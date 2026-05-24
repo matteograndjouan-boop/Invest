@@ -453,7 +453,7 @@ body {
       <div class="sidebar-footer">
         <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
         <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
-        <input type="file" id="import-file" accept=".json" style="display:none">
+        <input type="file" id="import-file" accept=".json,.xlsx,.xls,.csv" style="display:none">
       </div>
     </aside>
 
@@ -719,6 +719,7 @@ body {
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
 // ---- storage.js ----
 const Storage = {
@@ -1675,17 +1676,92 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('import-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        Storage.importAll(JSON.parse(evt.target.result));
-        navigateTo('dashboard');
-        alert('Données importées avec succès !');
-      } catch {
-        alert('Erreur lors de l\'importation.');
-      }
-    };
-    reader.readAsText(file);
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if (ext === 'json') {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          Storage.importAll(JSON.parse(evt.target.result));
+          navigateTo('dashboard');
+          alert('Données importées avec succès !');
+        } catch {
+          alert('Erreur lors de l\'importation.');
+        }
+      };
+      reader.readAsText(file);
+    } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const wb = XLSX.read(evt.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          const headers = rows[0].map(h => String(h).trim().toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, ''));
+
+          const idx = (names) => headers.findIndex(h => names.some(n => h.includes(n)));
+          const dateIdx    = idx(['date treso', 'date']);
+          const catIdx     = idx(['categorie']);
+          const subCatIdx  = idx(['sous-categorie', 'sous categorie', 'sous']);
+          const commentIdx = idx(['commentaire']);
+          const valeurIdx  = idx(['valeur']);
+          const positifIdx = idx(['positif']);
+
+          const CAT_MAP = {
+            'epargne': 'Épargne', 'transport': 'Transport', 'sante': 'Santé',
+            'loisir': 'Loisirs', 'loisirs': 'Loisirs', 'alimentation': 'Alimentation',
+            'abonnements': 'Abonnements', 'divers': 'Autre', 'logement': 'Logement',
+            'vetements': 'Vêtements', 'education': 'Éducation', 'restaurants': 'Restaurants',
+          };
+
+          const parseExcelDate = (v) => {
+            if (!v && v !== 0) return '';
+            if (typeof v === 'number') {
+              const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+              return d.toISOString().split('T')[0];
+            }
+            const s = String(v);
+            const parts = s.split('/');
+            if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            return s;
+          };
+
+          const existing = Storage.getExpenses();
+          let imported = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.every(c => c === '')) continue;
+            const cat = String(row[catIdx] || '').trim();
+            const positif = row[positifIdx];
+            if (cat.toLowerCase() === 'revenus') continue;
+            if (positif === true || String(positif).toUpperCase() === 'TRUE' || positif === 1) continue;
+            const amount = parseFloat(String(row[valeurIdx]).replace(',', '.')) || 0;
+            if (amount <= 0) continue;
+            const subCat  = String(row[subCatIdx]  || '').trim();
+            const comment = String(row[commentIdx] || '').trim();
+            const description = [subCat, comment].filter(Boolean).join(' – ') || 'Import';
+            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            existing.push({
+              id: Utils.generateId(),
+              description,
+              amount,
+              category: CAT_MAP[catNorm] || 'Autre',
+              date: parseExcelDate(row[dateIdx]),
+              notes: '',
+            });
+            imported++;
+          }
+          Storage.saveExpenses(existing);
+          navigateTo('expenses');
+          alert(`${imported} dépense(s) importée(s) depuis Excel !`);
+        } catch (err) {
+          console.error(err);
+          alert('Erreur lors de l\'importation Excel.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
     e.target.value = '';
   });
 
