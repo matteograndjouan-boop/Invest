@@ -422,6 +422,10 @@ body {
   .main-content { padding: 12px; }
   .kpi-grid, .kpi-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* ---- PDF Preview ---- */
+.modal-wide { max-width: 860px !important; }
+.preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
   </style>
 </head>
 <body>
@@ -453,7 +457,7 @@ body {
       <div class="sidebar-footer">
         <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
         <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
-        <input type="file" id="import-file" accept=".json,.xlsx,.xls,.csv" style="display:none">
+        <input type="file" id="import-file" accept=".json" style="display:none">
       </div>
     </aside>
 
@@ -719,7 +723,6 @@ body {
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
 // ---- storage.js ----
 const Storage = {
@@ -1685,11 +1688,10 @@ document.addEventListener('DOMContentLoaded', () => {
           Storage.importAll(JSON.parse(evt.target.result));
           navigateTo('dashboard');
           alert('Données importées avec succès !');
-        } catch {
-          alert('Erreur lors de l\'importation.');
-        }
+        } catch { alert('Erreur lors de l\'importation.'); }
       };
       reader.readAsText(file);
+
     } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -1697,73 +1699,169 @@ document.addEventListener('DOMContentLoaded', () => {
           const wb = XLSX.read(evt.target.result, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          const headers = rows[0].map(h => String(h).trim().toLowerCase()
-            .normalize('NFD').replace(/[̀-ͯ]/g, ''));
-
+          const headers = rows[0].map(h => String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
           const idx = (names) => headers.findIndex(h => names.some(n => h.includes(n)));
-          const dateIdx    = idx(['date treso', 'date']);
-          const catIdx     = idx(['categorie']);
-          const subCatIdx  = idx(['sous-categorie', 'sous categorie', 'sous']);
-          const commentIdx = idx(['commentaire']);
-          const valeurIdx  = idx(['valeur']);
-          const positifIdx = idx(['positif']);
-
+          const dateIdx = idx(['date treso', 'date']); const catIdx = idx(['categorie']);
+          const subCatIdx = idx(['sous']); const commentIdx = idx(['commentaire']);
+          const valeurIdx = idx(['valeur']); const positifIdx = idx(['positif']);
           const CAT_MAP = {
-            'epargne': 'Épargne', 'transport': 'Transport', 'sante': 'Santé',
-            'loisir': 'Loisirs', 'loisirs': 'Loisirs', 'alimentation': 'Alimentation',
-            'abonnements': 'Abonnements', 'divers': 'Autre', 'logement': 'Logement',
-            'vetements': 'Vêtements', 'education': 'Éducation', 'restaurants': 'Restaurants',
+            'epargne':'Épargne','transport':'Transport','sante':'Santé','loisir':'Loisirs',
+            'loisirs':'Loisirs','alimentation':'Alimentation','abonnements':'Abonnements',
+            'divers':'Autre','logement':'Logement','vetements':'Vêtements','education':'Éducation','restaurants':'Restaurants',
           };
-
           const parseExcelDate = (v) => {
             if (!v && v !== 0) return '';
-            if (typeof v === 'number') {
-              const d = new Date(Math.round((v - 25569) * 86400 * 1000));
-              return d.toISOString().split('T')[0];
-            }
-            const s = String(v);
-            const parts = s.split('/');
+            if (typeof v === 'number') { const d = new Date(Math.round((v-25569)*86400*1000)); return d.toISOString().split('T')[0]; }
+            const s = String(v); const parts = s.split('/');
             if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
             return s;
           };
-
-          const existing = Storage.getExpenses();
-          let imported = 0;
+          const existing = Storage.getExpenses(); let imported = 0;
           for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.every(c => c === '')) continue;
-            const cat = String(row[catIdx] || '').trim();
-            const positif = row[positifIdx];
+            const row = rows[i]; if (!row || row.every(c => c === '')) continue;
+            const cat = String(row[catIdx]||'').trim(); const positif = row[positifIdx];
             if (cat.toLowerCase() === 'revenus') continue;
             if (positif === true || String(positif).toUpperCase() === 'TRUE' || positif === 1) continue;
-            const amount = parseFloat(String(row[valeurIdx]).replace(',', '.')) || 0;
+            const amount = parseFloat(String(row[valeurIdx]).replace(',','.')) || 0;
             if (amount <= 0) continue;
-            const subCat  = String(row[subCatIdx]  || '').trim();
-            const comment = String(row[commentIdx] || '').trim();
-            const description = [subCat, comment].filter(Boolean).join(' – ') || 'Import';
-            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-            existing.push({
-              id: Utils.generateId(),
-              description,
-              amount,
-              category: CAT_MAP[catNorm] || 'Autre',
-              date: parseExcelDate(row[dateIdx]),
-              notes: '',
-            });
+            const subCat = String(row[subCatIdx]||'').trim(); const comment = String(row[commentIdx]||'').trim();
+            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            existing.push({ id: Utils.generateId(), description: [subCat,comment].filter(Boolean).join(' – ')||'Import',
+              amount, category: CAT_MAP[catNorm]||'Autre', date: parseExcelDate(row[dateIdx]), notes: '' });
             imported++;
           }
-          Storage.saveExpenses(existing);
-          navigateTo('expenses');
+          Storage.saveExpenses(existing); navigateTo('expenses');
           alert(`${imported} dépense(s) importée(s) depuis Excel !`);
-        } catch (err) {
-          console.error(err);
-          alert('Erreur lors de l\'importation Excel.');
-        }
+        } catch (err) { console.error(err); alert('Erreur lors de l\'importation Excel.'); }
+      };
+      reader.readAsArrayBuffer(file);
+
+    } else if (ext === 'pdf') {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const transactions = await parsePDFTransactions(evt.target.result);
+          if (!transactions.length) { alert('Aucune opération détectée dans ce PDF.'); return; }
+          showPDFPreview(transactions);
+        } catch (err) { console.error(err); alert('Erreur lors de la lecture du PDF.'); }
       };
       reader.readAsArrayBuffer(file);
     }
     e.target.value = '';
   });
+
+// ---- PDF Import ----
+function guessCategory(desc) {
+  const d = (desc||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const map = [
+    [['sncf','ratp','bus ','tram','train','metro','taxi','uber','bolt','navette','velib'], 'Transport'],
+    [['monoprix','carrefour','leclerc','lidl','aldi','franprix','picard','super u','casino','intermarche','biocoop','naturalia'], 'Alimentation'],
+    [['loyer','edf','engie','airbnb','electricite','gaz ','eau '], 'Logement'],
+    [['netflix','spotify','disney','apple.com','google','bouygues','sfr ','orange ','free ','abonnement','amazon prime'], 'Abonnements'],
+    [['pharmacie','medecin','docteur','clinique','hopital','cpam','mutuelle','optique'], 'Santé'],
+    [['restaurant','brasserie','mcdonald','burger','pizza','kebab','sushi','bistro','izly'], 'Restaurants'],
+    [['cinema','theatre','musee','sport','fitness','piscine','concert','fnac','cultura','steam'], 'Loisirs'],
+    [['livret','epargne','assurance vie','per '], 'Épargne'],
+    [['zara','h&m','primark','asos','shein','kiabi'], 'Vêtements'],
+  ];
+  for (const [keywords, cat] of map) { if (keywords.some(k => d.includes(k))) return cat; }
+  return 'Autre';
+}
+
+async function parsePDFTransactions(arrayBuffer) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js non chargé');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const transactions = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const byY = {};
+    for (const item of content.items) {
+      if (!item.str || !item.str.trim()) continue;
+      const y = Math.round(item.transform[5] / 3) * 3;
+      if (!byY[y]) byY[y] = [];
+      byY[y].push({ x: item.transform[4], str: item.str });
+    }
+    for (const y of Object.keys(byY).map(Number).sort((a,b) => b-a)) {
+      const line = byY[y].sort((a,b) => a.x-b.x).map(i => i.str).join(' ').trim();
+      const dateMatch = line.match(/^(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
+      if (!dateMatch) continue;
+      const [, rawDate, rest] = dateMatch;
+      const amountMatches = [...rest.matchAll(/\b(\d[\d\s]*[,\.]\d{2})\b/g)];
+      if (!amountMatches.length) continue;
+      const rawAmount = amountMatches[amountMatches.length-1][1].replace(/\s/g,'').replace(',','.');
+      const amount = parseFloat(rawAmount);
+      if (isNaN(amount) || amount <= 0 || amount > 50000) continue;
+      const firstAmtIdx = rest.indexOf(amountMatches[0][0]);
+      const description = (firstAmtIdx > 0 ? rest.substring(0, firstAmtIdx) : rest).trim();
+      if (!description) continue;
+      const parts = rawDate.split('/');
+      let year = new Date().getFullYear();
+      if (parts.length === 3) { year = parseInt(parts[2]); if (year < 100) year += 2000; }
+      const date = `${year}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      transactions.push({ date, description, amount, category: guessCategory(description) });
+    }
+  }
+  return transactions;
+}
+
+function showPDFPreview(transactions) {
+  const rows = transactions.map((t, i) => `
+    <tr>
+      <td style="text-align:center"><input type="checkbox" data-idx="${i}" checked style="width:16px;height:16px;cursor:pointer"></td>
+      <td style="white-space:nowrap">${Utils.formatDate(t.date)}</td>
+      <td style="max-width:220px;word-break:break-word;font-size:12px">${t.description}</td>
+      <td style="white-space:nowrap"><strong>${Utils.formatCurrency(t.amount)}</strong></td>
+      <td><select data-cat="${i}" class="select-input" style="font-size:12px;padding:4px 6px">
+        ${Utils.EXPENSE_CATEGORIES.map(c => `<option value="${c}" ${c===t.category?'selected':''}>${c}</option>`).join('')}
+      </select></td>
+    </tr>`).join('');
+  const content = `
+    <p style="margin-bottom:12px;color:var(--text-muted);font-size:13px">
+      <strong>${transactions.length} opération(s)</strong> détectée(s). Décochez les lignes à exclure et ajustez les catégories.
+    </p>
+    <div class="preview-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th style="width:32px"><input type="checkbox" id="pdf-check-all" checked style="width:16px;height:16px;cursor:pointer"></th>
+          <th>Date</th><th>Description</th><th>Montant</th><th>Catégorie</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
+      <button class="btn-primary" onclick="confirmPDFImport()">Importer les sélectionnées</button>
+    </div>`;
+  window._pdfTransactions = transactions;
+  document.getElementById('modal').classList.add('modal-wide');
+  Modal.open(`Import PDF — ${transactions.length} opération(s)`, content);
+  document.getElementById('pdf-check-all').addEventListener('change', (e) => {
+    document.querySelectorAll('[data-idx]').forEach(cb => cb.checked = e.target.checked);
+  });
+}
+
+function confirmPDFImport() {
+  const transactions = window._pdfTransactions || [];
+  const checkboxes = document.querySelectorAll('[data-idx]');
+  const catSelects = document.querySelectorAll('[data-cat]');
+  const existing = Storage.getExpenses();
+  let imported = 0;
+  checkboxes.forEach((cb, i) => {
+    if (!cb.checked) return;
+    const t = transactions[i];
+    existing.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
+      category: catSelects[i]?.value || t.category, date: t.date, notes: 'Import PDF' });
+    imported++;
+  });
+  Storage.saveExpenses(existing);
+  document.getElementById('modal').classList.remove('modal-wide');
+  Modal.close();
+  window._pdfTransactions = null;
+  navigateTo('expenses');
+  alert(`${imported} dépense(s) importée(s) !`);
+}
 
   navigateTo('dashboard');
 });
