@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvestTrack — Gestion de Patrimoine</title>
+  <style>
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #e0e7ff;
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --danger: #ef4444;
+  --danger-bg: #fee2e2;
+  --warning: #f59e0b;
+  --warning-bg: #fef3c7;
+  --info: #3b82f6;
+  --info-bg: #dbeafe;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active: #6366f1;
+  --sidebar-hover: #334155;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-bottom: 1px solid #334155;
+  font-weight: 700;
+  font-size: 16px;
+  color: #f1f5f9;
+}
+
+.logo-icon { font-size: 22px; }
+
+.sidebar-nav { flex: 1; padding: 12px 8px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--sidebar-text);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--sidebar-hover); color: #f1f5f9; }
+.nav-item.active { background: var(--sidebar-active); color: #fff; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  background: var(--bg);
+}
+
+.section { display: block; }
+.section.hidden { display: none; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.section-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+
+.header-actions { display: flex; gap: 10px; align-items: center; }
+
+.date-badge {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--surface);
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.kpi-card.primary { border-left: 4px solid var(--primary); }
+.kpi-card.success { border-left: 4px solid var(--success); }
+.kpi-card.danger  { border-left: 4px solid var(--danger); }
+.kpi-card.warning { border-left: 4px solid var(--warning); }
+.kpi-card.info    { border-left: 4px solid var(--info); }
+
+.kpi-label { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; }
+.kpi-value { font-size: 22px; font-weight: 700; color: var(--text); }
+.kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.charts-grid-single { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.chart-container { position: relative; height: 240px; }
+.chart-container canvas { max-height: 240px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+.card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+
+.recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.recent-item:last-child { border-bottom: none; }
+.text-right { text-align: right; }
+
+.table-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.search-input, .select-input {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color .15s;
+}
+.search-input { flex: 1; min-width: 160px; }
+.search-input:focus, .select-input:focus { border-color: var(--primary); }
+
+.table-wrapper { overflow-x: auto; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg); }
+.actions-cell { white-space: nowrap; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+  white-space: nowrap;
+}
+.btn-primary:hover { background: var(--primary-dark); }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background .15s;
+  white-space: nowrap;
+}
+.btn-secondary:hover { background: var(--bg); }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+.btn-icon {
+  background: none; border: none; cursor: pointer;
+  padding: 4px 6px; border-radius: 4px; font-size: 14px;
+  transition: background .15s;
+}
+.btn-icon:hover { background: var(--bg); }
+.btn-icon.btn-danger:hover { background: var(--danger-bg); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-action      { background: #e0e7ff; color: #4338ca; }
+.badge-etf         { background: #ede9fe; color: #7c3aed; }
+.badge-crypto      { background: #fce7f3; color: #be185d; }
+.badge-immobilier  { background: #fef3c7; color: #b45309; }
+.badge-obligations { background: #d1fae5; color: #065f46; }
+.badge-autre       { background: #f1f5f9; color: #475569; }
+.badge-category    { background: var(--primary-light); color: var(--primary-dark); }
+
+.positive { color: var(--success); }
+.negative { color: var(--danger); }
+.text-muted { color: var(--text-muted); }
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+.empty-state a { color: var(--primary); text-decoration: none; }
+.empty-state a:hover { text-decoration: underline; }
+
+.budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+.budget-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.budget-card.over-budget { border-left: 4px solid var(--danger); }
+.budget-card:not(.over-budget) { border-left: 4px solid var(--success); }
+
+.budget-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.budget-cat { font-weight: 600; font-size: 14px; }
+.budget-amounts { display: flex; gap: 4px; align-items: baseline; margin-bottom: 10px; font-size: 15px; font-weight: 700; }
+.budget-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.progress-bar {
+  flex: 1; height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: 4px;
+  transition: width .3s;
+}
+.progress-fill.warning { background: var(--warning); }
+.progress-fill.over    { background: var(--danger); }
+
+.budget-pct { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.budget-remaining { font-size: 12px; font-weight: 500; }
+
+.patrimony-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.pat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pat-item:last-child { border-bottom: none; }
+.pat-item-info { display: flex; flex-direction: column; gap: 3px; }
+.pat-item-name { font-weight: 500; font-size: 13px; }
+.pat-item-actions { display: flex; align-items: center; gap: 6px; }
+.pat-item-value { font-weight: 600; font-size: 13px; }
+.pat-auto { background: var(--primary-light); padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 8px; }
+.pat-total { padding-top: 12px; margin-top: 4px; border-top: 2px solid var(--border); font-size: 13px; }
+
+.py-sm { padding: 12px 0; }
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 16px; font-weight: 700; }
+.modal-close {
+  background: none; border: none; font-size: 22px;
+  cursor: pointer; color: var(--text-muted); line-height: 1;
+  padding: 2px 6px; border-radius: 4px;
+}
+.modal-close:hover { background: var(--bg); }
+.modal-body { padding: 20px 24px 24px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.form-full { grid-column: 1 / -1; }
+
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.form-group input:disabled { background: var(--bg); cursor: not-allowed; }
+.form-group textarea { resize: vertical; }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.text-center { text-align: center; }
+
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .recent-grid { grid-template-columns: 1fr; }
+  .patrimony-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .main-content { padding: 16px; }
+  .kpi-grid, .kpi-grid-3 { grid-template-columns: 1fr 1fr; }
+  .sidebar { width: 180px; min-width: 180px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; }
+  .sidebar-nav { display: flex; flex-direction: row; padding: 8px; }
+  .nav-item { flex-direction: column; gap: 2px; font-size: 10px; padding: 6px 8px; min-width: 60px; text-align: center; }
+  .sidebar-footer { display: none; }
+  .main-content { padding: 12px; }
+  .kpi-grid, .kpi-grid-3 { grid-template-columns: 1fr; }
+}
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">💰</span>
+        <span class="logo-text">InvestTrack</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">📊</span><span>Tableau de bord</span>
+        </a>
+        <a href="#" class="nav-item" data-section="investments">
+          <span class="nav-icon">📈</span><span>Investissements</span>
+        </a>
+        <a href="#" class="nav-item" data-section="expenses">
+          <span class="nav-icon">💳</span><span>Dépenses</span>
+        </a>
+        <a href="#" class="nav-item" data-section="budget">
+          <span class="nav-icon">🎯</span><span>Budget</span>
+        </a>
+        <a href="#" class="nav-item" data-section="patrimony">
+          <span class="nav-icon">🏦</span><span>Bilan patrimonial</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
+        <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section class="section" id="section-dashboard">
+        <div class="section-header">
+          <h1>Tableau de bord</h1>
+          <span class="date-badge" id="current-date"></span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur nette</div>
+            <div class="kpi-value" id="kpi-net-worth">0 €</div>
+            <div class="kpi-sub" id="kpi-net-worth-sub">Actifs − Passifs</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Portefeuille</div>
+            <div class="kpi-value" id="kpi-portfolio">0 €</div>
+            <div class="kpi-sub">Valeur actuelle</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépenses du mois</div>
+            <div class="kpi-value" id="kpi-expenses">0 €</div>
+            <div class="kpi-sub" id="kpi-expenses-sub">—</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Performance totale</div>
+            <div class="kpi-value" id="kpi-performance">+0 €</div>
+            <div class="kpi-sub" id="kpi-performance-sub">+0,00%</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition du portefeuille</h3>
+            <div class="chart-container"><canvas id="chart-portfolio-allocation"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Dépenses vs Budget (ce mois)</h3>
+            <div class="chart-container"><canvas id="chart-expenses-budget"></canvas></div>
+          </div>
+        </div>
+        <div class="recent-grid">
+          <div class="card">
+            <h3>Derniers investissements</h3>
+            <div id="recent-investments"></div>
+          </div>
+          <div class="card">
+            <h3>Dernières dépenses</h3>
+            <div id="recent-expenses"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INVESTMENTS -->
+      <section class="section hidden" id="section-investments">
+        <div class="section-header">
+          <h1>Investissements</h1>
+          <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur totale</div>
+            <div class="kpi-value" id="inv-total-value">0 €</div>
+          </div>
+          <div class="kpi-card" id="inv-gain-card">
+            <div class="kpi-label">Plus/Moins-value</div>
+            <div class="kpi-value" id="inv-total-gain">+0 €</div>
+            <div class="kpi-sub" id="inv-total-gain-pct">+0,00%</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Investissement initial</div>
+            <div class="kpi-value" id="inv-total-cost">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par type</h3>
+            <div class="chart-container"><canvas id="chart-inv-type"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Performance par position (top 10)</h3>
+            <div class="chart-container"><canvas id="chart-inv-performance"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="inv-search" placeholder="Rechercher..." class="search-input">
+            <select id="inv-filter-type" class="select-input">
+              <option value="">Tous les types</option>
+              <option value="action">Actions</option>
+              <option value="etf">ETF</option>
+              <option value="crypto">Crypto</option>
+              <option value="immobilier">Immobilier</option>
+              <option value="obligations">Obligations</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nom / Ticker</th>
+                  <th>Type</th>
+                  <th>Quantité</th>
+                  <th>Prix d'achat</th>
+                  <th>Prix actuel</th>
+                  <th>Valeur</th>
+                  <th>+/- Value</th>
+                  <th>%</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="investments-tbody"></tbody>
+            </table>
+          </div>
+          <div id="investments-empty" class="empty-state hidden">
+            <p>Aucun investissement pour l'instant. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXPENSES -->
+      <section class="section hidden" id="section-expenses">
+        <div class="section-header">
+          <h1>Dépenses</h1>
+          <div class="header-actions">
+            <input type="month" id="expenses-month-filter" class="select-input">
+            <button class="btn-primary" id="add-expense-btn">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card warning">
+            <div class="kpi-label">Total du mois</div>
+            <div class="kpi-value" id="exp-total-month">0 €</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Budget total</div>
+            <div class="kpi-value" id="exp-total-budget">0 €</div>
+          </div>
+          <div class="kpi-card" id="exp-remaining-card">
+            <div class="kpi-label">Restant</div>
+            <div class="kpi-value" id="exp-remaining">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par catégorie</h3>
+            <div class="chart-container"><canvas id="chart-exp-category"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Évolution mensuelle (12 mois)</h3>
+            <div class="chart-container"><canvas id="chart-exp-monthly"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="exp-search" placeholder="Rechercher..." class="search-input">
+            <select id="exp-filter-cat" class="select-input">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Catégorie</th>
+                  <th>Montant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="expenses-tbody"></tbody>
+            </table>
+          </div>
+          <div id="expenses-empty" class="empty-state hidden">
+            <p>Aucune dépense ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BUDGET -->
+      <section class="section hidden" id="section-budget">
+        <div class="section-header">
+          <h1>Budget mensuel</h1>
+          <button class="btn-primary" id="add-budget-btn">+ Catégorie</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Budget total</div>
+            <div class="kpi-value" id="budget-total">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépensé ce mois</div>
+            <div class="kpi-value" id="budget-spent">0 €</div>
+          </div>
+          <div class="kpi-card" id="budget-left-card">
+            <div class="kpi-label">Restant</div>
+            <div class="kpi-value" id="budget-left">0 €</div>
+          </div>
+        </div>
+        <div id="budget-grid" class="budget-grid"></div>
+        <div id="budget-empty" class="empty-state hidden">
+          <p>Aucun budget défini. Cliquez sur <strong>+ Catégorie</strong> pour définir vos budgets mensuels.</p>
+        </div>
+      </section>
+
+      <!-- PATRIMONY -->
+      <section class="section hidden" id="section-patrimony">
+        <div class="section-header">
+          <h1>Bilan patrimonial</h1>
+          <button class="btn-primary" id="add-patrimony-btn">+ Ajouter</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card success">
+            <div class="kpi-label">Total Actifs</div>
+            <div class="kpi-value" id="pat-assets">0 €</div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Total Passifs</div>
+            <div class="kpi-value" id="pat-liabilities">0 €</div>
+          </div>
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur nette</div>
+            <div class="kpi-value" id="pat-net-worth">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid-single">
+          <div class="chart-card">
+            <h3>Composition du patrimoine</h3>
+            <div class="chart-container"><canvas id="chart-patrimony"></canvas></div>
+          </div>
+        </div>
+        <div class="patrimony-grid">
+          <div class="card">
+            <h3>✅ Actifs</h3>
+            <div id="patrimony-assets-list"></div>
+            <div class="pat-total">Total actifs : <strong id="pat-assets-sum">0 €</strong></div>
+          </div>
+          <div class="card">
+            <h3>❌ Passifs</h3>
+            <div id="patrimony-liabilities-list"></div>
+            <div class="pat-total">Total passifs : <strong id="pat-liabilities-sum">0 €</strong></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+// ---- storage.js ----
+const Storage = {
+  KEYS: {
+    INVESTMENTS: 'invest_investments',
+    EXPENSES: 'invest_expenses',
+    BUDGETS: 'invest_budgets',
+    PATRIMONY: 'invest_patrimony',
+  },
+
+  get(key) {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error('Storage write error:', e);
+    }
+  },
+
+  getInvestments() { return this.get(this.KEYS.INVESTMENTS) || []; },
+  saveInvestments(data) { this.set(this.KEYS.INVESTMENTS, data); },
+
+  getExpenses() { return this.get(this.KEYS.EXPENSES) || []; },
+  saveExpenses(data) { this.set(this.KEYS.EXPENSES, data); },
+
+  getBudgets() { return this.get(this.KEYS.BUDGETS) || {}; },
+  saveBudgets(data) { this.set(this.KEYS.BUDGETS, data); },
+
+  getPatrimony() { return this.get(this.KEYS.PATRIMONY) || []; },
+  savePatrimony(data) { this.set(this.KEYS.PATRIMONY, data); },
+
+  exportAll() {
+    return {
+      investments: this.getInvestments(),
+      expenses: this.getExpenses(),
+      budgets: this.getBudgets(),
+      patrimony: this.getPatrimony(),
+      exportDate: new Date().toISOString(),
+    };
+  },
+
+  importAll(data) {
+    if (data.investments) this.saveInvestments(data.investments);
+    if (data.expenses) this.saveExpenses(data.expenses);
+    if (data.budgets) this.saveBudgets(data.budgets);
+    if (data.patrimony) this.savePatrimony(data.patrimony);
+  },
+};
+
+// ---- utils.js ----
+const Utils = {
+  generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  },
+
+  formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
+  },
+
+  formatPercent(value) {
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${(value || 0).toFixed(2)}%`;
+  },
+
+  formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Intl.DateTimeFormat('fr-FR').format(new Date(dateStr + 'T00:00:00'));
+  },
+
+  getCurrentMonth() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  },
+
+  getMonthLabel(yearMonth) {
+    const [year, month] = yearMonth.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(date);
+  },
+
+  getLast12Months() {
+    const months = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return months;
+  },
+
+  getExpenseMonth(expense) {
+    return expense.date.substring(0, 7);
+  },
+
+  INVESTMENT_TYPES: {
+    action: 'Action',
+    etf: 'ETF',
+    crypto: 'Crypto',
+    immobilier: 'Immobilier',
+    obligations: 'Obligations',
+    autre: 'Autre',
+  },
+
+  EXPENSE_CATEGORIES: [
+    'Logement', 'Alimentation', 'Transport', 'Santé', 'Loisirs',
+    'Vêtements', 'Éducation', 'Restaurants', 'Abonnements', 'Épargne', 'Autre',
+  ],
+
+  PATRIMONY_CATEGORIES: {
+    actif: ['Liquidités', 'Investissements', 'Immobilier', 'Véhicule', 'Autre actif'],
+    passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
+  },
+
+  TYPE_COLORS: {
+    action: '#6366f1',
+    etf: '#8b5cf6',
+    crypto: '#ec4899',
+    immobilier: '#f59e0b',
+    obligations: '#10b981',
+    autre: '#6b7280',
+  },
+
+  CATEGORY_COLORS: [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+    '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
+  ],
+};
+
+// ---- charts.js ----
+const Charts = {
+  _instances: {},
+
+  destroy(id) {
+    if (this._instances[id]) {
+      this._instances[id].destroy();
+      delete this._instances[id];
+    }
+  },
+
+  create(id, config) {
+    this.destroy(id);
+    const canvas = document.getElementById(id);
+    if (!canvas) return null;
+    const chart = new Chart(canvas, config);
+    this._instances[id] = chart;
+    return chart;
+  },
+
+  _doughnutOptions(formatFn) {
+    return {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${formatFn(ctx.raw)}` } },
+      },
+    };
+  },
+
+  portfolioAllocation(investments) {
+    const byType = {};
+    investments.forEach(inv => {
+      const type = inv.type || 'autre';
+      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const keys = Object.keys(byType);
+    const labels = keys.length ? keys.map(t => Utils.INVESTMENT_TYPES[t] || t) : ['Aucun investissement'];
+    const data = keys.length ? Object.values(byType) : [1];
+    const colors = keys.length ? keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280') : ['#e5e7eb'];
+
+    this.create('chart-portfolio-allocation', {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  expensesBudget(expenses, budgets) {
+    const month = Utils.getCurrentMonth();
+    const monthExpenses = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    const categories = Object.keys(budgets);
+    if (!categories.length) { this.destroy('chart-expenses-budget'); return; }
+
+    this.create('chart-expenses-budget', {
+      type: 'bar',
+      data: {
+        labels: categories,
+        datasets: [
+          { label: 'Dépensé', data: categories.map(cat => monthExpenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)), backgroundColor: '#6366f1', borderRadius: 4 },
+          { label: 'Budget', data: categories.map(cat => budgets[cat]), backgroundColor: '#e0e7ff', borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  investmentsByType(investments) {
+    const byType = {};
+    investments.forEach(inv => {
+      const type = inv.type || 'autre';
+      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const keys = Object.keys(byType);
+    if (!keys.length) { this.destroy('chart-inv-type'); return; }
+
+    this.create('chart-inv-type', {
+      type: 'doughnut',
+      data: { labels: keys.map(t => Utils.INVESTMENT_TYPES[t] || t), datasets: [{ data: Object.values(byType), backgroundColor: keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  investmentsPerformance(investments) {
+    if (!investments.length) { this.destroy('chart-inv-performance'); return; }
+    const sorted = [...investments].sort((a, b) => {
+      const pa = (a.currentPrice - a.buyPrice) / a.buyPrice * 100;
+      const pb = (b.currentPrice - b.buyPrice) / b.buyPrice * 100;
+      return pb - pa;
+    }).slice(0, 10);
+
+    const data = sorted.map(inv => ((inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100));
+    this.create('chart-inv-performance', {
+      type: 'bar',
+      data: {
+        labels: sorted.map(inv => inv.ticker || inv.name),
+        datasets: [{ label: 'Performance (%)', data, backgroundColor: data.map(v => v >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatPercent(ctx.raw)}` } } },
+        scales: { x: { ticks: { callback: (v) => `${v}%` } } },
+      },
+    });
+  },
+
+  expensesByCategory(expenses, month) {
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    const byCategory = {};
+    monthExp.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+    const keys = Object.keys(byCategory);
+    if (!keys.length) { this.destroy('chart-exp-category'); return; }
+
+    this.create('chart-exp-category', {
+      type: 'doughnut',
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  expensesMonthly(expenses) {
+    const months = Utils.getLast12Months();
+    this.create('chart-exp-monthly', {
+      type: 'bar',
+      data: {
+        labels: months.map(Utils.getMonthLabel),
+        datasets: [{ label: 'Dépenses', data: months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s, e) => s + e.amount, 0)), backgroundColor: '#6366f1', borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  patrimony(assets, liabilities) {
+    const assetsByCat = {}, liabByCat = {};
+    assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });
+    liabilities.forEach(l => { liabByCat[l.category] = (liabByCat[l.category] || 0) + l.value; });
+
+    const labels = [...Object.keys(assetsByCat).map(k => `${k} (actif)`), ...Object.keys(liabByCat).map(k => `${k} (passif)`)];
+    const data = [...Object.values(assetsByCat), ...Object.values(liabByCat).map(v => -v)];
+    const colors = [
+      ...Object.keys(assetsByCat).map((_, i) => `hsla(142, 60%, ${45 + i * 10}%, 0.8)`),
+      ...Object.keys(liabByCat).map((_, i) => `hsla(0, 80%, ${50 + i * 10}%, 0.8)`),
+    ];
+
+    if (!data.length) { this.destroy('chart-patrimony'); return; }
+    this.create('chart-patrimony', {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Valeur', data, backgroundColor: colors, borderRadius: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
+        scales: { y: { ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+};
+
+// ---- investments.js ----
+const Investments = {
+  render() {
+    const investments = Storage.getInvestments();
+    this._renderSummary(investments);
+    this._renderTable(investments);
+    Charts.investmentsByType(investments);
+    Charts.investmentsPerformance(investments);
+  },
+
+  _renderSummary(investments) {
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const totalCost = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const gain = totalValue - totalCost;
+    const gainPct = totalCost > 0 ? (gain / totalCost * 100) : 0;
+
+    document.getElementById('inv-total-value').textContent = Utils.formatCurrency(totalValue);
+    document.getElementById('inv-total-cost').textContent = Utils.formatCurrency(totalCost);
+
+    const gainEl = document.getElementById('inv-total-gain');
+    gainEl.textContent = Utils.formatCurrency(gain);
+    gainEl.className = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
+    document.getElementById('inv-total-gain-pct').textContent = Utils.formatPercent(gainPct);
+    document.getElementById('inv-gain-card').className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
+  },
+
+  _renderTable(investments) {
+    const tbody = document.getElementById('investments-tbody');
+    const empty = document.getElementById('investments-empty');
+    const search = (document.getElementById('inv-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('inv-filter-type')?.value || '';
+
+    let list = investments;
+    if (search) list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
+    if (typeFilter) list = list.filter(i => i.type === typeFilter);
+
+    if (!list.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = list.map(inv => {
+      const value = inv.quantity * inv.currentPrice;
+      const cost = inv.quantity * inv.buyPrice;
+      const gain = value - cost;
+      const gainPct = cost > 0 ? (gain / cost * 100) : 0;
+      const cls = gain >= 0 ? 'positive' : 'negative';
+      return `<tr>
+        <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
+        <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
+        <td>${inv.quantity}</td>
+        <td>${Utils.formatCurrency(inv.buyPrice)}</td>
+        <td>${Utils.formatCurrency(inv.currentPrice)}</td>
+        <td><strong>${Utils.formatCurrency(value)}</strong></td>
+        <td class="${cls}">${Utils.formatCurrency(gain)}</td>
+        <td class="${cls}">${Utils.formatPercent(gainPct)}</td>
+        <td class="actions-cell">
+          <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  openAddForm() { Modal.open('Ajouter un investissement', this._form(null)); },
+
+  edit(id) {
+    const inv = Storage.getInvestments().find(i => i.id === id);
+    if (inv) Modal.open("Modifier l'investissement", this._form(inv));
+  },
+
+  _form(inv) {
+    const isEdit = !!inv;
+    const typeOptions = Object.entries(Utils.INVESTMENT_TYPES)
+      .map(([v, l]) => `<option value="${v}" ${inv?.type === v ? 'selected' : ''}>${l}</option>`).join('');
+    return `
+      <form onsubmit="Investments.save(event, ${isEdit ? `'${inv.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group"><label>Nom *</label><input name="name" required value="${inv?.name || ''}" placeholder="ex: Apple Inc."></div>
+          <div class="form-group"><label>Ticker</label><input name="ticker" value="${inv?.ticker || ''}" placeholder="ex: AAPL"></div>
+          <div class="form-group"><label>Type *</label><select name="type" required>${typeOptions}</select></div>
+          <div class="form-group"><label>Quantité *</label><input name="quantity" type="number" step="0.000001" min="0" required value="${inv?.quantity || ''}"></div>
+          <div class="form-group"><label>Prix d'achat moyen (€) *</label><input name="buyPrice" type="number" step="0.01" min="0" required value="${inv?.buyPrice || ''}"></div>
+          <div class="form-group"><label>Prix actuel (€) *</label><input name="currentPrice" type="number" step="0.01" min="0" required value="${inv?.currentPrice || ''}"></div>
+          <div class="form-group"><label>Date d'achat</label><input name="buyDate" type="date" value="${inv?.buyDate || ''}"></div>
+          <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${inv?.notes || ''}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  save(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = {
+      id: id || Utils.generateId(),
+      name: fd.get('name').trim(),
+      ticker: (fd.get('ticker') || '').trim().toUpperCase(),
+      type: fd.get('type'),
+      quantity: parseFloat(fd.get('quantity')),
+      buyPrice: parseFloat(fd.get('buyPrice')),
+      currentPrice: parseFloat(fd.get('currentPrice')),
+      buyDate: fd.get('buyDate'),
+      notes: (fd.get('notes') || '').trim(),
+    };
+    const list = Storage.getInvestments();
+    if (id) { const idx = list.findIndex(i => i.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveInvestments(list);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+  },
+
+  delete(id) {
+    if (!confirm('Supprimer cet investissement ?')) return;
+    Storage.saveInvestments(Storage.getInvestments().filter(i => i.id !== id));
+    this.render();
+    Dashboard.render();
+  },
+};
+
+// ---- expenses.js ----
+const Expenses = {
+  currentMonth: Utils.getCurrentMonth(),
+
+  init() {
+    const filter = document.getElementById('expenses-month-filter');
+    if (filter) {
+      filter.value = this.currentMonth;
+      filter.addEventListener('change', (e) => { this.currentMonth = e.target.value; this.render(); });
+    }
+    const catFilter = document.getElementById('exp-filter-cat');
+    if (catFilter) {
+      Utils.EXPENSE_CATEGORIES.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat; opt.textContent = cat;
+        catFilter.appendChild(opt);
+      });
+    }
+  },
+
+  render() {
+    const expenses = Storage.getExpenses();
+    this._renderSummary(expenses);
+    this._renderTable(expenses);
+    Charts.expensesByCategory(expenses, this.currentMonth);
+    Charts.expensesMonthly(expenses);
+  },
+
+  _renderSummary(expenses) {
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === this.currentMonth);
+    const total = monthExp.reduce((s, e) => s + e.amount, 0);
+    const totalBudget = Object.values(Storage.getBudgets()).reduce((s, v) => s + v, 0);
+    const remaining = totalBudget - total;
+
+    document.getElementById('exp-total-month').textContent = Utils.formatCurrency(total);
+    document.getElementById('exp-total-budget').textContent = Utils.formatCurrency(totalBudget);
+    const remEl = document.getElementById('exp-remaining');
+    remEl.textContent = Utils.formatCurrency(remaining);
+    remEl.className = 'kpi-value ' + (remaining >= 0 ? 'positive' : 'negative');
+    document.getElementById('exp-remaining-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
+  },
+
+  _renderTable(expenses) {
+    const tbody = document.getElementById('expenses-tbody');
+    const empty = document.getElementById('expenses-empty');
+    const search = (document.getElementById('exp-search')?.value || '').toLowerCase();
+    const catFilter = document.getElementById('exp-filter-cat')?.value || '';
+
+    let list = expenses.filter(e => Utils.getExpenseMonth(e) === this.currentMonth);
+    if (search) list = list.filter(e => e.description.toLowerCase().includes(search));
+    if (catFilter) list = list.filter(e => e.category === catFilter);
+    list.sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!list.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = list.map(exp => `<tr>
+      <td>${Utils.formatDate(exp.date)}</td>
+      <td>${exp.description}</td>
+      <td><span class="badge badge-category">${exp.category}</span></td>
+      <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
+      <td class="actions-cell">
+        <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
+        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">🗑️</button>
+      </td>
+    </tr>`).join('');
+  },
+
+  openAddForm() { Modal.open('Ajouter une dépense', this._form(null)); },
+
+  edit(id) {
+    const exp = Storage.getExpenses().find(e => e.id === id);
+    if (exp) Modal.open('Modifier la dépense', this._form(exp));
+  },
+
+  _form(exp) {
+    const isEdit = !!exp;
+    const today = new Date().toISOString().split('T')[0];
+    const catOptions = Utils.EXPENSE_CATEGORIES
+      .map(c => `<option value="${c}" ${exp?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+    return `
+      <form onsubmit="Expenses.save(event, ${isEdit ? `'${exp.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Description *</label><input name="description" required value="${exp?.description || ''}" placeholder="ex: Courses Carrefour"></div>
+          <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
+          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
+          <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  save(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = {
+      id: id || Utils.generateId(),
+      description: fd.get('description').trim(),
+      amount: parseFloat(fd.get('amount')),
+      category: fd.get('category'),
+      date: fd.get('date'),
+      notes: (fd.get('notes') || '').trim(),
+    };
+    const list = Storage.getExpenses();
+    if (id) { const idx = list.findIndex(e => e.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveExpenses(list);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+    Budget.render();
+  },
+
+  delete(id) {
+    if (!confirm('Supprimer cette dépense ?')) return;
+    Storage.saveExpenses(Storage.getExpenses().filter(e => e.id !== id));
+    this.render();
+    Dashboard.render();
+    Budget.render();
+  },
+};
+
+// ---- budget.js ----
+const Budget = {
+  render() {
+    const budgets = Storage.getBudgets();
+    const expenses = Storage.getExpenses();
+    const month = Utils.getCurrentMonth();
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+
+    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
+    const totalSpent = monthExp.reduce((s, e) => s + e.amount, 0);
+    const remaining = totalBudget - totalSpent;
+
+    document.getElementById('budget-total').textContent = Utils.formatCurrency(totalBudget);
+    document.getElementById('budget-spent').textContent = Utils.formatCurrency(totalSpent);
+    const leftEl = document.getElementById('budget-left');
+    leftEl.textContent = Utils.formatCurrency(remaining);
+    document.getElementById('budget-left-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
+
+    const categories = Object.keys(budgets);
+    const grid = document.getElementById('budget-grid');
+    const empty = document.getElementById('budget-empty');
+
+    if (!categories.length) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    grid.innerHTML = categories.map(cat => {
+      const budget = budgets[cat];
+      const spent = monthExp.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
+      const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+      const over = spent > budget;
+      const rem = budget - spent;
+      const barClass = over ? 'over' : pct > 80 ? 'warning' : '';
+      return `
+        <div class="budget-card ${over ? 'over-budget' : ''}">
+          <div class="budget-card-header">
+            <span class="budget-cat">${cat}</span>
+            <div>
+              <button class="btn-icon" onclick="Budget.edit('${cat}')" title="Modifier">✏️</button>
+              <button class="btn-icon btn-danger" onclick="Budget.delete('${cat}')" title="Supprimer">🗑️</button>
+            </div>
+          </div>
+          <div class="budget-amounts">
+            <span class="${over ? 'negative' : ''}">${Utils.formatCurrency(spent)}</span>
+            <span class="text-muted">/ ${Utils.formatCurrency(budget)}</span>
+          </div>
+          <div class="budget-progress">
+            <div class="progress-bar"><div class="progress-fill ${barClass}" style="width:${pct}%"></div></div>
+            <span class="budget-pct">${pct.toFixed(0)}%</span>
+          </div>
+          <div class="budget-remaining ${over ? 'negative' : 'positive'}">
+            ${over ? `Dépassement: ${Utils.formatCurrency(Math.abs(rem))}` : `Restant: ${Utils.formatCurrency(rem)}`}
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  openAddForm() { Modal.open('Définir un budget', this._form(null, null)); },
+
+  edit(category) {
+    Modal.open('Modifier le budget', this._form(category, Storage.getBudgets()[category]));
+  },
+
+  _form(category, amount) {
+    const isEdit = !!category;
+    const used = Object.keys(Storage.getBudgets());
+    const available = isEdit
+      ? Utils.EXPENSE_CATEGORIES
+      : Utils.EXPENSE_CATEGORIES.filter(c => !used.includes(c));
+
+    const catField = isEdit
+      ? `<input value="${category}" disabled>`
+      : `<select name="category" required><option value="">Choisir...</option>${available.map(c => `<option value="${c}">${c}</option>`).join('')}</select>`;
+
+    return `
+      <form onsubmit="Budget.save(event, ${isEdit ? `'${category}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group"><label>Catégorie *</label>${catField}</div>
+          <div class="form-group"><label>Budget mensuel (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${amount || ''}"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  save(event, existingCat) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const category = existingCat || fd.get('category');
+    const amount = parseFloat(fd.get('amount'));
+    const budgets = Storage.getBudgets();
+    budgets[category] = amount;
+    Storage.saveBudgets(budgets);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+    Expenses.render();
+  },
+
+  delete(category) {
+    if (!confirm(`Supprimer le budget "${category}" ?`)) return;
+    const budgets = Storage.getBudgets();
+    delete budgets[category];
+    Storage.saveBudgets(budgets);
+    this.render();
+    Dashboard.render();
+  },
+};
+
+// ---- patrimony.js ----
+const Patrimony = {
+  render() {
+    const items = Storage.getPatrimony();
+    const investments = Storage.getInvestments();
+    const investValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const manualAssets = items.filter(i => i.type === 'actif');
+    const liabilities = items.filter(i => i.type === 'passif');
+    const totalAssets = manualAssets.reduce((s, i) => s + i.value, 0) + investValue;
+    const totalLiab = liabilities.reduce((s, i) => s + i.value, 0);
+    const netWorth = totalAssets - totalLiab;
+
+    document.getElementById('pat-assets').textContent = Utils.formatCurrency(totalAssets);
+    document.getElementById('pat-liabilities').textContent = Utils.formatCurrency(totalLiab);
+    const nwEl = document.getElementById('pat-net-worth');
+    nwEl.textContent = Utils.formatCurrency(netWorth);
+    nwEl.className = 'kpi-value ' + (netWorth >= 0 ? 'positive' : 'negative');
+    document.getElementById('pat-assets-sum').textContent = Utils.formatCurrency(totalAssets);
+    document.getElementById('pat-liabilities-sum').textContent = Utils.formatCurrency(totalLiab);
+
+    this._renderList('patrimony-assets-list', manualAssets, investValue);
+    this._renderList('patrimony-liabilities-list', liabilities, 0, true);
+
+    const chartAssets = [...manualAssets.map(a => ({ category: a.category, value: a.value }))];
+    if (investValue > 0) chartAssets.push({ category: 'Portefeuille', value: investValue });
+    Charts.patrimony(chartAssets, liabilities);
+  },
+
+  _renderList(containerId, items, investValue, isLiability = false) {
+    const container = document.getElementById(containerId);
+    let html = '';
+
+    if (!isLiability && investValue > 0) {
+      html += `
+        <div class="pat-item pat-auto">
+          <div class="pat-item-info">
+            <span class="pat-item-name">📈 Portefeuille d'investissements</span>
+            <span class="badge badge-category">Auto</span>
+          </div>
+          <span class="pat-item-value positive">${Utils.formatCurrency(investValue)}</span>
+        </div>`;
+    }
+
+    html += items.map(item => `
+      <div class="pat-item">
+        <div class="pat-item-info">
+          <span class="pat-item-name">${item.name}</span>
+          <span class="badge badge-category">${item.category}</span>
+        </div>
+        <div class="pat-item-actions">
+          <span class="pat-item-value ${isLiability ? 'negative' : ''}">${Utils.formatCurrency(item.value)}</span>
+          <button class="btn-icon" onclick="Patrimony.edit('${item.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Patrimony.delete('${item.id}')" title="Supprimer">🗑️</button>
+        </div>
+      </div>`).join('');
+
+    container.innerHTML = html || '<p class="text-muted text-center py-sm">Aucun élément</p>';
+  },
+
+  openAddForm() { Modal.open('Ajouter un élément patrimonial', this._form(null)); },
+
+  edit(id) {
+    const item = Storage.getPatrimony().find(i => i.id === id);
+    if (item) Modal.open("Modifier l'élément", this._form(item));
+  },
+
+  _form(item) {
+    const isEdit = !!item;
+    const type = item?.type || 'actif';
+    const catOptions = (t) => Utils.PATRIMONY_CATEGORIES[t]
+      .map(c => `<option value="${c}" ${item?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+
+    return `
+      <form onsubmit="Patrimony.save(event, ${isEdit ? `'${item.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Nom *</label><input name="name" required value="${item?.name || ''}" placeholder="ex: Résidence principale"></div>
+          <div class="form-group">
+            <label>Type *</label>
+            <select name="type" required onchange="Patrimony._updateCats(this.value)">
+              <option value="actif" ${type === 'actif' ? 'selected' : ''}>Actif</option>
+              <option value="passif" ${type === 'passif' ? 'selected' : ''}>Passif</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select name="category" id="pat-cat-select" required>${catOptions(type)}</select>
+          </div>
+          <div class="form-group"><label>Valeur (€) *</label><input name="value" type="number" step="0.01" min="0" required value="${item?.value || ''}"></div>
+          <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${item?.notes || ''}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  _updateCats(type) {
+    const sel = document.getElementById('pat-cat-select');
+    if (!sel) return;
+    sel.innerHTML = Utils.PATRIMONY_CATEGORIES[type]
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+  },
+
+  save(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = {
+      id: id || Utils.generateId(),
+      name: fd.get('name').trim(),
+      type: fd.get('type'),
+      category: fd.get('category'),
+      value: parseFloat(fd.get('value')),
+      notes: (fd.get('notes') || '').trim(),
+    };
+    const list = Storage.getPatrimony();
+    if (id) { const idx = list.findIndex(i => i.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.savePatrimony(list);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+  },
+
+  delete(id) {
+    if (!confirm('Supprimer cet élément ?')) return;
+    Storage.savePatrimony(Storage.getPatrimony().filter(i => i.id !== id));
+    this.render();
+    Dashboard.render();
+  },
+};
+
+// ---- app.js ----
+const Modal = {
+  open(title, content) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = content;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  },
+  close() {
+    document.getElementById('modal-overlay').classList.add('hidden');
+    document.body.style.overflow = '';
+  },
+};
+
+const Dashboard = {
+  render() {
+    const investments = Storage.getInvestments();
+    const expenses = Storage.getExpenses();
+    const budgets = Storage.getBudgets();
+    const patrimony = Storage.getPatrimony();
+
+    document.getElementById('current-date').textContent = new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    }).format(new Date());
+
+    const portfolioValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const portfolioCost = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const gain = portfolioValue - portfolioCost;
+    const gainPct = portfolioCost > 0 ? (gain / portfolioCost * 100) : 0;
+
+    document.getElementById('kpi-portfolio').textContent = Utils.formatCurrency(portfolioValue);
+    const perfEl = document.getElementById('kpi-performance');
+    perfEl.textContent = Utils.formatCurrency(gain);
+    perfEl.className = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
+    document.getElementById('kpi-performance-sub').textContent = Utils.formatPercent(gainPct);
+
+    const manualAssets = patrimony.filter(i => i.type === 'actif').reduce((s, i) => s + i.value, 0);
+    const liabilities = patrimony.filter(i => i.type === 'passif').reduce((s, i) => s + i.value, 0);
+    const netWorth = portfolioValue + manualAssets - liabilities;
+    document.getElementById('kpi-net-worth').textContent = Utils.formatCurrency(netWorth);
+    document.getElementById('kpi-net-worth-sub').textContent =
+      `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
+
+    const month = Utils.getCurrentMonth();
+    const monthTotal = expenses.filter(e => Utils.getExpenseMonth(e) === month).reduce((s, e) => s + e.amount, 0);
+    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
+    const remaining = totalBudget - monthTotal;
+
+    document.getElementById('kpi-expenses').textContent = Utils.formatCurrency(monthTotal);
+    const expSubEl = document.getElementById('kpi-expenses-sub');
+    expSubEl.textContent = totalBudget > 0 ? `Budget restant: ${Utils.formatCurrency(remaining)}` : 'Aucun budget défini';
+    expSubEl.className = 'kpi-sub ' + (totalBudget > 0 ? (remaining >= 0 ? 'positive' : 'negative') : '');
+
+    Charts.portfolioAllocation(investments);
+    Charts.expensesBudget(expenses, budgets);
+    this._renderRecentInvestments(investments);
+    this._renderRecentExpenses(expenses);
+  },
+
+  _renderRecentInvestments(investments) {
+    const container = document.getElementById('recent-investments');
+    const recent = [...investments].sort((a, b) => (b.buyDate || '').localeCompare(a.buyDate || '')).slice(0, 5);
+    if (!recent.length) { container.innerHTML = '<p class="text-muted">Aucun investissement</p>'; return; }
+    container.innerHTML = recent.map(inv => {
+      const value = inv.quantity * inv.currentPrice;
+      const gain = value - inv.quantity * inv.buyPrice;
+      return `<div class="recent-item">
+        <div>
+          <strong>${inv.name}</strong>${inv.ticker ? ` <small class="text-muted">· ${inv.ticker}</small>` : ''}<br>
+          <small class="text-muted">${Utils.INVESTMENT_TYPES[inv.type]}</small>
+        </div>
+        <div class="text-right">
+          <strong>${Utils.formatCurrency(value)}</strong><br>
+          <small class="${gain >= 0 ? 'positive' : 'negative'}">${Utils.formatCurrency(gain)}</small>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  _renderRecentExpenses(expenses) {
+    const container = document.getElementById('recent-expenses');
+    const recent = [...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+    if (!recent.length) { container.innerHTML = '<p class="text-muted">Aucune dépense</p>'; return; }
+    container.innerHTML = recent.map(exp => `
+      <div class="recent-item">
+        <div>
+          <strong>${exp.description}</strong><br>
+          <small class="text-muted">${exp.category} · ${Utils.formatDate(exp.date)}</small>
+        </div>
+        <strong class="negative">${Utils.formatCurrency(exp.amount)}</strong>
+      </div>`).join('');
+  },
+};
+
+function navigateTo(sectionId) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === sectionId));
+  document.querySelectorAll('.section').forEach(el => el.classList.toggle('hidden', el.id !== `section-${sectionId}`));
+  switch (sectionId) {
+    case 'dashboard':   Dashboard.render(); break;
+    case 'investments': Investments.render(); break;
+    case 'expenses':    Expenses.render(); break;
+    case 'budget':      Budget.render(); break;
+    case 'patrimony':   Patrimony.render(); break;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  Expenses.init();
+
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', (e) => { e.preventDefault(); navigateTo(el.dataset.section); });
+  });
+
+  document.getElementById('modal-close').addEventListener('click', Modal.close);
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-overlay') Modal.close();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
+
+  document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
+  document.getElementById('add-expense-btn').addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
+  document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
+
+  document.getElementById('inv-search').addEventListener('input', () => Investments.render());
+  document.getElementById('inv-filter-type').addEventListener('change', () => Investments.render());
+  document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
+  document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const data = Storage.exportAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `investtrack_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-file').click();
+  });
+
+  document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        Storage.importAll(JSON.parse(evt.target.result));
+        navigateTo('dashboard');
+        alert('Données importées avec succès !');
+      } catch {
+        alert('Erreur lors de l\'importation.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  navigateTo('dashboard');
+});
+  </script>
+</body>
+</html>
