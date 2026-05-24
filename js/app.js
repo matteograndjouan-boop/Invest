@@ -241,35 +241,88 @@ async function parsePDFTransactions(arrayBuffer) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const transactions = [];
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const byY = {};
-    for (const item of content.items) {
-      if (!item.str || !item.str.trim()) continue;
-      const y = Math.round(item.transform[5] / 3) * 3;
-      if (!byY[y]) byY[y] = [];
-      byY[y].push({ x: item.transform[4], str: item.str });
+
+    const items = content.items
+      .filter(i => i.str && i.str.trim())
+      .map(i => ({ x: Math.round(i.transform[4]), y: Math.round(i.transform[5]), str: i.str.trim() }));
+
+    // Detect Débit/Crédit column X positions from header
+    let debitX = null, creditX = null;
+    for (const item of items) {
+      const s = norm(item.str);
+      if (s === 'debit') debitX = item.x;
+      if (s === 'credit') creditX = item.x;
     }
+
+    // Group by Y coordinate (tolerance 3px)
+    const byY = {};
+    for (const item of items) {
+      const y = Math.round(item.y / 3) * 3;
+      if (!byY[y]) byY[y] = [];
+      byY[y].push(item);
+    }
+
+    const SKIP_HEADERS = /^(SOLDE|TOTAL|NOUVEAU|ANCIEN|RELEVE|COMPTE|REPORT|Date|Nature|Valeur|Monnaie)/i;
+    const AMT_RE = /^\d[\d\s]*,\d{2}$/;
+    const DATE_RE = /^\d{2}\.\d{2}$/;
+    let lastTx = null;
+
     for (const y of Object.keys(byY).map(Number).sort((a,b) => b-a)) {
-      const line = byY[y].sort((a,b) => a.x-b.x).map(i => i.str).join(' ').trim();
-      const dateMatch = line.match(/^(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
-      if (!dateMatch) continue;
-      const [, rawDate, rest] = dateMatch;
-      const amountMatches = [...rest.matchAll(/\b(\d[\d\s]*[,\.]\d{2})\b/g)];
-      if (!amountMatches.length) continue;
-      const rawAmount = amountMatches[amountMatches.length-1][1].replace(/\s/g,'').replace(',','.');
-      const amount = parseFloat(rawAmount);
-      if (isNaN(amount) || amount <= 0 || amount > 50000) continue;
-      const firstAmtIdx = rest.indexOf(amountMatches[0][0]);
-      const description = (firstAmtIdx > 0 ? rest.substring(0, firstAmtIdx) : rest).trim();
-      if (!description) continue;
-      const parts = rawDate.split('/');
-      let year = new Date().getFullYear();
-      if (parts.length === 3) { year = parseInt(parts[2]); if (year < 100) year += 2000; }
-      const date = `${year}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-      transactions.push({ date, description, amount, category: guessCategory(description) });
+      const row = byY[y].sort((a,b) => a.x - b.x);
+      const first = row[0];
+
+      // BNP format: date is DD.MM (dot separator)
+      if (DATE_RE.test(first.str)) {
+        const [day, month] = first.str.split('.');
+        const now = new Date();
+        const txMonth = parseInt(month);
+        const year = txMonth > (now.getMonth() + 3) ? now.getFullYear() - 1 : now.getFullYear();
+        const date = `${year}-${month}-${day}`;
+
+        let desc = '';
+        let debitAmt = null, creditAmt = null;
+
+        for (let i = 1; i < row.length; i++) {
+          const itm = row[i];
+          if (DATE_RE.test(itm.str)) continue; // skip Valeur column (repeated date)
+          const clean = itm.str.replace(/\s/g, '');
+          if (AMT_RE.test(itm.str) || /^\d+,\d{2}$/.test(clean)) {
+            const amount = parseFloat(clean.replace(',', '.'));
+            if (debitX !== null && creditX !== null) {
+              if (Math.abs(itm.x - debitX) < Math.abs(itm.x - creditX)) debitAmt = amount;
+              else creditAmt = amount;
+            } else {
+              if (debitAmt === null) debitAmt = amount;
+              else creditAmt = amount;
+            }
+          } else {
+            desc += (desc ? ' ' : '') + itm.str;
+          }
+        }
+
+        if (debitAmt !== null && debitAmt > 0) {
+          lastTx = { date, description: desc.trim() || 'Opération', amount: debitAmt, category: guessCategory(desc) };
+          transactions.push(lastTx);
+        } else {
+          lastTx = null;
+        }
+      } else if (lastTx && !SKIP_HEADERS.test(first.str)) {
+        // Multi-line description continuation
+        const hasAmt = row.some(i => AMT_RE.test(i.str) || /^\d+,\d{2}$/.test(i.str.replace(/\s/g,'')));
+        const hasDate = row.some(i => DATE_RE.test(i.str));
+        if (!hasAmt && !hasDate) {
+          const extra = row.map(i => i.str).join(' ').trim();
+          if (extra) {
+            lastTx.description += ' ' + extra;
+            lastTx.category = guessCategory(lastTx.description);
+          }
+        }
+      }
     }
   }
   return transactions;
