@@ -1,0 +1,127 @@
+const Expenses = {
+  currentMonth: Utils.getCurrentMonth(),
+
+  init() {
+    const filter = document.getElementById('expenses-month-filter');
+    if (filter) {
+      filter.value = this.currentMonth;
+      filter.addEventListener('change', (e) => { this.currentMonth = e.target.value; this.render(); });
+    }
+    const catFilter = document.getElementById('exp-filter-cat');
+    if (catFilter) {
+      Utils.EXPENSE_CATEGORIES.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat; opt.textContent = cat;
+        catFilter.appendChild(opt);
+      });
+    }
+  },
+
+  render() {
+    const expenses = Storage.getExpenses();
+    this._renderSummary(expenses);
+    this._renderTable(expenses);
+    Charts.expensesByCategory(expenses, this.currentMonth);
+    Charts.expensesMonthly(expenses);
+  },
+
+  _renderSummary(expenses) {
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === this.currentMonth);
+    const total = monthExp.reduce((s, e) => s + e.amount, 0);
+    const totalBudget = Object.values(Storage.getBudgets()).reduce((s, v) => s + v, 0);
+    const remaining = totalBudget - total;
+
+    document.getElementById('exp-total-month').textContent = Utils.formatCurrency(total);
+    document.getElementById('exp-total-budget').textContent = Utils.formatCurrency(totalBudget);
+    const remEl = document.getElementById('exp-remaining');
+    remEl.textContent = Utils.formatCurrency(remaining);
+    remEl.className = 'kpi-value ' + (remaining >= 0 ? 'positive' : 'negative');
+    document.getElementById('exp-remaining-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
+  },
+
+  _renderTable(expenses) {
+    const tbody = document.getElementById('expenses-tbody');
+    const empty = document.getElementById('expenses-empty');
+    const search = (document.getElementById('exp-search')?.value || '').toLowerCase();
+    const catFilter = document.getElementById('exp-filter-cat')?.value || '';
+
+    let list = expenses.filter(e => Utils.getExpenseMonth(e) === this.currentMonth);
+    if (search) list = list.filter(e => e.description.toLowerCase().includes(search));
+    if (catFilter) list = list.filter(e => e.category === catFilter);
+    list.sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!list.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = list.map(exp => `<tr>
+      <td>${Utils.formatDate(exp.date)}</td>
+      <td>${exp.description}</td>
+      <td><span class="badge badge-category">${exp.category}</span></td>
+      <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
+      <td class="actions-cell">
+        <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
+        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">🗑️</button>
+      </td>
+    </tr>`).join('');
+  },
+
+  openAddForm() { Modal.open('Ajouter une dépense', this._form(null)); },
+
+  edit(id) {
+    const exp = Storage.getExpenses().find(e => e.id === id);
+    if (exp) Modal.open('Modifier la dépense', this._form(exp));
+  },
+
+  _form(exp) {
+    const isEdit = !!exp;
+    const today = new Date().toISOString().split('T')[0];
+    const catOptions = Utils.EXPENSE_CATEGORIES
+      .map(c => `<option value="${c}" ${exp?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+    return `
+      <form onsubmit="Expenses.save(event, ${isEdit ? `'${exp.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Description *</label><input name="description" required value="${exp?.description || ''}" placeholder="ex: Courses Carrefour"></div>
+          <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
+          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
+          <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  save(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = {
+      id: id || Utils.generateId(),
+      description: fd.get('description').trim(),
+      amount: parseFloat(fd.get('amount')),
+      category: fd.get('category'),
+      date: fd.get('date'),
+      notes: (fd.get('notes') || '').trim(),
+    };
+    const list = Storage.getExpenses();
+    if (id) { const idx = list.findIndex(e => e.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveExpenses(list);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+    Budget.render();
+  },
+
+  delete(id) {
+    if (!confirm('Supprimer cette dépense ?')) return;
+    Storage.saveExpenses(Storage.getExpenses().filter(e => e.id !== id));
+    this.render();
+    Dashboard.render();
+    Budget.render();
+  },
+};

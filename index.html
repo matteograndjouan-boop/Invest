@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvestTrack — Gestion de Patrimoine</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">💰</span>
+        <span class="logo-text">InvestTrack</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">📊</span><span>Tableau de bord</span>
+        </a>
+        <a href="#" class="nav-item" data-section="investments">
+          <span class="nav-icon">📈</span><span>Investissements</span>
+        </a>
+        <a href="#" class="nav-item" data-section="expenses">
+          <span class="nav-icon">💳</span><span>Dépenses</span>
+        </a>
+        <a href="#" class="nav-item" data-section="budget">
+          <span class="nav-icon">🎯</span><span>Budget</span>
+        </a>
+        <a href="#" class="nav-item" data-section="patrimony">
+          <span class="nav-icon">🏦</span><span>Bilan patrimonial</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
+        <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section class="section" id="section-dashboard">
+        <div class="section-header">
+          <h1>Tableau de bord</h1>
+          <span class="date-badge" id="current-date"></span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur nette</div>
+            <div class="kpi-value" id="kpi-net-worth">0 €</div>
+            <div class="kpi-sub" id="kpi-net-worth-sub">Actifs − Passifs</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Portefeuille</div>
+            <div class="kpi-value" id="kpi-portfolio">0 €</div>
+            <div class="kpi-sub">Valeur actuelle</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépenses du mois</div>
+            <div class="kpi-value" id="kpi-expenses">0 €</div>
+            <div class="kpi-sub" id="kpi-expenses-sub">—</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Performance totale</div>
+            <div class="kpi-value" id="kpi-performance">+0 €</div>
+            <div class="kpi-sub" id="kpi-performance-sub">+0,00%</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition du portefeuille</h3>
+            <div class="chart-container"><canvas id="chart-portfolio-allocation"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Dépenses vs Budget (ce mois)</h3>
+            <div class="chart-container"><canvas id="chart-expenses-budget"></canvas></div>
+          </div>
+        </div>
+        <div class="recent-grid">
+          <div class="card">
+            <h3>Derniers investissements</h3>
+            <div id="recent-investments"></div>
+          </div>
+          <div class="card">
+            <h3>Dernières dépenses</h3>
+            <div id="recent-expenses"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INVESTMENTS -->
+      <section class="section hidden" id="section-investments">
+        <div class="section-header">
+          <h1>Investissements</h1>
+          <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur totale</div>
+            <div class="kpi-value" id="inv-total-value">0 €</div>
+          </div>
+          <div class="kpi-card" id="inv-gain-card">
+            <div class="kpi-label">Plus/Moins-value</div>
+            <div class="kpi-value" id="inv-total-gain">+0 €</div>
+            <div class="kpi-sub" id="inv-total-gain-pct">+0,00%</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Investissement initial</div>
+            <div class="kpi-value" id="inv-total-cost">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par type</h3>
+            <div class="chart-container"><canvas id="chart-inv-type"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Performance par position (top 10)</h3>
+            <div class="chart-container"><canvas id="chart-inv-performance"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="inv-search" placeholder="Rechercher..." class="search-input">
+            <select id="inv-filter-type" class="select-input">
+              <option value="">Tous les types</option>
+              <option value="action">Actions</option>
+              <option value="etf">ETF</option>
+              <option value="crypto">Crypto</option>
+              <option value="immobilier">Immobilier</option>
+              <option value="obligations">Obligations</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nom / Ticker</th>
+                  <th>Type</th>
+                  <th>Quantité</th>
+                  <th>Prix d'achat</th>
+                  <th>Prix actuel</th>
+                  <th>Valeur</th>
+                  <th>+/- Value</th>
+                  <th>%</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="investments-tbody"></tbody>
+            </table>
+          </div>
+          <div id="investments-empty" class="empty-state hidden">
+            <p>Aucun investissement pour l'instant. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXPENSES -->
+      <section class="section hidden" id="section-expenses">
+        <div class="section-header">
+          <h1>Dépenses</h1>
+          <div class="header-actions">
+            <input type="month" id="expenses-month-filter" class="select-input">
+            <button class="btn-primary" id="add-expense-btn">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card warning">
+            <div class="kpi-label">Total du mois</div>
+            <div class="kpi-value" id="exp-total-month">0 €</div>
+          </div>
+          <div class="kpi-card info">
+            <div class="kpi-label">Budget total</div>
+            <div class="kpi-value" id="exp-total-budget">0 €</div>
+          </div>
+          <div class="kpi-card" id="exp-remaining-card">
+            <div class="kpi-label">Restant</div>
+            <div class="kpi-value" id="exp-remaining">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par catégorie</h3>
+            <div class="chart-container"><canvas id="chart-exp-category"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Évolution mensuelle (12 mois)</h3>
+            <div class="chart-container"><canvas id="chart-exp-monthly"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="exp-search" placeholder="Rechercher..." class="search-input">
+            <select id="exp-filter-cat" class="select-input">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Catégorie</th>
+                  <th>Montant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="expenses-tbody"></tbody>
+            </table>
+          </div>
+          <div id="expenses-empty" class="empty-state hidden">
+            <p>Aucune dépense ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BUDGET -->
+      <section class="section hidden" id="section-budget">
+        <div class="section-header">
+          <h1>Budget mensuel</h1>
+          <button class="btn-primary" id="add-budget-btn">+ Catégorie</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card primary">
+            <div class="kpi-label">Budget total</div>
+            <div class="kpi-value" id="budget-total">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépensé ce mois</div>
+            <div class="kpi-value" id="budget-spent">0 €</div>
+          </div>
+          <div class="kpi-card" id="budget-left-card">
+            <div class="kpi-label">Restant</div>
+            <div class="kpi-value" id="budget-left">0 €</div>
+          </div>
+        </div>
+        <div id="budget-grid" class="budget-grid"></div>
+        <div id="budget-empty" class="empty-state hidden">
+          <p>Aucun budget défini. Cliquez sur <strong>+ Catégorie</strong> pour définir vos budgets mensuels.</p>
+        </div>
+      </section>
+
+      <!-- PATRIMONY -->
+      <section class="section hidden" id="section-patrimony">
+        <div class="section-header">
+          <h1>Bilan patrimonial</h1>
+          <button class="btn-primary" id="add-patrimony-btn">+ Ajouter</button>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card success">
+            <div class="kpi-label">Total Actifs</div>
+            <div class="kpi-value" id="pat-assets">0 €</div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Total Passifs</div>
+            <div class="kpi-value" id="pat-liabilities">0 €</div>
+          </div>
+          <div class="kpi-card primary">
+            <div class="kpi-label">Valeur nette</div>
+            <div class="kpi-value" id="pat-net-worth">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid-single">
+          <div class="chart-card">
+            <h3>Composition du patrimoine</h3>
+            <div class="chart-container"><canvas id="chart-patrimony"></canvas></div>
+          </div>
+        </div>
+        <div class="patrimony-grid">
+          <div class="card">
+            <h3>✅ Actifs</h3>
+            <div id="patrimony-assets-list"></div>
+            <div class="pat-total">Total actifs : <strong id="pat-assets-sum">0 €</strong></div>
+          </div>
+          <div class="card">
+            <h3>❌ Passifs</h3>
+            <div id="patrimony-liabilities-list"></div>
+            <div class="pat-total">Total passifs : <strong id="pat-liabilities-sum">0 €</strong></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/investments.js"></script>
+  <script src="js/expenses.js"></script>
+  <script src="js/budget.js"></script>
+  <script src="js/patrimony.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
