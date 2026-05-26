@@ -15,23 +15,54 @@
         <span class="logo-icon">💰</span>
         <span class="logo-text">InvestTrack</span>
       </div>
+
+      <!-- Mode Switcher -->
+      <div class="mode-switcher">
+        <button class="mode-btn" id="mode-investments" data-mode="investments">📈 Investissements</button>
+        <button class="mode-btn active" id="mode-expenses" data-mode="expenses">💳 Dépenses</button>
+      </div>
+
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-section="dashboard">
+        <!-- Investments mode nav -->
+        <div id="nav-investments-group">
+          <a href="#" class="nav-item" data-section="pea">
+            <span class="nav-icon">🏦</span><span>PEA</span>
+          </a>
+          <a href="#" class="nav-item" data-section="assurance_vie">
+            <span class="nav-icon">🛡️</span><span>Assurance vie</span>
+          </a>
+          <a href="#" class="nav-item" data-section="autre_compte">
+            <span class="nav-icon">📦</span><span>Autre</span>
+          </a>
+        </div>
+
+        <!-- Expenses mode nav -->
+        <div id="nav-expenses-group">
+          <a href="#" class="nav-item" data-section="revenues">
+            <span class="nav-icon">💵</span><span>Revenus</span>
+          </a>
+          <a href="#" class="nav-item active" data-section="expenses">
+            <span class="nav-icon">💳</span><span>Dépenses</span>
+          </a>
+          <a href="#" class="nav-item" data-section="comparisons">
+            <span class="nav-icon">⚖️</span><span>Comparaisons</span>
+          </a>
+          <a href="#" class="nav-item" data-section="budget">
+            <span class="nav-icon">🎯</span><span>Budget</span>
+          </a>
+        </div>
+
+        <!-- Always visible -->
+        <div class="nav-divider"></div>
+        <div class="nav-section-label">Général</div>
+        <a href="#" class="nav-item" data-section="dashboard">
           <span class="nav-icon">📊</span><span>Tableau de bord</span>
         </a>
-        <a href="#" class="nav-item" data-section="investments">
-          <span class="nav-icon">📈</span><span>Investissements</span>
-        </a>
-        <a href="#" class="nav-item" data-section="expenses">
-          <span class="nav-icon">💳</span><span>Dépenses</span>
-        </a>
-        <a href="#" class="nav-item" data-section="budget">
-          <span class="nav-icon">🎯</span><span>Budget</span>
-        </a>
         <a href="#" class="nav-item" data-section="patrimony">
-          <span class="nav-icon">🏦</span><span>Bilan patrimonial</span>
+          <span class="nav-icon">🏛️</span><span>Bilan patrimonial</span>
         </a>
       </nav>
+
       <div class="sidebar-footer">
         <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
         <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
@@ -43,7 +74,7 @@
     <main class="main-content">
 
       <!-- DASHBOARD -->
-      <section class="section" id="section-dashboard">
+      <section class="section hidden" id="section-dashboard">
         <div class="section-header">
           <h1>Tableau de bord</h1>
           <span class="date-badge" id="current-date"></span>
@@ -92,10 +123,10 @@
         </div>
       </section>
 
-      <!-- INVESTMENTS -->
+      <!-- INVESTMENTS (PEA / Assurance vie / Autre) — shared section, filtered by account -->
       <section class="section hidden" id="section-investments">
         <div class="section-header">
-          <h1>Investissements</h1>
+          <h1 id="investments-section-title">Investissements</h1>
           <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
         </div>
         <div class="kpi-grid-3">
@@ -142,6 +173,7 @@
                 <tr>
                   <th>Nom / Ticker</th>
                   <th>Type</th>
+                  <th>Compte</th>
                   <th>Quantité</th>
                   <th>Prix d'achat</th>
                   <th>Prix actuel</th>
@@ -155,13 +187,73 @@
             </table>
           </div>
           <div id="investments-empty" class="empty-state hidden">
-            <p>Aucun investissement pour l'instant. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+            <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- REVENUES -->
+      <section class="section hidden" id="section-revenues">
+        <div class="section-header">
+          <h1>Revenus</h1>
+          <div class="header-actions">
+            <input type="month" id="revenues-month-filter" class="select-input">
+            <button class="btn-primary" id="add-revenue-btn">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card success">
+            <div class="kpi-label">Revenus du mois</div>
+            <div class="kpi-value" id="rev-total-month">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépenses du mois</div>
+            <div class="kpi-value" id="rev-total-expenses">0 €</div>
+          </div>
+          <div class="kpi-card" id="rev-balance-card">
+            <div class="kpi-label">Balance</div>
+            <div class="kpi-value" id="rev-balance">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par catégorie</h3>
+            <div class="chart-container"><canvas id="chart-rev-category"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Évolution mensuelle (12 mois)</h3>
+            <div class="chart-container"><canvas id="chart-rev-monthly"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="rev-search" placeholder="Rechercher..." class="search-input">
+            <select id="rev-filter-cat" class="select-input">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Catégorie</th>
+                  <th>Montant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="revenues-tbody"></tbody>
+            </table>
+          </div>
+          <div id="revenues-empty" class="empty-state hidden">
+            <p>Aucun revenu ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
           </div>
         </div>
       </section>
 
       <!-- EXPENSES -->
-      <section class="section hidden" id="section-expenses">
+      <section class="section" id="section-expenses">
         <div class="section-header">
           <h1>Dépenses</h1>
           <div class="header-actions">
@@ -216,6 +308,58 @@
           </div>
           <div id="expenses-empty" class="empty-state hidden">
             <p>Aucune dépense ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPARISONS -->
+      <section class="section hidden" id="section-comparisons">
+        <div class="section-header">
+          <h1>Comparaisons de périodes</h1>
+        </div>
+        <div class="comp-period-selectors">
+          <div class="comp-period-group">
+            <label>Période A :</label>
+            <input type="month" id="comp-period-a" class="select-input">
+          </div>
+          <span class="comp-vs">vs</span>
+          <div class="comp-period-group">
+            <label>Période B :</label>
+            <input type="month" id="comp-period-b" class="select-input">
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card info">
+            <div class="kpi-label">Total Période A</div>
+            <div class="kpi-value" id="comp-total-a">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Total Période B</div>
+            <div class="kpi-value" id="comp-total-b">0 €</div>
+          </div>
+          <div class="kpi-card" id="comp-total-diff-card">
+            <div class="kpi-label">Différence (B − A)</div>
+            <div class="kpi-value" id="comp-total-diff">0 €</div>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:24px">
+          <h3>Comparaison par catégorie</h3>
+          <div class="chart-container"><canvas id="chart-comparison"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th>Période A</th>
+                  <th>Période B</th>
+                  <th>Différence (€)</th>
+                  <th>Différence (%)</th>
+                </tr>
+              </thead>
+              <tbody id="comp-tbody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -308,6 +452,8 @@
   <script src="js/charts.js"></script>
   <script src="js/investments.js"></script>
   <script src="js/expenses.js"></script>
+  <script src="js/revenues.js"></script>
+  <script src="js/comparisons.js"></script>
   <script src="js/budget.js"></script>
   <script src="js/patrimony.js"></script>
   <script src="js/app.js"></script>

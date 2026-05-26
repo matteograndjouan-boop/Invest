@@ -91,41 +91,154 @@ const Dashboard = {
   },
 };
 
+// ---- Mode & Navigation ----
+
+const APP_MODES = {
+  investments: {
+    sections: ['pea', 'assurance_vie', 'autre_compte'],
+    navGroupId: 'nav-investments-group',
+    default: 'pea',
+  },
+  expenses: {
+    sections: ['revenues', 'expenses', 'comparisons', 'budget'],
+    navGroupId: 'nav-expenses-group',
+    default: 'expenses',
+  },
+};
+
+let currentMode = 'expenses';
+
+function switchMode(mode) {
+  currentMode = mode;
+
+  // Update mode buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Show/hide nav groups
+  document.getElementById('nav-investments-group').style.display = mode === 'investments' ? '' : 'none';
+  document.getElementById('nav-expenses-group').style.display = mode === 'expenses' ? '' : 'none';
+
+  // Navigate to first section of mode
+  const firstSection = APP_MODES[mode].default;
+  navigateTo(firstSection);
+}
+
 function navigateTo(sectionId) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === sectionId));
-  document.querySelectorAll('.section').forEach(el => el.classList.toggle('hidden', el.id !== `section-${sectionId}`));
+  // Map section identifiers to actual HTML section IDs
+  const sectionMap = {
+    pea: 'investments',
+    assurance_vie: 'investments',
+    autre_compte: 'investments',
+    revenues: 'revenues',
+    expenses: 'expenses',
+    comparisons: 'comparisons',
+    budget: 'budget',
+    dashboard: 'dashboard',
+    patrimony: 'patrimony',
+  };
+
+  const htmlSectionId = sectionMap[sectionId] || sectionId;
+
+  // Update active nav item
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.section === sectionId);
+  });
+
+  // Show/hide sections
+  document.querySelectorAll('.section').forEach(el => {
+    el.classList.toggle('hidden', el.id !== `section-${htmlSectionId}`);
+  });
+
+  // Render the appropriate section
   switch (sectionId) {
-    case 'dashboard':   Dashboard.render(); break;
-    case 'investments': Investments.render(); break;
-    case 'expenses':    Expenses.render(); break;
-    case 'budget':      Budget.render(); break;
-    case 'patrimony':   Patrimony.render(); break;
+    case 'dashboard':
+      Dashboard.render();
+      break;
+    case 'pea':
+      document.getElementById('investments-section-title').textContent = 'PEA';
+      Investments.render('pea');
+      break;
+    case 'assurance_vie':
+      document.getElementById('investments-section-title').textContent = 'Assurance vie';
+      Investments.render('assurance_vie');
+      break;
+    case 'autre_compte':
+      document.getElementById('investments-section-title').textContent = 'Autre';
+      Investments.render('autre');
+      break;
+    case 'revenues':
+      Revenues.render();
+      break;
+    case 'expenses':
+      Expenses.render();
+      break;
+    case 'comparisons':
+      Comparisons.render();
+      break;
+    case 'budget':
+      Budget.render();
+      break;
+    case 'patrimony':
+      Patrimony.render();
+      break;
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   Expenses.init();
+  Revenues.init();
+  Comparisons.init();
 
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.addEventListener('click', (e) => { e.preventDefault(); navigateTo(el.dataset.section); });
+  // Populate revenue category filter
+  const revCatFilter = document.getElementById('rev-filter-cat');
+  if (revCatFilter) {
+    Utils.REVENUE_CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      revCatFilter.appendChild(opt);
+    });
+  }
+
+  // Mode switcher buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
   });
 
+  // Nav items
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = el.dataset.section;
+      // If navigating to dashboard or patrimony, no mode restriction
+      navigateTo(section);
+    });
+  });
+
+  // Modal
   document.getElementById('modal-close').addEventListener('click', Modal.close);
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'modal-overlay') Modal.close();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
 
+  // Action buttons
   document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
   document.getElementById('add-expense-btn').addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-btn').addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
 
+  // Filters
   document.getElementById('inv-search').addEventListener('input', () => Investments.render());
   document.getElementById('inv-filter-type').addEventListener('change', () => Investments.render());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
+  document.getElementById('rev-search').addEventListener('input', () => Revenues.render());
+  document.getElementById('rev-filter-cat').addEventListener('change', () => Revenues.render());
 
+  // Export
   document.getElementById('export-btn').addEventListener('click', () => {
     const data = Storage.exportAll();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -137,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     URL.revokeObjectURL(url);
   });
 
+  // Import
   document.getElementById('import-btn').addEventListener('click', () => {
     document.getElementById('import-file').click();
   });
@@ -215,7 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
     e.target.value = '';
   });
 
-  navigateTo('dashboard');
+  // Initialize: show nav groups correctly, then navigate to default
+  document.getElementById('nav-investments-group').style.display = 'none';
+  document.getElementById('nav-expenses-group').style.display = '';
+
+  // Default mode is Dépenses, show expenses section
+  navigateTo('expenses');
 });
 
 // ---- PDF Import ----

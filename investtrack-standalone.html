@@ -42,6 +42,7 @@ body {
   line-height: 1.5;
 }
 
+/* ---- Layout ---- */
 .app { display: flex; height: 100vh; overflow: hidden; }
 
 .sidebar {
@@ -57,11 +58,51 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px;
-  border-bottom: 1px solid #334155;
+  padding: 20px 16px 16px;
+  border-bottom: none;
   font-weight: 700;
   font-size: 16px;
   color: #f1f5f9;
+}
+
+/* ---- Mode Switcher ---- */
+.mode-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 10px 8px 12px;
+  border-bottom: 1px solid #334155;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 7px 6px;
+  border: 1px solid #475569;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sidebar-text);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  text-align: center;
+  white-space: nowrap;
+}
+.mode-btn:hover { background: var(--sidebar-hover); color: #f1f5f9; border-color: #64748b; }
+.mode-btn.active { background: var(--sidebar-active); color: #fff; border-color: var(--sidebar-active); }
+
+/* ---- Sidebar section divider ---- */
+.nav-divider {
+  height: 1px;
+  background: #334155;
+  margin: 8px 0;
+}
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #475569;
+  padding: 6px 12px 4px;
 }
 
 .logo-icon { font-size: 22px; }
@@ -100,6 +141,7 @@ body {
   background: var(--bg);
 }
 
+/* ---- Sections ---- */
 .section { display: block; }
 .section.hidden { display: none; }
 
@@ -125,6 +167,7 @@ body {
   border: 1px solid var(--border);
 }
 
+/* ---- KPI Cards ---- */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .kpi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
 
@@ -145,6 +188,7 @@ body {
 .kpi-value { font-size: 22px; font-weight: 700; color: var(--text); }
 .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
+/* ---- Charts ---- */
 .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 .charts-grid-single { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
 
@@ -159,6 +203,7 @@ body {
 .chart-container { position: relative; height: 240px; }
 .chart-container canvas { max-height: 240px; }
 
+/* ---- Generic Card ---- */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -169,6 +214,7 @@ body {
 }
 .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
 
+/* ---- Recent Activity ---- */
 .recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
 .recent-item {
@@ -181,6 +227,7 @@ body {
 .recent-item:last-child { border-bottom: none; }
 .text-right { text-align: right; }
 
+/* ---- Tables ---- */
 .table-toolbar {
   display: flex;
   gap: 10px;
@@ -219,6 +266,7 @@ body {
 .data-table tr:hover td { background: var(--bg); }
 .actions-cell { white-space: nowrap; }
 
+/* ---- Buttons ---- */
 .btn-primary {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--primary); color: #fff;
@@ -249,6 +297,7 @@ body {
 .btn-icon:hover { background: var(--bg); }
 .btn-icon.btn-danger:hover { background: var(--danger-bg); }
 
+/* ---- Badges ---- */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -265,11 +314,15 @@ body {
 .badge-obligations { background: #d1fae5; color: #065f46; }
 .badge-autre       { background: #f1f5f9; color: #475569; }
 .badge-category    { background: var(--primary-light); color: var(--primary-dark); }
+.badge-revenue     { background: #d1fae5; color: #065f46; }
+.badge-account     { background: #dbeafe; color: #1e40af; }
 
+/* ---- Colors ---- */
 .positive { color: var(--success); }
 .negative { color: var(--danger); }
 .text-muted { color: var(--text-muted); }
 
+/* ---- Empty State ---- */
 .empty-state {
   text-align: center;
   padding: 32px;
@@ -278,6 +331,7 @@ body {
 .empty-state a { color: var(--primary); text-decoration: none; }
 .empty-state a:hover { text-decoration: underline; }
 
+/* ---- Budget Cards ---- */
 .budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 
 .budget-card {
@@ -313,6 +367,7 @@ body {
 .budget-pct { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .budget-remaining { font-size: 12px; font-weight: 500; }
 
+/* ---- Patrimony ---- */
 .patrimony-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
 .pat-item {
@@ -332,6 +387,7 @@ body {
 
 .py-sm { padding: 12px 0; }
 
+/* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(15,23,42,.5);
@@ -367,6 +423,7 @@ body {
 .modal-close:hover { background: var(--bg); }
 .modal-body { padding: 20px 24px 24px; }
 
+/* ---- Forms ---- */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
 .form-full { grid-column: 1 / -1; }
 
@@ -397,8 +454,40 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* ---- Text utilities ---- */
 .text-center { text-align: center; }
 
+/* ---- Comparison Period Selectors ---- */
+.comp-period-selectors {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.comp-period-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.comp-period-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.comp-vs {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* ---- PDF Preview ---- */
+.modal-wide { max-width: 860px !important; }
+.preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+
+/* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .charts-grid { grid-template-columns: 1fr; }
@@ -423,12 +512,10 @@ body {
   .kpi-grid, .kpi-grid-3 { grid-template-columns: 1fr; }
 }
 
-/* ---- PDF Preview ---- */
-.modal-wide { max-width: 860px !important; }
-.preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
   </style>
 </head>
 <body>
+
   <div class="app">
 
     <!-- Sidebar -->
@@ -437,27 +524,58 @@ body {
         <span class="logo-icon">💰</span>
         <span class="logo-text">InvestTrack</span>
       </div>
+
+      <!-- Mode Switcher -->
+      <div class="mode-switcher">
+        <button class="mode-btn" id="mode-investments" data-mode="investments">📈 Investissements</button>
+        <button class="mode-btn active" id="mode-expenses" data-mode="expenses">💳 Dépenses</button>
+      </div>
+
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-section="dashboard">
+        <!-- Investments mode nav -->
+        <div id="nav-investments-group">
+          <a href="#" class="nav-item" data-section="pea">
+            <span class="nav-icon">🏦</span><span>PEA</span>
+          </a>
+          <a href="#" class="nav-item" data-section="assurance_vie">
+            <span class="nav-icon">🛡️</span><span>Assurance vie</span>
+          </a>
+          <a href="#" class="nav-item" data-section="autre_compte">
+            <span class="nav-icon">📦</span><span>Autre</span>
+          </a>
+        </div>
+
+        <!-- Expenses mode nav -->
+        <div id="nav-expenses-group">
+          <a href="#" class="nav-item" data-section="revenues">
+            <span class="nav-icon">💵</span><span>Revenus</span>
+          </a>
+          <a href="#" class="nav-item active" data-section="expenses">
+            <span class="nav-icon">💳</span><span>Dépenses</span>
+          </a>
+          <a href="#" class="nav-item" data-section="comparisons">
+            <span class="nav-icon">⚖️</span><span>Comparaisons</span>
+          </a>
+          <a href="#" class="nav-item" data-section="budget">
+            <span class="nav-icon">🎯</span><span>Budget</span>
+          </a>
+        </div>
+
+        <!-- Always visible -->
+        <div class="nav-divider"></div>
+        <div class="nav-section-label">Général</div>
+        <a href="#" class="nav-item" data-section="dashboard">
           <span class="nav-icon">📊</span><span>Tableau de bord</span>
         </a>
-        <a href="#" class="nav-item" data-section="investments">
-          <span class="nav-icon">📈</span><span>Investissements</span>
-        </a>
-        <a href="#" class="nav-item" data-section="expenses">
-          <span class="nav-icon">💳</span><span>Dépenses</span>
-        </a>
-        <a href="#" class="nav-item" data-section="budget">
-          <span class="nav-icon">🎯</span><span>Budget</span>
-        </a>
         <a href="#" class="nav-item" data-section="patrimony">
-          <span class="nav-icon">🏦</span><span>Bilan patrimonial</span>
+          <span class="nav-icon">🏛️</span><span>Bilan patrimonial</span>
         </a>
       </nav>
+
       <div class="sidebar-footer">
         <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
         <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
-        <input type="file" id="import-file" accept=".json" style="display:none">
+        <input type="file" id="import-file" accept=".json,.xlsx,.xls,.csv,.pdf" style="display:none">
       </div>
     </aside>
 
@@ -465,7 +583,7 @@ body {
     <main class="main-content">
 
       <!-- DASHBOARD -->
-      <section class="section" id="section-dashboard">
+      <section class="section hidden" id="section-dashboard">
         <div class="section-header">
           <h1>Tableau de bord</h1>
           <span class="date-badge" id="current-date"></span>
@@ -514,10 +632,10 @@ body {
         </div>
       </section>
 
-      <!-- INVESTMENTS -->
+      <!-- INVESTMENTS (PEA / Assurance vie / Autre) — shared section, filtered by account -->
       <section class="section hidden" id="section-investments">
         <div class="section-header">
-          <h1>Investissements</h1>
+          <h1 id="investments-section-title">Investissements</h1>
           <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
         </div>
         <div class="kpi-grid-3">
@@ -564,6 +682,7 @@ body {
                 <tr>
                   <th>Nom / Ticker</th>
                   <th>Type</th>
+                  <th>Compte</th>
                   <th>Quantité</th>
                   <th>Prix d'achat</th>
                   <th>Prix actuel</th>
@@ -577,13 +696,73 @@ body {
             </table>
           </div>
           <div id="investments-empty" class="empty-state hidden">
-            <p>Aucun investissement pour l'instant. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+            <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- REVENUES -->
+      <section class="section hidden" id="section-revenues">
+        <div class="section-header">
+          <h1>Revenus</h1>
+          <div class="header-actions">
+            <input type="month" id="revenues-month-filter" class="select-input">
+            <button class="btn-primary" id="add-revenue-btn">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card success">
+            <div class="kpi-label">Revenus du mois</div>
+            <div class="kpi-value" id="rev-total-month">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Dépenses du mois</div>
+            <div class="kpi-value" id="rev-total-expenses">0 €</div>
+          </div>
+          <div class="kpi-card" id="rev-balance-card">
+            <div class="kpi-label">Balance</div>
+            <div class="kpi-value" id="rev-balance">0 €</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par catégorie</h3>
+            <div class="chart-container"><canvas id="chart-rev-category"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Évolution mensuelle (12 mois)</h3>
+            <div class="chart-container"><canvas id="chart-rev-monthly"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="text" id="rev-search" placeholder="Rechercher..." class="search-input">
+            <select id="rev-filter-cat" class="select-input">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Catégorie</th>
+                  <th>Montant</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="revenues-tbody"></tbody>
+            </table>
+          </div>
+          <div id="revenues-empty" class="empty-state hidden">
+            <p>Aucun revenu ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
           </div>
         </div>
       </section>
 
       <!-- EXPENSES -->
-      <section class="section hidden" id="section-expenses">
+      <section class="section" id="section-expenses">
         <div class="section-header">
           <h1>Dépenses</h1>
           <div class="header-actions">
@@ -638,6 +817,58 @@ body {
           </div>
           <div id="expenses-empty" class="empty-state hidden">
             <p>Aucune dépense ce mois. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPARISONS -->
+      <section class="section hidden" id="section-comparisons">
+        <div class="section-header">
+          <h1>Comparaisons de périodes</h1>
+        </div>
+        <div class="comp-period-selectors">
+          <div class="comp-period-group">
+            <label>Période A :</label>
+            <input type="month" id="comp-period-a" class="select-input">
+          </div>
+          <span class="comp-vs">vs</span>
+          <div class="comp-period-group">
+            <label>Période B :</label>
+            <input type="month" id="comp-period-b" class="select-input">
+          </div>
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi-card info">
+            <div class="kpi-label">Total Période A</div>
+            <div class="kpi-value" id="comp-total-a">0 €</div>
+          </div>
+          <div class="kpi-card warning">
+            <div class="kpi-label">Total Période B</div>
+            <div class="kpi-value" id="comp-total-b">0 €</div>
+          </div>
+          <div class="kpi-card" id="comp-total-diff-card">
+            <div class="kpi-label">Différence (B − A)</div>
+            <div class="kpi-value" id="comp-total-diff">0 €</div>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:24px">
+          <h3>Comparaison par catégorie</h3>
+          <div class="chart-container"><canvas id="chart-comparison"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th>Période A</th>
+                  <th>Période B</th>
+                  <th>Différence (€)</th>
+                  <th>Différence (%)</th>
+                </tr>
+              </thead>
+              <tbody id="comp-tbody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -722,15 +953,18 @@ body {
     </div>
   </div>
 
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script>
-// ---- storage.js ----
 const Storage = {
   KEYS: {
     INVESTMENTS: 'invest_investments',
     EXPENSES: 'invest_expenses',
     BUDGETS: 'invest_budgets',
     PATRIMONY: 'invest_patrimony',
+    REVENUES: 'invest_revenues',
   },
 
   get(key) {
@@ -762,12 +996,16 @@ const Storage = {
   getPatrimony() { return this.get(this.KEYS.PATRIMONY) || []; },
   savePatrimony(data) { this.set(this.KEYS.PATRIMONY, data); },
 
+  getRevenues() { return this.get(this.KEYS.REVENUES) || []; },
+  saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
+
   exportAll() {
     return {
       investments: this.getInvestments(),
       expenses: this.getExpenses(),
       budgets: this.getBudgets(),
       patrimony: this.getPatrimony(),
+      revenues: this.getRevenues(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -777,10 +1015,12 @@ const Storage = {
     if (data.expenses) this.saveExpenses(data.expenses);
     if (data.budgets) this.saveBudgets(data.budgets);
     if (data.patrimony) this.savePatrimony(data.patrimony);
+    if (data.revenues) this.saveRevenues(data.revenues);
   },
 };
 
-// ---- utils.js ----
+  </script>
+  <script>
 const Utils = {
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -839,9 +1079,19 @@ const Utils = {
     autre: 'Autre',
   },
 
+  INVESTMENT_ACCOUNTS: {
+    pea: 'PEA',
+    assurance_vie: 'Assurance vie',
+    autre: 'Autre',
+  },
+
   EXPENSE_CATEGORIES: [
     'Logement', 'Alimentation', 'Transport', 'Santé', 'Loisirs',
     'Vêtements', 'Éducation', 'Restaurants', 'Abonnements', 'Épargne', 'Autre',
+  ],
+
+  REVENUE_CATEGORIES: [
+    'Salaire', 'Freelance', 'Remboursement', 'Loyer perçu', 'Autre',
   ],
 
   PATRIMONY_CATEGORIES: {
@@ -864,7 +1114,8 @@ const Utils = {
   ],
 };
 
-// ---- charts.js ----
+  </script>
+  <script>
 const Charts = {
   _instances: {},
 
@@ -1005,6 +1256,60 @@ const Charts = {
     });
   },
 
+  revenuesByCategory(revenues, month) {
+    const monthRev = revenues.filter(r => r.date.substring(0, 7) === month);
+    const byCategory = {};
+    monthRev.forEach(r => { byCategory[r.category] = (byCategory[r.category] || 0) + r.amount; });
+    const keys = Object.keys(byCategory);
+    if (!keys.length) { this.destroy('chart-rev-category'); return; }
+
+    this.create('chart-rev-category', {
+      type: 'doughnut',
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  revenuesMonthly(revenues) {
+    const months = Utils.getLast12Months();
+    this.create('chart-rev-monthly', {
+      type: 'bar',
+      data: {
+        labels: months.map(Utils.getMonthLabel),
+        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: '#10b981', borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  comparisonBar(expA, expB, periodA, periodB) {
+    const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
+    if (!allCategories.length) { this.destroy('chart-comparison'); return; }
+
+    const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+    const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+
+    this.create('chart-comparison', {
+      type: 'bar',
+      data: {
+        labels: allCategories,
+        datasets: [
+          { label: Utils.getMonthLabel(periodA), data: dataA, backgroundColor: '#6366f1', borderRadius: 4 },
+          { label: Utils.getMonthLabel(periodB), data: dataB, backgroundColor: '#f59e0b', borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
   patrimony(assets, liabilities) {
     const assetsByCat = {}, liabByCat = {};
     assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });
@@ -1030,14 +1335,27 @@ const Charts = {
   },
 };
 
-// ---- investments.js ----
+  </script>
+  <script>
 const Investments = {
-  render() {
-    const investments = Storage.getInvestments();
+  currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
+
+  render(account) {
+    if (account !== undefined) this.currentAccount = account;
+    const allInvestments = Storage.getInvestments();
+    const investments = this._filterByAccount(allInvestments);
     this._renderSummary(investments);
     this._renderTable(investments);
     Charts.investmentsByType(investments);
     Charts.investmentsPerformance(investments);
+  },
+
+  _filterByAccount(investments) {
+    if (!this.currentAccount) return investments;
+    if (this.currentAccount === 'autre') {
+      return investments.filter(i => !i.account || i.account === 'autre');
+    }
+    return investments.filter(i => i.account === this.currentAccount);
   },
 
   _renderSummary(investments) {
@@ -1079,9 +1397,11 @@ const Investments = {
       const gain = value - cost;
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
       const cls = gain >= 0 ? 'positive' : 'negative';
+      const accountLabel = inv.account ? (Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account) : 'Autre';
       return `<tr>
         <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
+        <td><span class="badge badge-account">${accountLabel}</span></td>
         <td>${inv.quantity}</td>
         <td>${Utils.formatCurrency(inv.buyPrice)}</td>
         <td>${Utils.formatCurrency(inv.currentPrice)}</td>
@@ -1107,12 +1427,15 @@ const Investments = {
     const isEdit = !!inv;
     const typeOptions = Object.entries(Utils.INVESTMENT_TYPES)
       .map(([v, l]) => `<option value="${v}" ${inv?.type === v ? 'selected' : ''}>${l}</option>`).join('');
+    const accountOptions = Object.entries(Utils.INVESTMENT_ACCOUNTS)
+      .map(([v, l]) => `<option value="${v}" ${(inv?.account || 'autre') === v ? 'selected' : ''}>${l}</option>`).join('');
     return `
       <form onsubmit="Investments.save(event, ${isEdit ? `'${inv.id}'` : 'null'})">
         <div class="form-grid">
           <div class="form-group"><label>Nom *</label><input name="name" required value="${inv?.name || ''}" placeholder="ex: Apple Inc."></div>
           <div class="form-group"><label>Ticker</label><input name="ticker" value="${inv?.ticker || ''}" placeholder="ex: AAPL"></div>
           <div class="form-group"><label>Type *</label><select name="type" required>${typeOptions}</select></div>
+          <div class="form-group"><label>Compte *</label><select name="account" required>${accountOptions}</select></div>
           <div class="form-group"><label>Quantité *</label><input name="quantity" type="number" step="0.000001" min="0" required value="${inv?.quantity || ''}"></div>
           <div class="form-group"><label>Prix d'achat moyen (€) *</label><input name="buyPrice" type="number" step="0.01" min="0" required value="${inv?.buyPrice || ''}"></div>
           <div class="form-group"><label>Prix actuel (€) *</label><input name="currentPrice" type="number" step="0.01" min="0" required value="${inv?.currentPrice || ''}"></div>
@@ -1134,6 +1457,7 @@ const Investments = {
       name: fd.get('name').trim(),
       ticker: (fd.get('ticker') || '').trim().toUpperCase(),
       type: fd.get('type'),
+      account: fd.get('account') || 'autre',
       quantity: parseFloat(fd.get('quantity')),
       buyPrice: parseFloat(fd.get('buyPrice')),
       currentPrice: parseFloat(fd.get('currentPrice')),
@@ -1157,7 +1481,8 @@ const Investments = {
   },
 };
 
-// ---- expenses.js ----
+  </script>
+  <script>
 const Expenses = {
   currentMonth: Utils.getCurrentMonth(),
 
@@ -1286,7 +1611,224 @@ const Expenses = {
   },
 };
 
-// ---- budget.js ----
+  </script>
+  <script>
+const Revenues = {
+  currentMonth: Utils.getCurrentMonth(),
+
+  init() {
+    const filter = document.getElementById('revenues-month-filter');
+    if (filter) {
+      filter.value = this.currentMonth;
+      filter.addEventListener('change', (e) => { this.currentMonth = e.target.value; this.render(); });
+    }
+  },
+
+  render() {
+    const revenues = Storage.getRevenues();
+    this._renderSummary(revenues);
+    this._renderTable(revenues);
+    Charts.revenuesByCategory(revenues, this.currentMonth);
+    Charts.revenuesMonthly(revenues);
+  },
+
+  _renderSummary(revenues) {
+    const monthRev = revenues.filter(r => r.date.substring(0, 7) === this.currentMonth);
+    const total = monthRev.reduce((s, r) => s + r.amount, 0);
+    const expenses = Storage.getExpenses();
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === this.currentMonth);
+    const totalExp = monthExp.reduce((s, e) => s + e.amount, 0);
+    const balance = total - totalExp;
+
+    document.getElementById('rev-total-month').textContent = Utils.formatCurrency(total);
+    document.getElementById('rev-total-expenses').textContent = Utils.formatCurrency(totalExp);
+    const balEl = document.getElementById('rev-balance');
+    balEl.textContent = Utils.formatCurrency(balance);
+    balEl.className = 'kpi-value ' + (balance >= 0 ? 'positive' : 'negative');
+    document.getElementById('rev-balance-card').className = 'kpi-card ' + (balance >= 0 ? 'success' : 'danger');
+  },
+
+  _renderTable(revenues) {
+    const tbody = document.getElementById('revenues-tbody');
+    const empty = document.getElementById('revenues-empty');
+    const search = (document.getElementById('rev-search')?.value || '').toLowerCase();
+    const catFilter = document.getElementById('rev-filter-cat')?.value || '';
+
+    let list = revenues.filter(r => r.date.substring(0, 7) === this.currentMonth);
+    if (search) list = list.filter(r => r.description.toLowerCase().includes(search));
+    if (catFilter) list = list.filter(r => r.category === catFilter);
+    list.sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!list.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = list.map(rev => `<tr>
+      <td>${Utils.formatDate(rev.date)}</td>
+      <td>${rev.description}</td>
+      <td><span class="badge badge-revenue">${rev.category}</span></td>
+      <td><strong class="positive">${Utils.formatCurrency(rev.amount)}</strong></td>
+      <td class="actions-cell">
+        <button class="btn-icon" onclick="Revenues.edit('${rev.id}')" title="Modifier">✏️</button>
+        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')" title="Supprimer">🗑️</button>
+      </td>
+    </tr>`).join('');
+  },
+
+  openAddForm() { Modal.open('Ajouter un revenu', this._form(null)); },
+
+  edit(id) {
+    const rev = Storage.getRevenues().find(r => r.id === id);
+    if (rev) Modal.open('Modifier le revenu', this._form(rev));
+  },
+
+  _form(rev) {
+    const isEdit = !!rev;
+    const today = new Date().toISOString().split('T')[0];
+    const catOptions = Utils.REVENUE_CATEGORIES
+      .map(c => `<option value="${c}" ${rev?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+    return `
+      <form onsubmit="Revenues.save(event, ${isEdit ? `'${rev.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Description *</label><input name="description" required value="${rev?.description || ''}" placeholder="ex: Salaire mars"></div>
+          <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${rev?.amount || ''}"></div>
+          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${rev?.date || today}"></div>
+          <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${rev?.notes || ''}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  save(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const data = {
+      id: id || Utils.generateId(),
+      description: fd.get('description').trim(),
+      amount: parseFloat(fd.get('amount')),
+      category: fd.get('category'),
+      date: fd.get('date'),
+      notes: (fd.get('notes') || '').trim(),
+    };
+    const list = Storage.getRevenues();
+    if (id) { const idx = list.findIndex(r => r.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveRevenues(list);
+    Modal.close();
+    this.render();
+    Dashboard.render();
+  },
+
+  delete(id) {
+    if (!confirm('Supprimer ce revenu ?')) return;
+    Storage.saveRevenues(Storage.getRevenues().filter(r => r.id !== id));
+    this.render();
+    Dashboard.render();
+  },
+};
+
+  </script>
+  <script>
+const Comparisons = {
+  periodA: '',
+  periodB: '',
+
+  init() {
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastMonth = now.getMonth() === 0
+      ? `${now.getFullYear() - 1}-12`
+      : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+
+    this.periodA = lastMonth;
+    this.periodB = thisMonth;
+
+    const selA = document.getElementById('comp-period-a');
+    const selB = document.getElementById('comp-period-b');
+    if (selA) {
+      selA.value = this.periodA;
+      selA.addEventListener('change', (e) => { this.periodA = e.target.value; this.render(); });
+    }
+    if (selB) {
+      selB.value = this.periodB;
+      selB.addEventListener('change', (e) => { this.periodB = e.target.value; this.render(); });
+    }
+  },
+
+  render() {
+    const expenses = Storage.getExpenses();
+    const expA = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodA);
+    const expB = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodB);
+
+    const totalA = expA.reduce((s, e) => s + e.amount, 0);
+    const totalB = expB.reduce((s, e) => s + e.amount, 0);
+    const totalDiff = totalB - totalA;
+    const totalPct = totalA > 0 ? ((totalDiff / totalA) * 100) : (totalB > 0 ? 100 : 0);
+
+    document.getElementById('comp-total-a').textContent = Utils.formatCurrency(totalA);
+    document.getElementById('comp-total-b').textContent = Utils.formatCurrency(totalB);
+    const diffEl = document.getElementById('comp-total-diff');
+    diffEl.textContent = (totalDiff >= 0 ? '+' : '') + Utils.formatCurrency(totalDiff) + ' (' + (totalDiff >= 0 ? '+' : '') + totalPct.toFixed(1) + '%)';
+    diffEl.className = 'kpi-value ' + (totalDiff <= 0 ? 'positive' : 'negative');
+    document.getElementById('comp-total-diff-card').className = 'kpi-card ' + (totalDiff <= 0 ? 'success' : 'danger');
+
+    this._renderTable(expA, expB);
+    Charts.comparisonBar(expA, expB, this.periodA, this.periodB);
+  },
+
+  _renderTable(expA, expB) {
+    const tbody = document.getElementById('comp-tbody');
+    const allCategories = new Set([...expA.map(e => e.category), ...expB.map(e => e.category)]);
+
+    if (!allCategories.size) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:24px">Aucune dépense pour ces périodes</td></tr>';
+      return;
+    }
+
+    const rows = [...allCategories].sort().map(cat => {
+      const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
+      const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
+      const diff = amtB - amtA;
+      const pct = amtA > 0 ? ((diff / amtA) * 100) : (amtB > 0 ? 100 : 0);
+      const cls = diff <= 0 ? 'positive' : 'negative';
+      const sign = diff >= 0 ? '+' : '';
+      return `<tr>
+        <td><span class="badge badge-category">${cat}</span></td>
+        <td>${Utils.formatCurrency(amtA)}</td>
+        <td>${Utils.formatCurrency(amtB)}</td>
+        <td class="${cls}">${sign}${Utils.formatCurrency(diff)}</td>
+        <td class="${cls}">${sign}${pct.toFixed(1)}%</td>
+      </tr>`;
+    });
+
+    // Total row
+    const totalA = expA.reduce((s, e) => s + e.amount, 0);
+    const totalB = expB.reduce((s, e) => s + e.amount, 0);
+    const totalDiff = totalB - totalA;
+    const totalPct = totalA > 0 ? ((totalDiff / totalA) * 100) : (totalB > 0 ? 100 : 0);
+    const totalSign = totalDiff >= 0 ? '+' : '';
+    const totalCls = totalDiff <= 0 ? 'positive' : 'negative';
+
+    rows.push(`<tr style="font-weight:700;border-top:2px solid var(--border)">
+      <td>Total</td>
+      <td>${Utils.formatCurrency(totalA)}</td>
+      <td>${Utils.formatCurrency(totalB)}</td>
+      <td class="${totalCls}">${totalSign}${Utils.formatCurrency(totalDiff)}</td>
+      <td class="${totalCls}">${totalSign}${totalPct.toFixed(1)}%</td>
+    </tr>`);
+
+    tbody.innerHTML = rows.join('');
+  },
+};
+
+  </script>
+  <script>
 const Budget = {
   render() {
     const budgets = Storage.getBudgets();
@@ -1400,7 +1942,8 @@ const Budget = {
   },
 };
 
-// ---- patrimony.js ----
+  </script>
+  <script>
 const Patrimony = {
   render() {
     const items = Storage.getPatrimony();
@@ -1532,7 +2075,8 @@ const Patrimony = {
   },
 };
 
-// ---- app.js ----
+  </script>
+  <script>
 const Modal = {
   open(title, content) {
     document.getElementById('modal-title').textContent = title;
@@ -1626,41 +2170,154 @@ const Dashboard = {
   },
 };
 
+// ---- Mode & Navigation ----
+
+const APP_MODES = {
+  investments: {
+    sections: ['pea', 'assurance_vie', 'autre_compte'],
+    navGroupId: 'nav-investments-group',
+    default: 'pea',
+  },
+  expenses: {
+    sections: ['revenues', 'expenses', 'comparisons', 'budget'],
+    navGroupId: 'nav-expenses-group',
+    default: 'expenses',
+  },
+};
+
+let currentMode = 'expenses';
+
+function switchMode(mode) {
+  currentMode = mode;
+
+  // Update mode buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Show/hide nav groups
+  document.getElementById('nav-investments-group').style.display = mode === 'investments' ? '' : 'none';
+  document.getElementById('nav-expenses-group').style.display = mode === 'expenses' ? '' : 'none';
+
+  // Navigate to first section of mode
+  const firstSection = APP_MODES[mode].default;
+  navigateTo(firstSection);
+}
+
 function navigateTo(sectionId) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.section === sectionId));
-  document.querySelectorAll('.section').forEach(el => el.classList.toggle('hidden', el.id !== `section-${sectionId}`));
+  // Map section identifiers to actual HTML section IDs
+  const sectionMap = {
+    pea: 'investments',
+    assurance_vie: 'investments',
+    autre_compte: 'investments',
+    revenues: 'revenues',
+    expenses: 'expenses',
+    comparisons: 'comparisons',
+    budget: 'budget',
+    dashboard: 'dashboard',
+    patrimony: 'patrimony',
+  };
+
+  const htmlSectionId = sectionMap[sectionId] || sectionId;
+
+  // Update active nav item
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.section === sectionId);
+  });
+
+  // Show/hide sections
+  document.querySelectorAll('.section').forEach(el => {
+    el.classList.toggle('hidden', el.id !== `section-${htmlSectionId}`);
+  });
+
+  // Render the appropriate section
   switch (sectionId) {
-    case 'dashboard':   Dashboard.render(); break;
-    case 'investments': Investments.render(); break;
-    case 'expenses':    Expenses.render(); break;
-    case 'budget':      Budget.render(); break;
-    case 'patrimony':   Patrimony.render(); break;
+    case 'dashboard':
+      Dashboard.render();
+      break;
+    case 'pea':
+      document.getElementById('investments-section-title').textContent = 'PEA';
+      Investments.render('pea');
+      break;
+    case 'assurance_vie':
+      document.getElementById('investments-section-title').textContent = 'Assurance vie';
+      Investments.render('assurance_vie');
+      break;
+    case 'autre_compte':
+      document.getElementById('investments-section-title').textContent = 'Autre';
+      Investments.render('autre');
+      break;
+    case 'revenues':
+      Revenues.render();
+      break;
+    case 'expenses':
+      Expenses.render();
+      break;
+    case 'comparisons':
+      Comparisons.render();
+      break;
+    case 'budget':
+      Budget.render();
+      break;
+    case 'patrimony':
+      Patrimony.render();
+      break;
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   Expenses.init();
+  Revenues.init();
+  Comparisons.init();
 
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.addEventListener('click', (e) => { e.preventDefault(); navigateTo(el.dataset.section); });
+  // Populate revenue category filter
+  const revCatFilter = document.getElementById('rev-filter-cat');
+  if (revCatFilter) {
+    Utils.REVENUE_CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      revCatFilter.appendChild(opt);
+    });
+  }
+
+  // Mode switcher buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
   });
 
+  // Nav items
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = el.dataset.section;
+      // If navigating to dashboard or patrimony, no mode restriction
+      navigateTo(section);
+    });
+  });
+
+  // Modal
   document.getElementById('modal-close').addEventListener('click', Modal.close);
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'modal-overlay') Modal.close();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
 
+  // Action buttons
   document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
   document.getElementById('add-expense-btn').addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-btn').addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
 
+  // Filters
   document.getElementById('inv-search').addEventListener('input', () => Investments.render());
   document.getElementById('inv-filter-type').addEventListener('change', () => Investments.render());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
+  document.getElementById('rev-search').addEventListener('input', () => Revenues.render());
+  document.getElementById('rev-filter-cat').addEventListener('change', () => Revenues.render());
 
+  // Export
   document.getElementById('export-btn').addEventListener('click', () => {
     const data = Storage.exportAll();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1672,6 +2329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     URL.revokeObjectURL(url);
   });
 
+  // Import
   document.getElementById('import-btn').addEventListener('click', () => {
     document.getElementById('import-file').click();
   });
@@ -1699,7 +2357,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const wb = XLSX.read(evt.target.result, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          const headers = rows[0].map(h => String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+          const headers = rows[0].map(h => String(h).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
           const idx = (names) => headers.findIndex(h => names.some(n => h.includes(n)));
           const dateIdx = idx(['date treso', 'date']); const catIdx = idx(['categorie']);
           const subCatIdx = idx(['sous']); const commentIdx = idx(['commentaire']);
@@ -1725,7 +2383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const amount = parseFloat(String(row[valeurIdx]).replace(',','.')) || 0;
             if (amount <= 0) continue;
             const subCat = String(row[subCatIdx]||'').trim(); const comment = String(row[commentIdx]||'').trim();
-            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
             existing.push({ id: Utils.generateId(), description: [subCat,comment].filter(Boolean).join(' – ')||'Import',
               amount, category: CAT_MAP[catNorm]||'Autre', date: parseExcelDate(row[dateIdx]), notes: '' });
             imported++;
@@ -1750,9 +2408,17 @@ document.addEventListener('DOMContentLoaded', () => {
     e.target.value = '';
   });
 
+  // Initialize: show nav groups correctly, then navigate to default
+  document.getElementById('nav-investments-group').style.display = 'none';
+  document.getElementById('nav-expenses-group').style.display = '';
+
+  // Default mode is Dépenses, show expenses section
+  navigateTo('expenses');
+});
+
 // ---- PDF Import ----
 function guessCategory(desc) {
-  const d = (desc||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const d = (desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const map = [
     [['sncf','ratp','bus ','tram','train','metro','taxi','uber','bolt','navette','velib'], 'Transport'],
     [['monoprix','carrefour','leclerc','lidl','aldi','franprix','picard','super u','casino','intermarche','biocoop','naturalia'], 'Alimentation'],
@@ -1773,6 +2439,7 @@ async function parsePDFTransactions(arrayBuffer) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const transactions = [];
+
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
@@ -1817,6 +2484,7 @@ function showPDFPreview(transactions) {
         ${Utils.EXPENSE_CATEGORIES.map(c => `<option value="${c}" ${c===t.category?'selected':''}>${c}</option>`).join('')}
       </select></td>
     </tr>`).join('');
+
   const content = `
     <p style="margin-bottom:12px;color:var(--text-muted);font-size:13px">
       <strong>${transactions.length} opération(s)</strong> détectée(s). Décochez les lignes à exclure et ajustez les catégories.
@@ -1834,6 +2502,7 @@ function showPDFPreview(transactions) {
       <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
       <button class="btn-primary" onclick="confirmPDFImport()">Importer les sélectionnées</button>
     </div>`;
+
   window._pdfTransactions = transactions;
   document.getElementById('modal').classList.add('modal-wide');
   Modal.open(`Import PDF — ${transactions.length} opération(s)`, content);
@@ -1863,8 +2532,6 @@ function confirmPDFImport() {
   alert(`${imported} dépense(s) importée(s) !`);
 }
 
-  navigateTo('dashboard');
-});
   </script>
 </body>
 </html>
