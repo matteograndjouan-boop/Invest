@@ -4,6 +4,7 @@ const Storage = {
     EXPENSES: 'invest_expenses',
     BUDGETS: 'invest_budgets',
     PATRIMONY: 'invest_patrimony',
+    REVENUES: 'invest_revenues',
   },
 
   get(key) {
@@ -35,12 +36,16 @@ const Storage = {
   getPatrimony() { return this.get(this.KEYS.PATRIMONY) || []; },
   savePatrimony(data) { this.set(this.KEYS.PATRIMONY, data); },
 
+  getRevenues() { return this.get(this.KEYS.REVENUES) || []; },
+  saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
+
   exportAll() {
     return {
       investments: this.getInvestments(),
       expenses: this.getExpenses(),
       budgets: this.getBudgets(),
       patrimony: this.getPatrimony(),
+      revenues: this.getRevenues(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -50,5 +55,6 @@ const Storage = {
     if (data.expenses) this.saveExpenses(data.expenses);
     if (data.budgets) this.saveBudgets(data.budgets);
     if (data.patrimony) this.savePatrimony(data.patrimony);
+    if (data.revenues) this.saveRevenues(data.revenues);
   },
 };
