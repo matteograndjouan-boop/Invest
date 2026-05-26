@@ -1,10 +1,22 @@
 const Investments = {
-  render() {
-    const investments = Storage.getInvestments();
+  currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
+
+  render(account) {
+    if (account !== undefined) this.currentAccount = account;
+    const allInvestments = Storage.getInvestments();
+    const investments = this._filterByAccount(allInvestments);
     this._renderSummary(investments);
     this._renderTable(investments);
     Charts.investmentsByType(investments);
     Charts.investmentsPerformance(investments);
+  },
+
+  _filterByAccount(investments) {
+    if (!this.currentAccount) return investments;
+    if (this.currentAccount === 'autre') {
+      return investments.filter(i => !i.account || i.account === 'autre');
+    }
+    return investments.filter(i => i.account === this.currentAccount);
   },
 
   _renderSummary(investments) {
@@ -46,9 +58,11 @@ const Investments = {
       const gain = value - cost;
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
       const cls = gain >= 0 ? 'positive' : 'negative';
+      const accountLabel = inv.account ? (Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account) : 'Autre';
       return `<tr>
         <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
+        <td><span class="badge badge-account">${accountLabel}</span></td>
         <td>${inv.quantity}</td>
         <td>${Utils.formatCurrency(inv.buyPrice)}</td>
         <td>${Utils.formatCurrency(inv.currentPrice)}</td>
@@ -74,12 +88,15 @@ const Investments = {
     const isEdit = !!inv;
     const typeOptions = Object.entries(Utils.INVESTMENT_TYPES)
       .map(([v, l]) => `<option value="${v}" ${inv?.type === v ? 'selected' : ''}>${l}</option>`).join('');
+    const accountOptions = Object.entries(Utils.INVESTMENT_ACCOUNTS)
+      .map(([v, l]) => `<option value="${v}" ${(inv?.account || 'autre') === v ? 'selected' : ''}>${l}</option>`).join('');
     return `
       <form onsubmit="Investments.save(event, ${isEdit ? `'${inv.id}'` : 'null'})">
         <div class="form-grid">
           <div class="form-group"><label>Nom *</label><input name="name" required value="${inv?.name || ''}" placeholder="ex: Apple Inc."></div>
           <div class="form-group"><label>Ticker</label><input name="ticker" value="${inv?.ticker || ''}" placeholder="ex: AAPL"></div>
           <div class="form-group"><label>Type *</label><select name="type" required>${typeOptions}</select></div>
+          <div class="form-group"><label>Compte *</label><select name="account" required>${accountOptions}</select></div>
           <div class="form-group"><label>Quantité *</label><input name="quantity" type="number" step="0.000001" min="0" required value="${inv?.quantity || ''}"></div>
           <div class="form-group"><label>Prix d'achat moyen (€) *</label><input name="buyPrice" type="number" step="0.01" min="0" required value="${inv?.buyPrice || ''}"></div>
           <div class="form-group"><label>Prix actuel (€) *</label><input name="currentPrice" type="number" step="0.01" min="0" required value="${inv?.currentPrice || ''}"></div>
@@ -101,6 +118,7 @@ const Investments = {
       name: fd.get('name').trim(),
       ticker: (fd.get('ticker') || '').trim().toUpperCase(),
       type: fd.get('type'),
+      account: fd.get('account') || 'autre',
       quantity: parseFloat(fd.get('quantity')),
       buyPrice: parseFloat(fd.get('buyPrice')),
       currentPrice: parseFloat(fd.get('currentPrice')),

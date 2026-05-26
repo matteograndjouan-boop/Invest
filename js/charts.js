@@ -138,6 +138,60 @@ const Charts = {
     });
   },
 
+  revenuesByCategory(revenues, month) {
+    const monthRev = revenues.filter(r => r.date.substring(0, 7) === month);
+    const byCategory = {};
+    monthRev.forEach(r => { byCategory[r.category] = (byCategory[r.category] || 0) + r.amount; });
+    const keys = Object.keys(byCategory);
+    if (!keys.length) { this.destroy('chart-rev-category'); return; }
+
+    this.create('chart-rev-category', {
+      type: 'doughnut',
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  revenuesMonthly(revenues) {
+    const months = Utils.getLast12Months();
+    this.create('chart-rev-monthly', {
+      type: 'bar',
+      data: {
+        labels: months.map(Utils.getMonthLabel),
+        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: '#10b981', borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  comparisonBar(expA, expB, periodA, periodB) {
+    const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
+    if (!allCategories.length) { this.destroy('chart-comparison'); return; }
+
+    const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+    const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+
+    this.create('chart-comparison', {
+      type: 'bar',
+      data: {
+        labels: allCategories,
+        datasets: [
+          { label: Utils.getMonthLabel(periodA), data: dataA, backgroundColor: '#6366f1', borderRadius: 4 },
+          { label: Utils.getMonthLabel(periodB), data: dataB, backgroundColor: '#f59e0b', borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
   patrimony(assets, liabilities) {
     const assetsByCat = {}, liabByCat = {};
     assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });

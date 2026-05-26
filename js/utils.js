@@ -56,9 +56,19 @@ const Utils = {
     autre: 'Autre',
   },
 
+  INVESTMENT_ACCOUNTS: {
+    pea: 'PEA',
+    assurance_vie: 'Assurance vie',
+    autre: 'Autre',
+  },
+
   EXPENSE_CATEGORIES: [
     'Logement', 'Alimentation', 'Transport', 'Santé', 'Loisirs',
     'Vêtements', 'Éducation', 'Restaurants', 'Abonnements', 'Épargne', 'Autre',
+  ],
+
+  REVENUE_CATEGORIES: [
+    'Salaire', 'Freelance', 'Remboursement', 'Loyer perçu', 'Autre',
   ],
 
   PATRIMONY_CATEGORIES: {
