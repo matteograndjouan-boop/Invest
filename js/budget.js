@@ -66,9 +66,10 @@ const Budget = {
   _form(category, amount) {
     const isEdit = !!category;
     const used = Object.keys(Storage.getBudgets());
+    const allCats = Storage.getCategories().map(c => c.name);
     const available = isEdit
-      ? Utils.EXPENSE_CATEGORIES
-      : Utils.EXPENSE_CATEGORIES.filter(c => !used.includes(c));
+      ? allCats
+      : allCats.filter(c => !used.includes(c));
 
     const catField = isEdit
       ? `<input value="${category}" disabled>`

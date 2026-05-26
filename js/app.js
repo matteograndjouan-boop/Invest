@@ -100,7 +100,7 @@ const APP_MODES = {
     default: 'pea',
   },
   expenses: {
-    sections: ['revenues', 'expenses', 'comparisons', 'budget'],
+    sections: ['revenues', 'expenses', 'comparisons', 'budget', 'categories'],
     navGroupId: 'nav-expenses-group',
     default: 'expenses',
   },
@@ -135,6 +135,7 @@ function navigateTo(sectionId) {
     expenses: 'expenses',
     comparisons: 'comparisons',
     budget: 'budget',
+    categories: 'categories',
     dashboard: 'dashboard',
     patrimony: 'patrimony',
   };
@@ -179,6 +180,9 @@ function navigateTo(sectionId) {
       break;
     case 'budget':
       Budget.render();
+      break;
+    case 'categories':
+      Categories.render();
       break;
     case 'patrimony':
       Patrimony.render();

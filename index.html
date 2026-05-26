@@ -50,6 +50,9 @@
           <a href="#" class="nav-item" data-section="budget">
             <span class="nav-icon">🎯</span><span>Budget</span>
           </a>
+          <a href="#" class="nav-item" data-section="categories">
+            <span class="nav-icon">🏷️</span><span>Catégories</span>
+          </a>
         </div>
 
         <!-- Always visible -->
@@ -390,6 +393,18 @@
         </div>
       </section>
 
+      <!-- CATEGORIES -->
+      <section class="section hidden" id="section-categories">
+        <div class="section-header">
+          <h1>Catégories</h1>
+        </div>
+        <div class="new-category-bar">
+          <input type="text" id="new-category-input" placeholder="Nom de la nouvelle catégorie…" class="new-category-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addCategory()}">
+          <button class="btn-primary" onclick="Categories.addCategory()">+ Ajouter une catégorie</button>
+        </div>
+        <div id="categories-container" class="categories-grid"></div>
+      </section>
+
       <!-- PATRIMONY -->
       <section class="section hidden" id="section-patrimony">
         <div class="section-header">
@@ -454,6 +469,7 @@
   <script src="js/expenses.js"></script>
   <script src="js/revenues.js"></script>
   <script src="js/comparisons.js"></script>
+  <script src="js/categories.js"></script>
   <script src="js/budget.js"></script>
   <script src="js/patrimony.js"></script>
   <script src="js/app.js"></script>

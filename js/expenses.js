@@ -3,22 +3,33 @@ const Expenses = {
 
   init() {
     const filter = document.getElementById('expenses-month-filter');
-    if (filter) {
+    if (filter && !filter._initialized) {
+      filter._initialized = true;
       filter.value = this.currentMonth;
       filter.addEventListener('change', (e) => { this.currentMonth = e.target.value; this.render(); });
     }
+    this._populateCatFilter();
+  },
+
+  _populateCatFilter() {
     const catFilter = document.getElementById('exp-filter-cat');
-    if (catFilter) {
-      Utils.EXPENSE_CATEGORIES.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat; opt.textContent = cat;
-        catFilter.appendChild(opt);
-      });
+    if (!catFilter) return;
+    const currentVal = catFilter.value;
+    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
+    Storage.getCategories().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name;
+      opt.textContent = cat.name;
+      catFilter.appendChild(opt);
+    });
+    if (currentVal && catFilter.querySelector(`option[value="${currentVal}"]`)) {
+      catFilter.value = currentVal;
     }
   },
 
   render() {
     const expenses = Storage.getExpenses();
+    this._populateCatFilter();
     this._renderSummary(expenses);
     this._renderTable(expenses);
     Charts.expensesByCategory(expenses, this.currentMonth);
@@ -59,7 +70,10 @@ const Expenses = {
     tbody.innerHTML = list.map(exp => `<tr>
       <td>${Utils.formatDate(exp.date)}</td>
       <td>${exp.description}</td>
-      <td><span class="badge badge-category">${exp.category}</span></td>
+      <td>
+        <span class="badge badge-category">${exp.category}</span>
+        ${exp.subcategory ? `<span class="badge badge-subcategory">${exp.subcategory}</span>` : ''}
+      </td>
       <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
@@ -78,14 +92,31 @@ const Expenses = {
   _form(exp) {
     const isEdit = !!exp;
     const today = new Date().toISOString().split('T')[0];
-    const catOptions = Utils.EXPENSE_CATEGORIES
-      .map(c => `<option value="${c}" ${exp?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+    const cats = Storage.getCategories();
+    const selectedCatName = exp?.category || (cats[0]?.name || '');
+    const selectedCat = cats.find(c => c.name === selectedCatName) || cats[0];
+
+    const catOptions = cats
+      .map(c => `<option value="${c.name}" ${c.name === selectedCatName ? 'selected' : ''}>${c.name}</option>`).join('');
+
+    const subcats = selectedCat?.subcategories || [];
+    const subcatOptions = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}" ${(exp?.subcategory || '') === s ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+
     return `
       <form onsubmit="Expenses.save(event, ${isEdit ? `'${exp.id}'` : 'null'})">
         <div class="form-grid">
           <div class="form-group form-full"><label>Description *</label><input name="description" required value="${exp?.description || ''}" placeholder="ex: Courses Carrefour"></div>
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
-          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select name="category" required onchange="Expenses._updateSubcats(this.value)">${catOptions}</select>
+          </div>
+          <div class="form-group">
+            <label>Sous-catégorie</label>
+            <select name="subcategory" id="exp-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+          </div>
           <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
@@ -96,6 +127,19 @@ const Expenses = {
       </form>`;
   },
 
+  _updateSubcats(catName) {
+    const sel = document.getElementById('exp-subcat-select');
+    if (!sel) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length) {
+      sel.disabled = false;
+      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
+    } else {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">—</option>';
+    }
+  },
+
   save(event, id) {
     event.preventDefault();
     const fd = new FormData(event.target);
@@ -104,6 +148,7 @@ const Expenses = {
       description: fd.get('description').trim(),
       amount: parseFloat(fd.get('amount')),
       category: fd.get('category'),
+      subcategory: fd.get('subcategory') || '',
       date: fd.get('date'),
       notes: (fd.get('notes') || '').trim(),
     };
