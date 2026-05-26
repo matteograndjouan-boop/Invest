@@ -483,6 +483,78 @@ body {
   padding: 0 4px;
 }
 
+/* ---- Categories ---- */
+.new-category-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+.new-category-input {
+  flex: 1;
+  max-width: 400px;
+}
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.category-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.category-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.category-card-header h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.subcat-list {
+  padding: 0.375rem 0.5rem;
+  min-height: 2rem;
+}
+.py-xs { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+.subcat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.subcat-item:hover { background: var(--bg); }
+.subcat-item span { font-size: 0.875rem; }
+.subcat-add-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.subcat-input {
+  flex: 1;
+  font-size: 0.8125rem !important;
+  padding: 0.375rem 0.625rem !important;
+}
+.badge-subcategory {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
+
 /* ---- PDF Preview ---- */
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -512,10 +584,9 @@ body {
   .kpi-grid, .kpi-grid-3 { grid-template-columns: 1fr; }
 }
 
-  </style>
+</style>
 </head>
 <body>
-
   <div class="app">
 
     <!-- Sidebar -->
@@ -558,6 +629,9 @@ body {
           </a>
           <a href="#" class="nav-item" data-section="budget">
             <span class="nav-icon">🎯</span><span>Budget</span>
+          </a>
+          <a href="#" class="nav-item" data-section="categories">
+            <span class="nav-icon">🏷️</span><span>Catégories</span>
           </a>
         </div>
 
@@ -899,6 +973,18 @@ body {
         </div>
       </section>
 
+      <!-- CATEGORIES -->
+      <section class="section hidden" id="section-categories">
+        <div class="section-header">
+          <h1>Catégories</h1>
+        </div>
+        <div class="new-category-bar">
+          <input type="text" id="new-category-input" placeholder="Nom de la nouvelle catégorie…" class="new-category-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addCategory()}">
+          <button class="btn-primary" onclick="Categories.addCategory()">+ Ajouter une catégorie</button>
+        </div>
+        <div id="categories-container" class="categories-grid"></div>
+      </section>
+
       <!-- PATRIMONY -->
       <section class="section hidden" id="section-patrimony">
         <div class="section-header">
@@ -953,7 +1039,6 @@ body {
     </div>
   </div>
 
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -965,6 +1050,7 @@ const Storage = {
     BUDGETS: 'invest_budgets',
     PATRIMONY: 'invest_patrimony',
     REVENUES: 'invest_revenues',
+    CATEGORIES: 'invest_categories',
   },
 
   get(key) {
@@ -999,6 +1085,19 @@ const Storage = {
   getRevenues() { return this.get(this.KEYS.REVENUES) || []; },
   saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
 
+  _defaultCategories() {
+    return ['Logement','Alimentation','Transport','Santé','Loisirs','Vêtements','Éducation','Restaurants','Abonnements','Épargne','Autre']
+      .map((name, i) => ({ id: 'dcat' + i, name, subcategories: [] }));
+  },
+  getCategories() {
+    const saved = this.get(this.KEYS.CATEGORIES);
+    if (saved && saved.length > 0) return saved;
+    const defaults = this._defaultCategories();
+    this.saveCategories(defaults);
+    return defaults;
+  },
+  saveCategories(data) { this.set(this.KEYS.CATEGORIES, data); },
+
   exportAll() {
     return {
       investments: this.getInvestments(),
@@ -1006,6 +1105,7 @@ const Storage = {
       budgets: this.getBudgets(),
       patrimony: this.getPatrimony(),
       revenues: this.getRevenues(),
+      categories: this.getCategories(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -1016,6 +1116,7 @@ const Storage = {
     if (data.budgets) this.saveBudgets(data.budgets);
     if (data.patrimony) this.savePatrimony(data.patrimony);
     if (data.revenues) this.saveRevenues(data.revenues);
+    if (data.categories) this.saveCategories(data.categories);
   },
 };
 
@@ -1488,22 +1589,33 @@ const Expenses = {
 
   init() {
     const filter = document.getElementById('expenses-month-filter');
-    if (filter) {
+    if (filter && !filter._initialized) {
+      filter._initialized = true;
       filter.value = this.currentMonth;
       filter.addEventListener('change', (e) => { this.currentMonth = e.target.value; this.render(); });
     }
+    this._populateCatFilter();
+  },
+
+  _populateCatFilter() {
     const catFilter = document.getElementById('exp-filter-cat');
-    if (catFilter) {
-      Utils.EXPENSE_CATEGORIES.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat; opt.textContent = cat;
-        catFilter.appendChild(opt);
-      });
+    if (!catFilter) return;
+    const currentVal = catFilter.value;
+    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
+    Storage.getCategories().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name;
+      opt.textContent = cat.name;
+      catFilter.appendChild(opt);
+    });
+    if (currentVal && catFilter.querySelector(`option[value="${currentVal}"]`)) {
+      catFilter.value = currentVal;
     }
   },
 
   render() {
     const expenses = Storage.getExpenses();
+    this._populateCatFilter();
     this._renderSummary(expenses);
     this._renderTable(expenses);
     Charts.expensesByCategory(expenses, this.currentMonth);
@@ -1544,7 +1656,10 @@ const Expenses = {
     tbody.innerHTML = list.map(exp => `<tr>
       <td>${Utils.formatDate(exp.date)}</td>
       <td>${exp.description}</td>
-      <td><span class="badge badge-category">${exp.category}</span></td>
+      <td>
+        <span class="badge badge-category">${exp.category}</span>
+        ${exp.subcategory ? `<span class="badge badge-subcategory">${exp.subcategory}</span>` : ''}
+      </td>
       <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
@@ -1563,14 +1678,31 @@ const Expenses = {
   _form(exp) {
     const isEdit = !!exp;
     const today = new Date().toISOString().split('T')[0];
-    const catOptions = Utils.EXPENSE_CATEGORIES
-      .map(c => `<option value="${c}" ${exp?.category === c ? 'selected' : ''}>${c}</option>`).join('');
+    const cats = Storage.getCategories();
+    const selectedCatName = exp?.category || (cats[0]?.name || '');
+    const selectedCat = cats.find(c => c.name === selectedCatName) || cats[0];
+
+    const catOptions = cats
+      .map(c => `<option value="${c.name}" ${c.name === selectedCatName ? 'selected' : ''}>${c.name}</option>`).join('');
+
+    const subcats = selectedCat?.subcategories || [];
+    const subcatOptions = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}" ${(exp?.subcategory || '') === s ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+
     return `
       <form onsubmit="Expenses.save(event, ${isEdit ? `'${exp.id}'` : 'null'})">
         <div class="form-grid">
           <div class="form-group form-full"><label>Description *</label><input name="description" required value="${exp?.description || ''}" placeholder="ex: Courses Carrefour"></div>
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
-          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select name="category" required onchange="Expenses._updateSubcats(this.value)">${catOptions}</select>
+          </div>
+          <div class="form-group">
+            <label>Sous-catégorie</label>
+            <select name="subcategory" id="exp-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+          </div>
           <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
@@ -1581,6 +1713,19 @@ const Expenses = {
       </form>`;
   },
 
+  _updateSubcats(catName) {
+    const sel = document.getElementById('exp-subcat-select');
+    if (!sel) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length) {
+      sel.disabled = false;
+      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
+    } else {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">—</option>';
+    }
+  },
+
   save(event, id) {
     event.preventDefault();
     const fd = new FormData(event.target);
@@ -1589,6 +1734,7 @@ const Expenses = {
       description: fd.get('description').trim(),
       amount: parseFloat(fd.get('amount')),
       category: fd.get('category'),
+      subcategory: fd.get('subcategory') || '',
       date: fd.get('date'),
       notes: (fd.get('notes') || '').trim(),
     };
@@ -1829,6 +1975,111 @@ const Comparisons = {
 
   </script>
   <script>
+const Categories = {
+  render() {
+    const cats = Storage.getCategories();
+    const container = document.getElementById('categories-container');
+    if (!container) return;
+
+    if (!cats.length) {
+      container.innerHTML = '<p class="text-muted text-center py-lg">Aucune catégorie. Créez-en une !</p>';
+      return;
+    }
+
+    container.innerHTML = cats.map(cat => {
+      const subcatRows = cat.subcategories.map((sub, idx) => `
+        <div class="subcat-item">
+          <span>${sub}</span>
+          <button class="btn-icon btn-danger" onclick="Categories.deleteSubcat('${cat.id}', ${idx})" title="Supprimer">🗑️</button>
+        </div>`).join('');
+
+      return `
+        <div class="category-card" id="cat-${cat.id}">
+          <div class="category-card-header">
+            <h3>${cat.name}</h3>
+            <button class="btn-icon btn-danger" onclick="Categories.deleteCategory('${cat.id}')" title="Supprimer la catégorie">🗑️</button>
+          </div>
+          <div class="subcat-list">
+            ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
+          </div>
+          <div class="subcat-add-row">
+            <input type="text" id="subcat-input-${cat.id}" placeholder="Nouvelle sous-catégorie…" class="subcat-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addSubcat('${cat.id}')}">
+            <button class="btn-primary btn-sm" onclick="Categories.addSubcat('${cat.id}')">+ Ajouter</button>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  addCategory() {
+    const input = document.getElementById('new-category-input');
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    const cats = Storage.getCategories();
+    if (cats.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+      alert('Cette catégorie existe déjà.');
+      return;
+    }
+
+    cats.push({ id: 'cat_' + Date.now(), name, subcategories: [] });
+    Storage.saveCategories(cats);
+    input.value = '';
+    this.render();
+    Expenses._populateCatFilter();
+  },
+
+  deleteCategory(id) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === id);
+    if (!cat) return;
+    if (!confirm(`Supprimer la catégorie "${cat.name}" et toutes ses sous-catégories ?`)) return;
+    Storage.saveCategories(cats.filter(c => c.id !== id));
+    this.render();
+    Expenses._populateCatFilter();
+  },
+
+  addSubcat(catId) {
+    const input = document.getElementById(`subcat-input-${catId}`);
+    if (!input) return;
+    const name = input.value.trim();
+    if (!name) return;
+
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    if (cat.subcategories.includes(name)) {
+      alert('Cette sous-catégorie existe déjà.');
+      return;
+    }
+
+    cat.subcategories.push(name);
+    Storage.saveCategories(cats);
+    input.value = '';
+    this.render();
+  },
+
+  deleteSubcat(catId, idx) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    cat.subcategories.splice(idx, 1);
+    Storage.saveCategories(cats);
+    this.render();
+  },
+
+  getCategoryNames() {
+    return Storage.getCategories().map(c => c.name);
+  },
+
+  getSubcats(categoryName) {
+    const cat = Storage.getCategories().find(c => c.name === categoryName);
+    return cat ? cat.subcategories : [];
+  },
+};
+
+  </script>
+  <script>
 const Budget = {
   render() {
     const budgets = Storage.getBudgets();
@@ -1897,9 +2148,10 @@ const Budget = {
   _form(category, amount) {
     const isEdit = !!category;
     const used = Object.keys(Storage.getBudgets());
+    const allCats = Storage.getCategories().map(c => c.name);
     const available = isEdit
-      ? Utils.EXPENSE_CATEGORIES
-      : Utils.EXPENSE_CATEGORIES.filter(c => !used.includes(c));
+      ? allCats
+      : allCats.filter(c => !used.includes(c));
 
     const catField = isEdit
       ? `<input value="${category}" disabled>`
@@ -2179,7 +2431,7 @@ const APP_MODES = {
     default: 'pea',
   },
   expenses: {
-    sections: ['revenues', 'expenses', 'comparisons', 'budget'],
+    sections: ['revenues', 'expenses', 'comparisons', 'budget', 'categories'],
     navGroupId: 'nav-expenses-group',
     default: 'expenses',
   },
@@ -2214,6 +2466,7 @@ function navigateTo(sectionId) {
     expenses: 'expenses',
     comparisons: 'comparisons',
     budget: 'budget',
+    categories: 'categories',
     dashboard: 'dashboard',
     patrimony: 'patrimony',
   };
@@ -2258,6 +2511,9 @@ function navigateTo(sectionId) {
       break;
     case 'budget':
       Budget.render();
+      break;
+    case 'categories':
+      Categories.render();
       break;
     case 'patrimony':
       Patrimony.render();
@@ -2439,35 +2695,88 @@ async function parsePDFTransactions(arrayBuffer) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const transactions = [];
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const byY = {};
-    for (const item of content.items) {
-      if (!item.str || !item.str.trim()) continue;
-      const y = Math.round(item.transform[5] / 3) * 3;
-      if (!byY[y]) byY[y] = [];
-      byY[y].push({ x: item.transform[4], str: item.str });
+
+    const items = content.items
+      .filter(i => i.str && i.str.trim())
+      .map(i => ({ x: Math.round(i.transform[4]), y: Math.round(i.transform[5]), str: i.str.trim() }));
+
+    // Detect Débit/Crédit column X positions from header
+    let debitX = null, creditX = null;
+    for (const item of items) {
+      const s = norm(item.str);
+      if (s === 'debit') debitX = item.x;
+      if (s === 'credit') creditX = item.x;
     }
+
+    // Group by Y coordinate (tolerance 3px)
+    const byY = {};
+    for (const item of items) {
+      const y = Math.round(item.y / 3) * 3;
+      if (!byY[y]) byY[y] = [];
+      byY[y].push(item);
+    }
+
+    const SKIP_HEADERS = /^(SOLDE|TOTAL|NOUVEAU|ANCIEN|RELEVE|COMPTE|REPORT|Date|Nature|Valeur|Monnaie)/i;
+    const AMT_RE = /^\d[\d\s]*,\d{2}$/;
+    const DATE_RE = /^\d{2}\.\d{2}$/;
+    let lastTx = null;
+
     for (const y of Object.keys(byY).map(Number).sort((a,b) => b-a)) {
-      const line = byY[y].sort((a,b) => a.x-b.x).map(i => i.str).join(' ').trim();
-      const dateMatch = line.match(/^(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
-      if (!dateMatch) continue;
-      const [, rawDate, rest] = dateMatch;
-      const amountMatches = [...rest.matchAll(/\b(\d[\d\s]*[,\.]\d{2})\b/g)];
-      if (!amountMatches.length) continue;
-      const rawAmount = amountMatches[amountMatches.length-1][1].replace(/\s/g,'').replace(',','.');
-      const amount = parseFloat(rawAmount);
-      if (isNaN(amount) || amount <= 0 || amount > 50000) continue;
-      const firstAmtIdx = rest.indexOf(amountMatches[0][0]);
-      const description = (firstAmtIdx > 0 ? rest.substring(0, firstAmtIdx) : rest).trim();
-      if (!description) continue;
-      const parts = rawDate.split('/');
-      let year = new Date().getFullYear();
-      if (parts.length === 3) { year = parseInt(parts[2]); if (year < 100) year += 2000; }
-      const date = `${year}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-      transactions.push({ date, description, amount, category: guessCategory(description) });
+      const row = byY[y].sort((a,b) => a.x - b.x);
+      const first = row[0];
+
+      // BNP format: date is DD.MM (dot separator)
+      if (DATE_RE.test(first.str)) {
+        const [day, month] = first.str.split('.');
+        const now = new Date();
+        const txMonth = parseInt(month);
+        const year = txMonth > (now.getMonth() + 3) ? now.getFullYear() - 1 : now.getFullYear();
+        const date = `${year}-${month}-${day}`;
+
+        let desc = '';
+        let debitAmt = null, creditAmt = null;
+
+        for (let i = 1; i < row.length; i++) {
+          const itm = row[i];
+          if (DATE_RE.test(itm.str)) continue; // skip Valeur column (repeated date)
+          const clean = itm.str.replace(/\s/g, '');
+          if (AMT_RE.test(itm.str) || /^\d+,\d{2}$/.test(clean)) {
+            const amount = parseFloat(clean.replace(',', '.'));
+            if (debitX !== null && creditX !== null) {
+              if (Math.abs(itm.x - debitX) < Math.abs(itm.x - creditX)) debitAmt = amount;
+              else creditAmt = amount;
+            } else {
+              if (debitAmt === null) debitAmt = amount;
+              else creditAmt = amount;
+            }
+          } else {
+            desc += (desc ? ' ' : '') + itm.str;
+          }
+        }
+
+        if (debitAmt !== null && debitAmt > 0) {
+          lastTx = { date, description: desc.trim() || 'Opération', amount: debitAmt, category: guessCategory(desc) };
+          transactions.push(lastTx);
+        } else {
+          lastTx = null;
+        }
+      } else if (lastTx && !SKIP_HEADERS.test(first.str)) {
+        // Multi-line description continuation
+        const hasAmt = row.some(i => AMT_RE.test(i.str) || /^\d+,\d{2}$/.test(i.str.replace(/\s/g,'')));
+        const hasDate = row.some(i => DATE_RE.test(i.str));
+        if (!hasAmt && !hasDate) {
+          const extra = row.map(i => i.str).join(' ').trim();
+          if (extra) {
+            lastTx.description += ' ' + extra;
+            lastTx.category = guessCategory(lastTx.description);
+          }
+        }
+      }
     }
   }
   return transactions;
@@ -2533,5 +2842,6 @@ function confirmPDFImport() {
 }
 
   </script>
+
 </body>
 </html>
