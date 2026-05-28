@@ -893,38 +893,14 @@ body {
           <select id="flux-filter-cat"><option value="">Toutes catégories</option></select>
           <select id="flux-filter-subcat" disabled><option value="">Toutes sous-catégories</option></select>
         </div>
-        <div class="chart-card">
-          <h3>Revenus vs Dépenses (6 derniers mois)</h3>
-          <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
-        </div>
-        <div class="flux-toggle-row">
-          <button class="flux-toggle-btn active" id="flux-btn-depenses" onclick="Flux.setView('depenses')">💳 Dépenses</button>
-          <button class="flux-toggle-btn" id="flux-btn-revenus" onclick="Flux.setView('revenus')">💵 Revenus</button>
-        </div>
-        <div id="flux-view-depenses">
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Revenus vs Dépenses (6 derniers mois)</h3>
+            <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
+          </div>
           <div class="chart-card">
             <h3>Répartition des dépenses</h3>
             <div class="chart-container" style="height:220px"><canvas id="chart-flux-donut"></canvas></div>
-          </div>
-          <div class="card mt-md">
-            <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
-                <tbody id="flux-expenses-tbody"></tbody>
-              </table>
-            </div>
-            <p class="empty-state hidden" id="flux-expenses-empty">Aucune dépense pour cette période.</p>
-          </div>
-        </div>
-        <div id="flux-view-revenus" class="hidden">
-          <div class="card">
-            <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
-                <tbody id="flux-revenus-tbody"></tbody>
-              </table>
-            </div>
-            <p class="empty-state hidden" id="flux-revenus-empty">Aucun revenu pour cette période.</p>
           </div>
         </div>
       </section>
@@ -2405,11 +2381,10 @@ const Revenues = {
   </script>
   <script>
 const Flux = {
-  activeView: 'depenses',
-
   init() {
-    PeriodFilter.onChange(() => { if (document.getElementById('section-flux') && !document.getElementById('section-flux').classList.contains('hidden')) this.render(); });
-
+    PeriodFilter.onChange(() => {
+      if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
+    });
     const catFilter = document.getElementById('flux-filter-cat');
     if (catFilter) {
       catFilter.addEventListener('change', () => {
@@ -2419,7 +2394,6 @@ const Flux = {
     }
     const subcatFilter = document.getElementById('flux-filter-subcat');
     if (subcatFilter) subcatFilter.addEventListener('change', () => this.render());
-
     this._populateCatFilter();
   },
 
@@ -2448,15 +2422,6 @@ const Flux = {
     }
   },
 
-  setView(view) {
-    this.activeView = view;
-    document.getElementById('flux-view-depenses').classList.toggle('hidden', view !== 'depenses');
-    document.getElementById('flux-view-revenus').classList.toggle('hidden', view !== 'revenus');
-    document.getElementById('flux-btn-depenses').classList.toggle('active', view === 'depenses');
-    document.getElementById('flux-btn-revenus').classList.toggle('active', view === 'revenus');
-    this.render();
-  },
-
   render() {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilter = document.getElementById('flux-filter-cat')?.value || '';
@@ -2466,7 +2431,7 @@ const Flux = {
     const allRevenues = Storage.getRevenues();
 
     let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
-    let revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
+    const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
 
     if (catFilter) {
       expenses = expenses.filter(e => e.category === catFilter);
@@ -2489,13 +2454,7 @@ const Flux = {
     epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
 
     this._renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter);
-
-    if (this.activeView === 'depenses') {
-      this._renderDonut(expenses);
-      this._renderExpensesTable(expenses);
-    } else {
-      this._renderRevenuesTable(revenues);
-    }
+    this._renderDonut(expenses);
   },
 
   _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
@@ -2506,15 +2465,16 @@ const Flux = {
       months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const labels = months.map(m => { const [y, mo] = m.split('-').map(Number); return MONTHS_FR[mo-1] + ' ' + String(y).slice(2); });
-
+    const labels = months.map(m => {
+      const [y, mo] = m.split('-').map(Number);
+      return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
+    });
     const revByMonth = months.map(m => allRevenues.filter(r => r.date.startsWith(m)).reduce((s, r) => s + r.amount, 0));
     const depByMonth = months.map(m => {
       let exp = allExpenses.filter(e => e.date.startsWith(m));
       if (catFilter) { exp = exp.filter(e => e.category === catFilter); if (subcatFilter) exp = exp.filter(e => e.subcategory === subcatFilter); }
       return exp.reduce((s, e) => s + e.amount, 0);
     });
-
     Charts.fluxBar(labels, revByMonth, depByMonth);
   },
 
@@ -2527,42 +2487,6 @@ const Flux = {
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
     Charts.fluxDonut(entries.map(([k]) => k), entries.map(([, v]) => v));
-  },
-
-  _renderExpensesTable(expenses) {
-    const tbody = document.getElementById('flux-expenses-tbody');
-    const empty = document.getElementById('flux-expenses-empty');
-    if (!tbody) return;
-    const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
-    empty.classList.toggle('hidden', sorted.length > 0);
-    tbody.innerHTML = sorted.map(exp => `<tr>
-      <td>${Utils.formatDate(exp.date)}</td>
-      <td>${exp.description}</td>
-      <td><span class="badge badge-category">${exp.category}</span>${exp.subcategory ? `<span class="badge badge-subcategory">${exp.subcategory}</span>` : ''}</td>
-      <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
-      <td class="actions-cell">
-        <button class="btn-icon" onclick="Expenses.edit('${exp.id}')">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')">🗑️</button>
-      </td>
-    </tr>`).join('');
-  },
-
-  _renderRevenuesTable(revenues) {
-    const tbody = document.getElementById('flux-revenus-tbody');
-    const empty = document.getElementById('flux-revenus-empty');
-    if (!tbody) return;
-    const sorted = [...revenues].sort((a, b) => b.date.localeCompare(a.date));
-    empty.classList.toggle('hidden', sorted.length > 0);
-    tbody.innerHTML = sorted.map(rev => `<tr>
-      <td>${Utils.formatDate(rev.date)}</td>
-      <td>${rev.description}</td>
-      <td><span class="badge badge-revenue">${rev.category}</span></td>
-      <td><strong class="positive">${Utils.formatCurrency(rev.amount)}</strong></td>
-      <td class="actions-cell">
-        <button class="btn-icon" onclick="Revenues.edit('${rev.id}')">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')">🗑️</button>
-      </td>
-    </tr>`).join('');
   },
 };
 
