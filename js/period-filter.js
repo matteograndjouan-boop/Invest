@@ -172,12 +172,13 @@ const PeriodFilter = {
   _buildHTML() {
     return `
       <div class="period-filter">
+        <span class="period-filter-label">Période :</span>
         <div class="period-type-btns">
           <button class="period-type-btn" data-type="month">Mois</button>
-          <button class="period-type-btn" data-type="quarter">T</button>
-          <button class="period-type-btn" data-type="semester">S</button>
+          <button class="period-type-btn" data-type="quarter">Trimestre</button>
+          <button class="period-type-btn" data-type="semester">Semestre</button>
           <button class="period-type-btn" data-type="year">Année</button>
-          <button class="period-type-btn" data-type="range">Plage</button>
+          <button class="period-type-btn" data-type="range">Plage libre</button>
         </div>
         <div class="period-nav" id="period-nav-row">
           <button class="period-arrow" id="period-prev" title="Période précédente">&#8592;</button>
