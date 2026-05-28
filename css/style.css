@@ -504,10 +504,41 @@ body {
 .period-nav { display: flex; align-items: center; gap: 6px; }
 .period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
-.period-label { min-width: 130px; text-align: center; font-size: 0.9375rem; font-weight: 700; color: var(--text); }
-.period-range-inputs { display: flex; align-items: center; gap: 8px; }
-.period-range-input { padding: 5px 8px; font-size: 0.8125rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
-.period-range-sep { color: var(--text-muted); font-size: 0.875rem; flex-shrink: 0; }
+.period-label-wrap { position: relative; }
+.period-label-btn {
+  min-width: 130px; padding: 5px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.9375rem; font-weight: 700;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.period-label-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.period-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; min-width: 220px; padding: 10px;
+  animation: dropIn 0.12s ease;
+}
+.period-dropdown.hidden { display: none; }
+@keyframes dropIn { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+.pd-year-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 4px; }
+.pd-year-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.pd-year-nav button:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.pd-year-nav span { font-weight: 700; font-size: 0.9375rem; color: var(--text); }
+.pd-months-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pd-quarters-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pd-semesters-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+.pd-years-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pd-item-btn {
+  padding: 6px 4px; border-radius: 6px; border: 1px solid transparent;
+  background: var(--bg); color: var(--text); font-size: 0.8rem; font-weight: 500;
+  cursor: pointer; text-align: center; transition: all 0.12s;
+}
+.pd-item-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.pd-item-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+.pd-range { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.pd-range label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.pd-range input[type="date"] { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.8125rem; width: 100%; }
+.pd-range .btn-primary.btn-sm { padding: 7px; border-radius: 6px; font-size: 0.8125rem; width: 100%; }
 
 /* ---- Flux ---- */
 .flux-filters { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
