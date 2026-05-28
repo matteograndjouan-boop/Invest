@@ -4,7 +4,7 @@ const DataEntry = {
   _selectionMode: false,
   _selected: new Set(), // "id|type" strings
   _filteredRows: [],
-  _lastClickIdx: -1,
+  _isDragging: false,
 
   init() {
     const search = document.getElementById('donnees-search');
@@ -23,6 +23,9 @@ const DataEntry = {
       });
     });
 
+    // End drag on mouseup anywhere
+    document.addEventListener('mouseup', () => { this._isDragging = false; });
+
     this._populateCatFilter();
   },
 
@@ -40,83 +43,58 @@ const DataEntry = {
   toggleSelectionMode() {
     this._selectionMode = !this._selectionMode;
     this._selected.clear();
-    this._lastClickIdx = -1;
-
-    const bar = document.getElementById('donnees-selection-bar');
-    const modeBtn = document.getElementById('donnees-delete-mode-btn');
-    const thCheck = document.getElementById('donnees-th-check');
-    const thActions = document.getElementById('donnees-th-actions');
-
-    if (this._selectionMode) {
-      bar?.classList.remove('hidden');
-      if (modeBtn) { modeBtn.textContent = '✕ Annuler sélection'; modeBtn.classList.replace('btn-secondary', 'btn-danger'); }
-      thCheck?.classList.remove('hidden');
-      if (thActions) thActions.classList.add('hidden');
-    } else {
-      bar?.classList.add('hidden');
-      if (modeBtn) { modeBtn.textContent = '🗑️ Supprimer'; modeBtn.classList.replace('btn-danger', 'btn-secondary'); }
-      thCheck?.classList.add('hidden');
-      if (thActions) thActions.classList.remove('hidden');
-    }
+    this._isDragging = false;
+    this._updateHeaderButtons();
     this.render();
   },
 
-  toggleRow(key, idx, event) {
-    if (event.shiftKey && this._lastClickIdx !== -1) {
-      const lo = Math.min(this._lastClickIdx, idx);
-      const hi = Math.max(this._lastClickIdx, idx);
-      for (let i = lo; i <= hi; i++) {
-        const r = this._filteredRows[i];
-        if (r) this._selected.add(`${r.id}|${r._type}`);
-      }
-    } else {
-      if (this._selected.has(key)) this._selected.delete(key);
-      else this._selected.add(key);
-    }
-    this._lastClickIdx = idx;
-    this._updateSelectionUI();
-  },
-
-  toggleSelectAll(checked) {
-    if (checked) {
-      this._filteredRows.forEach(r => this._selected.add(`${r.id}|${r._type}`));
-    } else {
-      this._filteredRows.forEach(r => this._selected.delete(`${r.id}|${r._type}`));
-    }
-    this._updateSelectionUI();
-  },
-
-  _updateSelectionUI() {
+  _updateHeaderButtons() {
+    const actions = document.getElementById('donnees-header-actions');
+    if (!actions) return;
     const n = this._selected.size;
     const total = this._filteredRows.length;
-
-    const countEl = document.getElementById('donnees-sel-count');
-    if (countEl) countEl.textContent = n > 0
-      ? `${n} ligne${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}`
-      : 'Aucune ligne sélectionnée';
-
-    const delBtn = document.getElementById('donnees-delete-sel-btn');
-    if (delBtn) {
-      delBtn.disabled = n === 0;
-      delBtn.textContent = n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Supprimer la sélection';
+    if (this._selectionMode) {
+      actions.innerHTML = `
+        <button class="btn-primary" id="add-donnees-btn" style="display:none"></button>
+        <button class="btn-secondary btn-sm" onclick="DataEntry.toggleSelectionMode()">✕ Annuler</button>
+        <button class="btn-secondary btn-sm" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">Tout supprimer (${total})</button>
+        <button class="btn-danger btn-sm" id="donnees-delete-sel-btn" ${n === 0 ? 'disabled' : ''} onclick="DataEntry.deleteSelected()">
+          ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
+        </button>`;
+    } else {
+      actions.innerHTML = `
+        <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
+        <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>`;
+      // Re-bind add button
+      document.getElementById('add-donnees-btn')?.addEventListener('click', () => this.openAddForm());
     }
+  },
 
-    const allBtn = document.getElementById('donnees-delete-all-btn');
-    if (allBtn) allBtn.textContent = `Tout supprimer (${total})`;
+  _onRowMousedown(key, e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    this._isDragging = true;
+    this._toggleKey(key);
+  },
 
+  _onRowMouseenter(key) {
+    if (!this._isDragging) return;
+    this._selected.add(key);
+    this._refreshRowHighlights();
+    this._updateHeaderButtons();
+  },
+
+  _toggleKey(key) {
+    if (this._selected.has(key)) this._selected.delete(key);
+    else this._selected.add(key);
+    this._refreshRowHighlights();
+    this._updateHeaderButtons();
+  },
+
+  _refreshRowHighlights() {
     document.querySelectorAll('#donnees-tbody tr[data-key]').forEach(tr => {
-      const cb = tr.querySelector('.donnees-row-cb');
-      const isSelected = this._selected.has(tr.dataset.key);
-      if (cb) cb.checked = isSelected;
-      tr.classList.toggle('selected', isSelected);
+      tr.classList.toggle('selected', this._selected.has(tr.dataset.key));
     });
-
-    const allCb = document.getElementById('donnees-check-all');
-    if (allCb && total > 0) {
-      const allSelected = this._filteredRows.every(r => this._selected.has(`${r.id}|${r._type}`));
-      allCb.checked = allSelected;
-      allCb.indeterminate = n > 0 && !allSelected;
-    }
   },
 
   deleteSelected() {
@@ -132,7 +110,6 @@ const DataEntry = {
     if (expIds.size) Storage.saveExpenses(Storage.getExpenses().filter(e => !expIds.has(e.id)));
     if (revIds.size) Storage.saveRevenues(Storage.getRevenues().filter(r => !revIds.has(r.id)));
     this._selected.clear();
-    this._lastClickIdx = -1;
     this.render();
     Dashboard.render();
   },
@@ -147,15 +124,7 @@ const DataEntry = {
     if (revIds.size) Storage.saveRevenues(Storage.getRevenues().filter(r => !revIds.has(r.id)));
     this._selected.clear();
     this._selectionMode = false;
-    // Reset UI state
-    const bar = document.getElementById('donnees-selection-bar');
-    const modeBtn = document.getElementById('donnees-delete-mode-btn');
-    const thCheck = document.getElementById('donnees-th-check');
-    const thActions = document.getElementById('donnees-th-actions');
-    bar?.classList.add('hidden');
-    if (modeBtn) { modeBtn.textContent = '🗑️ Supprimer'; modeBtn.classList.replace('btn-danger', 'btn-secondary'); }
-    thCheck?.classList.add('hidden');
-    if (thActions) thActions.classList.remove('hidden');
+    this._updateHeaderButtons();
     this.render();
     Dashboard.render();
   },
@@ -200,18 +169,20 @@ const DataEntry = {
 
     const tbody = document.getElementById('donnees-tbody');
     const empty = document.getElementById('donnees-empty');
+    const thActions = document.getElementById('donnees-th-actions');
     if (!tbody) return;
+    if (thActions) thActions.style.display = this._selectionMode ? 'none' : '';
 
     if (!rows.length) {
       tbody.innerHTML = '';
       empty.classList.remove('hidden');
-      if (this._selectionMode) this._updateSelectionUI();
+      if (this._selectionMode) this._updateHeaderButtons();
       return;
     }
     empty.classList.add('hidden');
 
     const sel = this._selectionMode;
-    tbody.innerHTML = rows.map((row, idx) => {
+    tbody.innerHTML = rows.map(row => {
       const key = `${row.id}|${row._type}`;
       const isExpense = row._type === 'expense';
       const isSelected = sel && this._selected.has(key);
@@ -219,17 +190,15 @@ const DataEntry = {
         ? '<span class="badge badge-expense-type">Dépense</span>'
         : '<span class="badge badge-revenue-type">Revenu</span>';
       const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
-      const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
+      const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>`;
       const amountClass = isExpense ? 'negative' : 'positive';
-      const checkTd = sel ? `<td class="donnees-td-check"><input type="checkbox" class="donnees-row-cb" ${isSelected ? 'checked' : ''}></td>` : '';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}')" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-icon-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">🗑️</button>
       </td>`;
 
-      return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}" data-idx="${idx}"
-        ${sel ? `onclick="DataEntry.toggleRow('${key}',${idx},event)"` : ''}>
-        ${checkTd}
+      return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}"
+        ${sel ? `onmousedown="DataEntry._onRowMousedown('${key}',event)" onmouseenter="DataEntry._onRowMouseenter('${key}')"` : ''}>
         <td class="donnees-date">${Utils.formatDate(row.date)}</td>
         <td>${typeBadge}</td>
         <td class="donnees-desc">${row.description || '—'}</td>
@@ -240,7 +209,7 @@ const DataEntry = {
       </tr>`;
     }).join('');
 
-    if (sel) this._updateSelectionUI();
+    if (sel) this._updateHeaderButtons();
   },
 
   openAddForm() {
@@ -335,13 +304,9 @@ const DataEntry = {
     const revCatGroup = document.getElementById('de-rev-cat-group');
     const subcatGroup = document.getElementById('de-subcat-group');
     if (type === 'revenue') {
-      catGroup.style.display = 'none';
-      revCatGroup.style.display = '';
-      subcatGroup.style.display = 'none';
+      catGroup.style.display = 'none'; revCatGroup.style.display = ''; subcatGroup.style.display = 'none';
     } else {
-      catGroup.style.display = '';
-      revCatGroup.style.display = 'none';
-      subcatGroup.style.display = '';
+      catGroup.style.display = ''; revCatGroup.style.display = 'none'; subcatGroup.style.display = '';
     }
   },
 

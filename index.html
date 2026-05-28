@@ -451,7 +451,7 @@
       <section class="section hidden" id="section-donnees">
         <div class="section-header">
           <h1>Données</h1>
-          <div class="header-actions">
+          <div class="header-actions" id="donnees-header-actions">
             <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
             <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>
           </div>
@@ -466,17 +466,10 @@
           <select id="donnees-filter-cat"><option value="">Toutes catégories</option></select>
           <span id="donnees-count" class="donnees-count"></span>
         </div>
-        <div id="donnees-selection-bar" class="donnees-selection-bar hidden">
-          <span id="donnees-sel-count">0 ligne sélectionnée</span>
-          <button class="btn-danger btn-sm" id="donnees-delete-sel-btn" disabled onclick="DataEntry.deleteSelected()">Supprimer la sélection</button>
-          <button class="btn-danger btn-sm btn-outline-danger" id="donnees-delete-all-btn" onclick="DataEntry.deleteAll()">Tout supprimer</button>
-          <button class="btn-secondary btn-sm" onclick="DataEntry.toggleSelectionMode()">✕ Annuler</button>
-        </div>
         <div class="donnees-table-wrap">
           <table class="table donnees-table" id="donnees-table">
             <thead>
               <tr>
-                <th id="donnees-th-check" class="donnees-th-check hidden"><input type="checkbox" id="donnees-check-all" onchange="DataEntry.toggleSelectAll(this.checked)"></th>
                 <th class="sortable" data-col="date">Date <span class="sort-icon">↕</span></th>
                 <th>Type</th>
                 <th class="sortable" data-col="description">Description <span class="sort-icon">↕</span></th>
