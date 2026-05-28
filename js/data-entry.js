@@ -5,6 +5,7 @@ const DataEntry = {
   _selected: new Set(), // "id|type" strings
   _filteredRows: [],
   _isDragging: false,
+  _dragMode: 'select', // 'select' ou 'deselect' selon l'état de la 1ère ligne touchée
 
   init() {
     const search = document.getElementById('donnees-search');
@@ -81,14 +82,13 @@ const DataEntry = {
     if (e.button !== 0) return;
     e.preventDefault();
     this._isDragging = true;
-    this._toggleKey(key);
+    this._dragMode = this._selected.has(key) ? 'deselect' : 'select';
+    this._applyDragMode(key);
   },
 
   _onRowMouseenter(key) {
     if (!this._isDragging) return;
-    this._selected.add(key);
-    this._refreshRowHighlights();
-    this._updateHeaderButtons();
+    this._applyDragMode(key);
   },
 
   _onTouchStart(e) {
@@ -97,7 +97,8 @@ const DataEntry = {
     if (!tr) return;
     e.preventDefault(); // bloque sélection texte iOS
     this._isDragging = true;
-    this._toggleKey(tr.dataset.key);
+    this._dragMode = this._selected.has(tr.dataset.key) ? 'deselect' : 'select';
+    this._applyDragMode(tr.dataset.key);
   },
 
   _onTouchMove(e) {
@@ -107,8 +108,13 @@ const DataEntry = {
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!el) return;
     const tr = el.closest('tr[data-key]');
-    if (!tr || this._selected.has(tr.dataset.key)) return;
-    this._selected.add(tr.dataset.key);
+    if (!tr) return;
+    this._applyDragMode(tr.dataset.key);
+  },
+
+  _applyDragMode(key) {
+    if (this._dragMode === 'deselect') this._selected.delete(key);
+    else this._selected.add(key);
     this._refreshRowHighlights();
     this._updateHeaderButtons();
   },
