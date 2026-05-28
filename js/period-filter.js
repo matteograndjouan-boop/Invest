@@ -133,7 +133,7 @@ const PeriodFilter = {
         if (!s.year) s.year = new Date().getFullYear();
         this.set(s);
         this._closeDropdown();
-        this._updateAll();
+        this._updateLabel();
       });
     });
 
