@@ -119,23 +119,41 @@ const Flux = {
   },
 
   _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
-    const now = new Date();
+    const { start, end } = PeriodFilter.getDateRange();
+
+    // Build list of months covered by the selected period
     const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    let cur = new Date(start + 'T00:00:00');
+    const endDate = new Date(end + 'T00:00:00');
+    cur = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    while (cur <= endDate) {
+      months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
+
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = months.map(m => {
       const [y, mo] = m.split('-').map(Number);
       return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
     });
-    const revByMonth = months.map(m => allRevenues.filter(r => r.date.startsWith(m)).reduce((s, r) => s + r.amount, 0));
-    const depByMonth = months.map(m => {
-      let exp = allExpenses.filter(e => e.date.startsWith(m));
-      if (catFilter) { exp = exp.filter(e => e.category === catFilter); if (subcatFilter) exp = exp.filter(e => e.subcategory === subcatFilter); }
-      return exp.reduce((s, e) => s + e.amount, 0);
+
+    const getLastDay = (m) => {
+      const [y, mo] = m.split('-').map(Number);
+      return new Date(y, mo, 0).getDate();
+    };
+
+    const revByMonth = months.map(m => {
+      const s = `${m}-01`, e = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      return allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0);
     });
+
+    const depByMonth = months.map(m => {
+      const s = `${m}-01`, e = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
+      if (catFilter) { exp = exp.filter(ex => ex.category === catFilter); if (subcatFilter) exp = exp.filter(ex => ex.subcategory === subcatFilter); }
+      return exp.reduce((sum, ex) => sum + ex.amount, 0);
+    });
+
     Charts.fluxBar(labels, revByMonth, depByMonth, catFilter || null);
   },
 
