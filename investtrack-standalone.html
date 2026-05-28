@@ -3106,7 +3106,7 @@ const DataEntry = {
         ? '<span class="badge badge-expense-type">Dépense</span>'
         : '<span class="badge badge-revenue-type">Revenu</span>';
       const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
-      const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>`;
+      const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
