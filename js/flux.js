@@ -1,4 +1,6 @@
 const Flux = {
+  _activeFilter: null, // catégorie active par clic sur le graphique
+
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
@@ -6,6 +8,7 @@ const Flux = {
     const catFilter = document.getElementById('flux-filter-cat');
     if (catFilter) {
       catFilter.addEventListener('change', () => {
+        this._activeFilter = null; // reset click filter when dropdown changes
         this._updateSubcatFilter(catFilter.value);
         this.render();
       });
@@ -40,10 +43,49 @@ const Flux = {
     }
   },
 
+  // Appelé au clic sur un segment du donut
+  toggleFilter(label) {
+    if (!label || label === 'Autres') return; // "Autres" ne filtre pas
+    this._activeFilter = (this._activeFilter === label) ? null : label;
+    this.render();
+  },
+
+  _getEffectiveCatFilter() {
+    // Le filtre clic prend la priorité sur le dropdown
+    if (this._activeFilter) return this._activeFilter;
+    return document.getElementById('flux-filter-cat')?.value || '';
+  },
+
+  _renderFilterBadge(catFilter) {
+    let badge = document.getElementById('flux-active-filter');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'flux-active-filter';
+      badge.className = 'flux-active-filter-badge';
+      const filtersRow = document.querySelector('.flux-filters');
+      if (filtersRow) filtersRow.after(badge);
+    }
+    if (catFilter) {
+      badge.innerHTML = `Filtre actif : <strong>${catFilter}</strong> <button class="filter-badge-clear" onclick="Flux.clearFilter()">✕ effacer</button>`;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  },
+
+  clearFilter() {
+    this._activeFilter = null;
+    const catFilter = document.getElementById('flux-filter-cat');
+    if (catFilter) catFilter.value = '';
+    const subcatFilter = document.getElementById('flux-filter-subcat');
+    if (subcatFilter) { subcatFilter.disabled = true; subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>'; }
+    this.render();
+  },
+
   render() {
     const { start, end } = PeriodFilter.getDateRange();
-    const catFilter = document.getElementById('flux-filter-cat')?.value || '';
-    const subcatFilter = document.getElementById('flux-filter-subcat')?.value || '';
+    const catFilter = this._getEffectiveCatFilter();
+    const subcatFilter = this._activeFilter ? '' : (document.getElementById('flux-filter-subcat')?.value || '');
 
     const allExpenses = Storage.getExpenses();
     const allRevenues = Storage.getRevenues();
@@ -71,8 +113,9 @@ const Flux = {
     epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
     epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
 
+    this._renderFilterBadge(catFilter);
     this._renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter);
-    this._renderDonut(expenses);
+    this._renderDonut(expenses, catFilter);
   },
 
   _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
@@ -93,17 +136,27 @@ const Flux = {
       if (catFilter) { exp = exp.filter(e => e.category === catFilter); if (subcatFilter) exp = exp.filter(e => e.subcategory === subcatFilter); }
       return exp.reduce((s, e) => s + e.amount, 0);
     });
-    Charts.fluxBar(labels, revByMonth, depByMonth);
+    Charts.fluxBar(labels, revByMonth, depByMonth, catFilter || null);
   },
 
-  _renderDonut(expenses) {
+  _renderDonut(expenses, activeCategory) {
     const byCategory = {};
-    expenses.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+    // Always compute donut from ALL expenses in period (unfiltered) so all slices stay visible
+    const { start, end } = PeriodFilter.getDateRange();
+    Storage.getExpenses()
+      .filter(e => e.date >= start && e.date <= end)
+      .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+
     let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
     if (entries.length > 6) {
       const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
-    Charts.fluxDonut(entries.map(([k]) => k), entries.map(([, v]) => v));
+    Charts.fluxDonut(
+      entries.map(([k]) => k),
+      entries.map(([, v]) => v),
+      activeCategory || null,
+      (label) => this.toggleFilter(label)
+    );
   },
 };

@@ -192,15 +192,22 @@ const Charts = {
     });
   },
 
-  fluxBar(labels, revData, depData) {
+  fluxBar(labels, revData, depData, activeCategory) {
+    const title = activeCategory ? `Dépenses — ${activeCategory} (6 derniers mois)` : 'Revenus vs Dépenses (6 derniers mois)';
+    // Update chart card title if present
+    const card = document.getElementById('chart-flux-bar')?.closest('.chart-card');
+    if (card) { const h3 = card.querySelector('h3'); if (h3) h3.textContent = title; }
+
     this.create('chart-flux-bar', {
       type: 'bar',
       data: {
         labels,
-        datasets: [
-          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
-          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
-        ],
+        datasets: activeCategory
+          ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 }]
+          : [
+              { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+              { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
+            ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -210,13 +217,37 @@ const Charts = {
     });
   },
 
-  fluxDonut(labels, data) {
+  fluxDonut(labels, data, activeLabel, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
-    const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+    const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+
+    // Dim non-selected slices when a filter is active
+    const bgColors = labels.map((label, i) => {
+      const c = BASE_COLORS[i % BASE_COLORS.length];
+      if (!activeLabel || label === activeLabel) return c;
+      return c + '38'; // ~22% opacity for dimmed slices
+    });
+    const offsets = labels.map(l => l === activeLabel ? 14 : 0);
+    const borderWidths = labels.map(l => l === activeLabel ? 3 : 2);
+
     this.create('chart-flux-donut', {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: bgColors, borderWidth: borderWidths, borderColor: '#fff', offset: offsets }],
+      },
+      options: {
+        ...this._doughnutOptions(Utils.formatCurrency),
+        onClick: onClickFn
+          ? (event, elements) => {
+              if (elements.length > 0) onClickFn(labels[elements[0].index]);
+              else onClickFn(null);
+            }
+          : undefined,
+        onHover: onClickFn
+          ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+          : undefined,
+      },
     });
   },
 

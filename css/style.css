@@ -545,6 +545,32 @@ body {
 .color-swatch { display: block; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s; }
 .color-opt input[type=radio]:checked + .color-swatch { border-color: var(--text); }
 
+/* ---- Flux cross-filter badge ---- */
+.flux-active-filter-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 12px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--primary-dark);
+  width: fit-content;
+  margin-bottom: 0.75rem;
+}
+.filter-badge-clear {
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0 2px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+.filter-badge-clear:hover { opacity: 1; }
+
 /* ---- Données table ---- */
 .donnees-toolbar { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
 .donnees-search-input { flex: 1; min-width: 180px; max-width: 300px; }
