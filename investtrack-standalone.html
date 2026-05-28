@@ -513,12 +513,13 @@ body {
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .period-label-wrap { position: relative; }
 .period-label-btn {
-  min-width: 130px; padding: 5px 14px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); font-size: 0.9375rem; font-weight: 700;
+  min-width: 140px; padding: 6px 16px; border-radius: 8px;
+  border: 2px solid var(--primary); background: var(--primary-light);
+  color: var(--primary); font-size: 0.9375rem; font-weight: 700;
   cursor: pointer; text-align: center; transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.15);
 }
-.period-label-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.period-label-btn:hover { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
 .period-dropdown {
   position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
