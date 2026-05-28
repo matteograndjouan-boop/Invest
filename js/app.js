@@ -320,22 +320,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
             return s;
           };
-          const existing = Storage.getExpenses(); let imported = 0;
+          const existing = Storage.getExpenses();
+          const existingRevenues = Storage.getRevenues();
+          let imported = 0; let importedRev = 0;
           for (let i = 1; i < rows.length; i++) {
             const row = rows[i]; if (!row || row.every(c => c === '')) continue;
             const cat = String(row[catIdx]||'').trim(); const positif = row[positifIdx];
-            if (cat.toLowerCase() === 'revenus') continue;
-            if (positif === true || String(positif).toUpperCase() === 'TRUE' || positif === 1) continue;
-            const amount = parseFloat(String(row[valeurIdx]).replace(',','.')) || 0;
+            const isRevenue = cat.toLowerCase() === 'revenus' ||
+              positif === true || String(positif).toUpperCase() === 'TRUE' || positif === 1;
+            const amount = parseFloat(String(row[valeurIdx]).replace(',','.').replace(/[^0-9.-]/g,'')) || 0;
             if (amount <= 0) continue;
             const subCat = String(row[subCatIdx]||'').trim(); const comment = String(row[commentIdx]||'').trim();
-            const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-            existing.push({ id: Utils.generateId(), description: [subCat,comment].filter(Boolean).join(' – ')||'Import',
-              amount, category: CAT_MAP[catNorm]||'Autre', date: parseExcelDate(row[dateIdx]), notes: '' });
-            imported++;
+            const description = [subCat, comment].filter(Boolean).join(' – ') || 'Import';
+            const date = parseExcelDate(row[dateIdx]);
+            if (isRevenue) {
+              existingRevenues.push({ id: Utils.generateId(), description, amount, category: 'Revenus', date, notes: '' });
+              importedRev++;
+            } else {
+              const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+              existing.push({ id: Utils.generateId(), description, amount,
+                category: CAT_MAP[catNorm]||'Autre', subcategory: '', date, notes: '' });
+              imported++;
+            }
           }
-          Storage.saveExpenses(existing); navigateTo('flux');
-          alert(`${imported} dépense(s) importée(s) depuis Excel !`);
+          Storage.saveExpenses(existing);
+          Storage.saveRevenues(existingRevenues);
+          navigateTo('flux');
+          alert(`Import terminé : ${imported} dépense(s) et ${importedRev} revenu(s) importé(s).`);
         } catch (err) { console.error(err); alert('Erreur lors de l\'importation Excel.'); }
       };
       reader.readAsArrayBuffer(file);
