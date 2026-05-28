@@ -104,6 +104,11 @@ const APP_MODES = {
     navGroupId: 'nav-expenses-group',
     default: 'flux',
   },
+  donnees: {
+    sections: ['donnees'],
+    navGroupId: 'nav-donnees-group',
+    default: 'donnees',
+  },
 };
 
 let currentMode = 'expenses';
@@ -119,6 +124,7 @@ function switchMode(mode) {
   // Show/hide nav groups
   document.getElementById('nav-investments-group').style.display = mode === 'investments' ? '' : 'none';
   document.getElementById('nav-expenses-group').style.display = mode === 'expenses' ? '' : 'none';
+  document.getElementById('nav-donnees-group').style.display = mode === 'donnees' ? '' : 'none';
 
   // Navigate to first section of mode
   const firstSection = APP_MODES[mode].default;
@@ -132,6 +138,7 @@ function navigateTo(sectionId) {
     assurance_vie: 'investments',
     autre_compte: 'investments',
     flux: 'flux',
+    donnees: 'donnees',
     revenues: 'revenues',
     expenses: 'expenses',
     comparisons: 'comparisons',
@@ -173,6 +180,9 @@ function navigateTo(sectionId) {
     case 'flux':
       Flux.render();
       break;
+    case 'donnees':
+      DataEntry.render();
+      break;
     case 'revenues':
       Revenues.render();
       break;
@@ -200,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Revenues.init();
   Flux.init();
   Budget.init();
+  DataEntry.init();
   Comparisons.init();
 
   // Populate revenue category filter
@@ -242,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-revenue-flux-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
+  document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
   document.getElementById('inv-search').addEventListener('input', () => Investments.render());

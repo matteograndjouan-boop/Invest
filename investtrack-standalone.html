@@ -68,27 +68,31 @@ body {
 /* ---- Mode Switcher ---- */
 .mode-switcher {
   display: flex;
-  gap: 6px;
-  padding: 10px 8px 12px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 8px 10px;
   border-bottom: 1px solid #334155;
 }
 
 .mode-btn {
-  flex: 1;
-  padding: 7px 6px;
-  border: 1px solid #475569;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--sidebar-text);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-  text-align: center;
+  transition: background .15s, color .15s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   white-space: nowrap;
 }
-.mode-btn:hover { background: var(--sidebar-hover); color: #f1f5f9; border-color: #64748b; }
-.mode-btn.active { background: var(--sidebar-active); color: #fff; border-color: var(--sidebar-active); }
+.mode-btn:hover { background: rgba(255,255,255,0.07); color: #f1f5f9; }
+.mode-btn.active { background: var(--sidebar-active); color: #fff; }
 
 /* ---- Sidebar section divider ---- */
 .nav-divider {
@@ -538,6 +542,28 @@ body {
 .color-swatch { display: block; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s; }
 .color-opt input[type=radio]:checked + .color-swatch { border-color: var(--text); }
 
+/* ---- Données table ---- */
+.donnees-toolbar { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.donnees-search-input { flex: 1; min-width: 180px; max-width: 300px; }
+.donnees-toolbar select { min-width: 160px; }
+.donnees-count { margin-left: auto; font-size: 0.8125rem; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+.donnees-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.donnees-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.donnees-table thead th { position: sticky; top: 0; background: var(--bg); z-index: 2; padding: 10px 12px; font-size: 0.8125rem; font-weight: 600; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.donnees-table thead th.text-right { text-align: right; }
+.donnees-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+.donnees-table tbody tr:last-child { border-bottom: none; }
+.donnees-table tbody tr:hover { background: var(--bg); }
+.donnees-table td { padding: 9px 12px; font-size: 0.875rem; vertical-align: middle; }
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { color: var(--primary); }
+.sort-icon { opacity: 0.5; font-size: 0.7rem; }
+.donnees-date { white-space: nowrap; color: var(--text-muted); font-size: 0.8125rem; }
+.donnees-desc { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge-expense-type { background: rgba(239,68,68,0.1); color: var(--danger); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+.badge-revenue-type { background: rgba(16,185,129,0.1); color: var(--success); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+.text-right { text-align: right; }
+
 /* ---- Categories ---- */
 .new-category-bar {
   display: flex;
@@ -653,8 +679,9 @@ body {
 
       <!-- Mode Switcher -->
       <div class="mode-switcher">
-        <button class="mode-btn" id="mode-investments" data-mode="investments">📈 Investissements</button>
-        <button class="mode-btn active" id="mode-expenses" data-mode="expenses">💳 Dépenses</button>
+        <button class="mode-btn" id="mode-investments" data-mode="investments"><span>📈</span> Investissements</button>
+        <button class="mode-btn active" id="mode-expenses" data-mode="expenses"><span>💳</span> Dépenses</button>
+        <button class="mode-btn" id="mode-donnees" data-mode="donnees"><span>🗃️</span> Données</button>
       </div>
 
       <!-- Period filter -->
@@ -687,6 +714,13 @@ body {
           </a>
           <a href="#" class="nav-item" data-section="categories">
             <span class="nav-icon">🏷️</span><span>Catégories</span>
+          </a>
+        </div>
+
+        <!-- Données mode nav -->
+        <div id="nav-donnees-group" style="display:none">
+          <a href="#" class="nav-item active" data-section="donnees">
+            <span class="nav-icon">📋</span><span>Toutes les données</span>
           </a>
         </div>
 
@@ -1096,6 +1130,41 @@ body {
             <div class="chart-container" style="height:200px"><canvas id="chart-budget-history"></canvas></div>
           </div>
         </div>
+      </section>
+
+      <!-- DONNEES -->
+      <section class="section hidden" id="section-donnees">
+        <div class="section-header">
+          <h1>Données</h1>
+          <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
+        </div>
+        <div class="donnees-toolbar">
+          <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
+          <select id="donnees-filter-type">
+            <option value="">Dépenses + Revenus</option>
+            <option value="expense">Dépenses seulement</option>
+            <option value="revenue">Revenus seulement</option>
+          </select>
+          <select id="donnees-filter-cat"><option value="">Toutes catégories</option></select>
+          <span id="donnees-count" class="donnees-count"></span>
+        </div>
+        <div class="donnees-table-wrap">
+          <table class="table donnees-table" id="donnees-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="date">Date <span class="sort-icon">↕</span></th>
+                <th>Type</th>
+                <th class="sortable" data-col="description">Description <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-col="category">Catégorie <span class="sort-icon">↕</span></th>
+                <th>Sous-catégorie</th>
+                <th class="sortable text-right" data-col="amount">Montant <span class="sort-icon">↕</span></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="donnees-tbody"></tbody>
+          </table>
+        </div>
+        <p class="empty-state hidden" id="donnees-empty">Aucune donnée pour ces filtres.</p>
       </section>
 
       <!-- CATEGORIES -->
@@ -2687,6 +2756,275 @@ const Categories = {
 
   </script>
   <script>
+const DataEntry = {
+  _sortCol: 'date',
+  _sortDir: -1, // -1 = desc, 1 = asc
+
+  init() {
+    const search = document.getElementById('donnees-search');
+    const typeFilter = document.getElementById('donnees-filter-type');
+    const catFilter = document.getElementById('donnees-filter-cat');
+    if (search) search.addEventListener('input', () => this.render());
+    if (typeFilter) typeFilter.addEventListener('change', () => this.render());
+    if (catFilter) catFilter.addEventListener('change', () => this.render());
+
+    document.querySelectorAll('#donnees-table .sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        if (this._sortCol === col) this._sortDir *= -1;
+        else { this._sortCol = col; this._sortDir = -1; }
+        this.render();
+      });
+    });
+
+    this._populateCatFilter();
+  },
+
+  _populateCatFilter() {
+    const catFilter = document.getElementById('donnees-filter-cat');
+    if (!catFilter) return;
+    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
+    Storage.getCategories().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name; opt.textContent = cat.name;
+      catFilter.appendChild(opt);
+    });
+  },
+
+  render() {
+    const search = (document.getElementById('donnees-search')?.value || '').toLowerCase().trim();
+    const typeFilter = document.getElementById('donnees-filter-type')?.value || '';
+    const catFilter = document.getElementById('donnees-filter-cat')?.value || '';
+
+    const expenses = Storage.getExpenses().map(e => ({ ...e, _type: 'expense' }));
+    const revenues = Storage.getRevenues().map(r => ({ ...r, _type: 'revenue' }));
+    let rows = [...expenses, ...revenues];
+
+    if (typeFilter === 'expense') rows = rows.filter(r => r._type === 'expense');
+    else if (typeFilter === 'revenue') rows = rows.filter(r => r._type === 'revenue');
+
+    if (catFilter) rows = rows.filter(r => r.category === catFilter);
+
+    if (search) {
+      rows = rows.filter(r =>
+        (r.description || '').toLowerCase().includes(search) ||
+        (r.category || '').toLowerCase().includes(search) ||
+        (r.subcategory || '').toLowerCase().includes(search) ||
+        (r.date || '').includes(search)
+      );
+    }
+
+    // Sort
+    rows.sort((a, b) => {
+      let va = a[this._sortCol] ?? '';
+      let vb = b[this._sortCol] ?? '';
+      if (this._sortCol === 'amount') { va = Number(va); vb = Number(vb); }
+      else { va = String(va); vb = String(vb); }
+      return va < vb ? -this._sortDir : va > vb ? this._sortDir : 0;
+    });
+
+    // Update sort icons
+    document.querySelectorAll('#donnees-table .sortable').forEach(th => {
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = th.dataset.col === this._sortCol ? (this._sortDir === -1 ? '↓' : '↑') : '↕';
+    });
+
+    const countEl = document.getElementById('donnees-count');
+    if (countEl) countEl.textContent = `${rows.length} ligne${rows.length > 1 ? 's' : ''}`;
+
+    const tbody = document.getElementById('donnees-tbody');
+    const empty = document.getElementById('donnees-empty');
+    if (!tbody) return;
+
+    if (!rows.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    tbody.innerHTML = rows.map(row => {
+      const isExpense = row._type === 'expense';
+      const typeBadge = isExpense
+        ? '<span class="badge badge-expense-type">Dépense</span>'
+        : '<span class="badge badge-revenue-type">Revenu</span>';
+      const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
+      const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
+      const amountClass = isExpense ? 'negative' : 'positive';
+
+      return `<tr class="donnees-row">
+        <td class="donnees-date">${Utils.formatDate(row.date)}</td>
+        <td>${typeBadge}</td>
+        <td class="donnees-desc">${row.description || '—'}</td>
+        <td>${catBadge}</td>
+        <td>${subcatBadge}</td>
+        <td class="text-right"><strong class="${amountClass}">${Utils.formatCurrency(row.amount)}</strong></td>
+        <td class="actions-cell">
+          <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}')" title="Supprimer">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  openAddForm() {
+    Modal.open('Ajouter une ligne', this._form(null, 'expense'));
+  },
+
+  edit(id, type) {
+    const list = type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
+    const item = list.find(i => i.id === id);
+    if (item) Modal.open('Modifier', this._form({ ...item, _type: type }, type));
+  },
+
+  delete(id, type) {
+    if (!confirm('Supprimer cette ligne ?')) return;
+    if (type === 'expense') {
+      Storage.saveExpenses(Storage.getExpenses().filter(e => e.id !== id));
+    } else {
+      Storage.saveRevenues(Storage.getRevenues().filter(r => r.id !== id));
+    }
+    this.render();
+    Dashboard.render();
+  },
+
+  _form(item, defaultType) {
+    const isEdit = !!item;
+    const type = item?._type || defaultType || 'expense';
+    const today = new Date().toISOString().split('T')[0];
+
+    const cats = Storage.getCategories();
+    const catOptions = cats.map(c =>
+      `<option value="${c.name}" ${item?.category === c.name ? 'selected' : ''}>${c.name}</option>`
+    ).join('');
+
+    const selectedCat = cats.find(c => c.name === item?.category) || cats[0];
+    const subcats = selectedCat?.subcategories || [];
+    const subcatOptions = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}" ${(item?.subcategory || '') === s ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+
+    const revCats = Utils.REVENUE_CATEGORIES.map(c =>
+      `<option value="${c}" ${item?.category === c ? 'selected' : ''}>${c}</option>`
+    ).join('');
+
+    return `
+      <form onsubmit="DataEntry.save(event, '${isEdit ? item.id : ''}', '${type}')">
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label>Type</label>
+            <select name="entry_type" onchange="DataEntry._toggleTypeFields(this.value)">
+              <option value="expense" ${type === 'expense' ? 'selected' : ''}>Dépense</option>
+              <option value="revenue" ${type === 'revenue' ? 'selected' : ''}>Revenu</option>
+            </select>
+          </div>
+          <div class="form-group form-full">
+            <label>Description *</label>
+            <input name="description" required value="${item?.description || ''}" placeholder="ex: Courses Carrefour">
+          </div>
+          <div class="form-group">
+            <label>Montant (€) *</label>
+            <input name="amount" type="number" step="0.01" min="0" required value="${item?.amount || ''}">
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input name="date" type="date" required value="${item?.date || today}">
+          </div>
+          <div class="form-group" id="de-cat-group">
+            <label>Catégorie *</label>
+            <select name="category" required onchange="DataEntry._updateSubcats(this.value)">${catOptions}</select>
+          </div>
+          <div class="form-group" id="de-rev-cat-group" style="display:none">
+            <label>Catégorie (revenu) *</label>
+            <select name="rev_category">${revCats}</select>
+          </div>
+          <div class="form-group" id="de-subcat-group">
+            <label>Sous-catégorie</label>
+            <select name="subcategory" id="de-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+          </div>
+          <div class="form-group form-full">
+            <label>Notes</label>
+            <textarea name="notes" rows="2">${item?.notes || ''}</textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  _toggleTypeFields(type) {
+    const catGroup = document.getElementById('de-cat-group');
+    const revCatGroup = document.getElementById('de-rev-cat-group');
+    const subcatGroup = document.getElementById('de-subcat-group');
+    if (type === 'revenue') {
+      catGroup.style.display = 'none';
+      revCatGroup.style.display = '';
+      subcatGroup.style.display = 'none';
+    } else {
+      catGroup.style.display = '';
+      revCatGroup.style.display = 'none';
+      subcatGroup.style.display = '';
+    }
+  },
+
+  _updateSubcats(catName) {
+    const sel = document.getElementById('de-subcat-select');
+    if (!sel) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length) {
+      sel.disabled = false;
+      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
+    } else {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">—</option>';
+    }
+  },
+
+  save(event, id, originalType) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const newType = fd.get('entry_type');
+    const isRevenue = newType === 'revenue';
+
+    const data = {
+      id: id || Utils.generateId(),
+      description: fd.get('description').trim(),
+      amount: parseFloat(fd.get('amount')),
+      category: isRevenue ? fd.get('rev_category') : fd.get('category'),
+      subcategory: isRevenue ? '' : (fd.get('subcategory') || ''),
+      date: fd.get('date'),
+      notes: (fd.get('notes') || '').trim(),
+    };
+
+    // If type changed, delete from old list
+    if (id && originalType !== newType) {
+      if (originalType === 'expense') Storage.saveExpenses(Storage.getExpenses().filter(e => e.id !== id));
+      else Storage.saveRevenues(Storage.getRevenues().filter(r => r.id !== id));
+      data.id = Utils.generateId(); // new id to avoid collision
+    }
+
+    if (isRevenue) {
+      const list = Storage.getRevenues();
+      const idx = list.findIndex(r => r.id === data.id);
+      if (idx !== -1) list[idx] = data; else list.push(data);
+      Storage.saveRevenues(list);
+    } else {
+      const list = Storage.getExpenses();
+      const idx = list.findIndex(e => e.id === data.id);
+      if (idx !== -1) list[idx] = data; else list.push(data);
+      Storage.saveExpenses(list);
+    }
+
+    Modal.close();
+    this.render();
+    Dashboard.render();
+  },
+};
+
+  </script>
+  <script>
 const Budget = {
   _currentThemeId: null,
   _THEME_COLORS: ['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#ef4444','#14b8a6'],
@@ -3243,6 +3581,11 @@ const APP_MODES = {
     navGroupId: 'nav-expenses-group',
     default: 'flux',
   },
+  donnees: {
+    sections: ['donnees'],
+    navGroupId: 'nav-donnees-group',
+    default: 'donnees',
+  },
 };
 
 let currentMode = 'expenses';
@@ -3258,6 +3601,7 @@ function switchMode(mode) {
   // Show/hide nav groups
   document.getElementById('nav-investments-group').style.display = mode === 'investments' ? '' : 'none';
   document.getElementById('nav-expenses-group').style.display = mode === 'expenses' ? '' : 'none';
+  document.getElementById('nav-donnees-group').style.display = mode === 'donnees' ? '' : 'none';
 
   // Navigate to first section of mode
   const firstSection = APP_MODES[mode].default;
@@ -3271,6 +3615,7 @@ function navigateTo(sectionId) {
     assurance_vie: 'investments',
     autre_compte: 'investments',
     flux: 'flux',
+    donnees: 'donnees',
     revenues: 'revenues',
     expenses: 'expenses',
     comparisons: 'comparisons',
@@ -3312,6 +3657,9 @@ function navigateTo(sectionId) {
     case 'flux':
       Flux.render();
       break;
+    case 'donnees':
+      DataEntry.render();
+      break;
     case 'revenues':
       Revenues.render();
       break;
@@ -3339,6 +3687,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Revenues.init();
   Flux.init();
   Budget.init();
+  DataEntry.init();
   Comparisons.init();
 
   // Populate revenue category filter
@@ -3381,6 +3730,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-revenue-flux-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
+  document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
   document.getElementById('inv-search').addEventListener('input', () => Investments.render());
