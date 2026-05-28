@@ -633,7 +633,9 @@ body {
   -webkit-touch-callout: none;
   touch-action: none;
 }
-.donnees-table tbody tr.selectable:hover { background: var(--primary-light); }
+@media (hover: hover) {
+  .donnees-table tbody tr.selectable:hover { background: var(--primary-light); }
+}
 .donnees-table tbody tr.selected { background: #e0e7ff !important; border-color: #a5b4fc !important; }
 .donnees-table td { padding: 9px 12px; font-size: 0.875rem; vertical-align: middle; }
 #donnees-th-actions[style*="none"] { display: none; }
