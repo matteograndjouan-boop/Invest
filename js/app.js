@@ -100,9 +100,9 @@ const APP_MODES = {
     default: 'pea',
   },
   expenses: {
-    sections: ['revenues', 'expenses', 'comparisons', 'budget', 'categories'],
+    sections: ['flux', 'comparisons', 'budget', 'categories'],
     navGroupId: 'nav-expenses-group',
-    default: 'expenses',
+    default: 'flux',
   },
 };
 
@@ -131,6 +131,7 @@ function navigateTo(sectionId) {
     pea: 'investments',
     assurance_vie: 'investments',
     autre_compte: 'investments',
+    flux: 'flux',
     revenues: 'revenues',
     expenses: 'expenses',
     comparisons: 'comparisons',
@@ -169,6 +170,9 @@ function navigateTo(sectionId) {
       document.getElementById('investments-section-title').textContent = 'Autre';
       Investments.render('autre');
       break;
+    case 'flux':
+      Flux.render();
+      break;
     case 'revenues':
       Revenues.render();
       break;
@@ -191,8 +195,11 @@ function navigateTo(sectionId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  PeriodFilter.renderUI();
   Expenses.init();
   Revenues.init();
+  Flux.init();
+  Budget.init();
   Comparisons.init();
 
   // Populate revenue category filter
@@ -229,8 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Action buttons
   document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
-  document.getElementById('add-expense-btn').addEventListener('click', () => Expenses.openAddForm());
-  document.getElementById('add-revenue-btn').addEventListener('click', () => Revenues.openAddForm());
+  document.getElementById('add-expense-btn')?.addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-btn')?.addEventListener('click', () => Revenues.openAddForm());
+  document.getElementById('add-expense-flux-btn')?.addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-flux-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
 
@@ -313,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
               amount, category: CAT_MAP[catNorm]||'Autre', date: parseExcelDate(row[dateIdx]), notes: '' });
             imported++;
           }
-          Storage.saveExpenses(existing); navigateTo('expenses');
+          Storage.saveExpenses(existing); navigateTo('flux');
           alert(`${imported} dépense(s) importée(s) depuis Excel !`);
         } catch (err) { console.error(err); alert('Erreur lors de l\'importation Excel.'); }
       };
@@ -338,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nav-expenses-group').style.display = '';
 
   // Default mode is Dépenses, show expenses section
-  navigateTo('expenses');
+  navigateTo('flux');
 });
 
 // ---- PDF Import ----
@@ -506,6 +515,6 @@ function confirmPDFImport() {
   document.getElementById('modal').classList.remove('modal-wide');
   Modal.close();
   window._pdfTransactions = null;
-  navigateTo('expenses');
+  navigateTo('flux');
   alert(`${imported} dépense(s) importée(s) !`);
 }

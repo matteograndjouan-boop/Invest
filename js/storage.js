@@ -6,6 +6,7 @@ const Storage = {
     PATRIMONY: 'invest_patrimony',
     REVENUES: 'invest_revenues',
     CATEGORIES: 'invest_categories',
+    BUDGET_THEMES: 'invest_budgets_v2',
   },
 
   get(key) {
@@ -34,6 +35,9 @@ const Storage = {
   getBudgets() { return this.get(this.KEYS.BUDGETS) || {}; },
   saveBudgets(data) { this.set(this.KEYS.BUDGETS, data); },
 
+  getBudgetThemes() { return this.get(this.KEYS.BUDGET_THEMES) || []; },
+  saveBudgetThemes(data) { this.set(this.KEYS.BUDGET_THEMES, data); },
+
   getPatrimony() { return this.get(this.KEYS.PATRIMONY) || []; },
   savePatrimony(data) { this.set(this.KEYS.PATRIMONY, data); },
 
@@ -44,6 +48,7 @@ const Storage = {
     return ['Logement','Alimentation','Transport','Santé','Loisirs','Vêtements','Éducation','Restaurants','Abonnements','Épargne','Autre']
       .map((name, i) => ({ id: 'dcat' + i, name, subcategories: [] }));
   },
+
   getCategories() {
     const saved = this.get(this.KEYS.CATEGORIES);
     if (saved && saved.length > 0) return saved;
@@ -58,6 +63,7 @@ const Storage = {
       investments: this.getInvestments(),
       expenses: this.getExpenses(),
       budgets: this.getBudgets(),
+      budgetThemes: this.getBudgetThemes(),
       patrimony: this.getPatrimony(),
       revenues: this.getRevenues(),
       categories: this.getCategories(),
@@ -69,6 +75,7 @@ const Storage = {
     if (data.investments) this.saveInvestments(data.investments);
     if (data.expenses) this.saveExpenses(data.expenses);
     if (data.budgets) this.saveBudgets(data.budgets);
+    if (data.budgetThemes) this.saveBudgetThemes(data.budgetThemes);
     if (data.patrimony) this.savePatrimony(data.patrimony);
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);

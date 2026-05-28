@@ -22,9 +22,12 @@
         <button class="mode-btn active" id="mode-expenses" data-mode="expenses">💳 Dépenses</button>
       </div>
 
+      <!-- Period filter -->
+      <div id="period-filter-container"></div>
+
       <nav class="sidebar-nav">
         <!-- Investments mode nav -->
-        <div id="nav-investments-group">
+        <div id="nav-investments-group" style="display:none">
           <a href="#" class="nav-item" data-section="pea">
             <span class="nav-icon">🏦</span><span>PEA</span>
           </a>
@@ -38,11 +41,8 @@
 
         <!-- Expenses mode nav -->
         <div id="nav-expenses-group">
-          <a href="#" class="nav-item" data-section="revenues">
-            <span class="nav-icon">💵</span><span>Revenus</span>
-          </a>
-          <a href="#" class="nav-item active" data-section="expenses">
-            <span class="nav-icon">💳</span><span>Dépenses</span>
+          <a href="#" class="nav-item active" data-section="flux">
+            <span class="nav-icon">💸</span><span>Flux</span>
           </a>
           <a href="#" class="nav-item" data-section="comparisons">
             <span class="nav-icon">⚖️</span><span>Comparaisons</span>
@@ -191,6 +191,61 @@
           </div>
           <div id="investments-empty" class="empty-state hidden">
             <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLUX -->
+      <section class="section" id="section-flux">
+        <div class="section-header">
+          <h1>Flux</h1>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn-primary" id="add-expense-flux-btn">+ Dépense</button>
+            <button class="btn-secondary" id="add-revenue-flux-btn">+ Revenu</button>
+          </div>
+        </div>
+        <div class="kpi-grid-4">
+          <div class="kpi-card success"><div class="kpi-label">Revenus</div><div class="kpi-value positive" id="flux-kpi-revenus">0 €</div></div>
+          <div class="kpi-card danger"><div class="kpi-label">Dépenses</div><div class="kpi-value" id="flux-kpi-depenses">0 €</div></div>
+          <div class="kpi-card" id="flux-kpi-solde-card"><div class="kpi-label">Solde net</div><div class="kpi-value" id="flux-kpi-solde">0 €</div></div>
+          <div class="kpi-card primary"><div class="kpi-label">Taux d'épargne</div><div class="kpi-value" id="flux-kpi-epargne">— %</div></div>
+        </div>
+        <div class="flux-filters">
+          <select id="flux-filter-cat"><option value="">Toutes catégories</option></select>
+          <select id="flux-filter-subcat" disabled><option value="">Toutes sous-catégories</option></select>
+        </div>
+        <div class="chart-card">
+          <h3>Revenus vs Dépenses (6 derniers mois)</h3>
+          <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
+        </div>
+        <div class="flux-toggle-row">
+          <button class="flux-toggle-btn active" id="flux-btn-depenses" onclick="Flux.setView('depenses')">💳 Dépenses</button>
+          <button class="flux-toggle-btn" id="flux-btn-revenus" onclick="Flux.setView('revenus')">💵 Revenus</button>
+        </div>
+        <div id="flux-view-depenses">
+          <div class="chart-card">
+            <h3>Répartition des dépenses</h3>
+            <div class="chart-container" style="height:220px"><canvas id="chart-flux-donut"></canvas></div>
+          </div>
+          <div class="card mt-md">
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
+                <tbody id="flux-expenses-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="flux-expenses-empty">Aucune dépense pour cette période.</p>
+          </div>
+        </div>
+        <div id="flux-view-revenus" class="hidden">
+          <div class="card">
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
+                <tbody id="flux-revenus-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="flux-revenus-empty">Aucun revenu pour cette période.</p>
           </div>
         </div>
       </section>
@@ -370,26 +425,41 @@
       <!-- BUDGET -->
       <section class="section hidden" id="section-budget">
         <div class="section-header">
-          <h1>Budget mensuel</h1>
-          <button class="btn-primary" id="add-budget-btn">+ Catégorie</button>
+          <h1 id="budget-section-title">Budgets</h1>
+          <button class="btn-primary" id="add-budget-btn">+ Nouveau budget</button>
         </div>
-        <div class="kpi-grid-3">
-          <div class="kpi-card primary">
-            <div class="kpi-label">Budget total</div>
-            <div class="kpi-value" id="budget-total">0 €</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-label">Dépensé ce mois</div>
-            <div class="kpi-value" id="budget-spent">0 €</div>
-          </div>
-          <div class="kpi-card" id="budget-left-card">
-            <div class="kpi-label">Restant</div>
-            <div class="kpi-value" id="budget-left">0 €</div>
+        <!-- List view -->
+        <div id="budget-list-view">
+          <div id="budget-themes-grid" class="budget-themes-grid"></div>
+          <div id="budget-empty" class="empty-state hidden">
+            <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
         </div>
-        <div id="budget-grid" class="budget-grid"></div>
-        <div id="budget-empty" class="empty-state hidden">
-          <p>Aucun budget défini. Cliquez sur <strong>+ Catégorie</strong> pour définir vos budgets mensuels.</p>
+        <!-- Detail view -->
+        <div id="budget-detail-view" class="hidden">
+          <div class="budget-detail-header">
+            <button class="btn-secondary btn-sm" onclick="Budget.showList()">← Retour</button>
+            <div id="budget-detail-message" class="budget-smart-message"></div>
+          </div>
+          <div class="kpi-grid-3" style="margin-top:1rem">
+            <div class="kpi-card primary"><div class="kpi-label">Budget prévu</div><div class="kpi-value" id="budget-detail-planned">0 €</div></div>
+            <div class="kpi-card warning"><div class="kpi-label">Dépensé</div><div class="kpi-value" id="budget-detail-spent">0 €</div></div>
+            <div class="kpi-card" id="budget-detail-remaining-card"><div class="kpi-label">Restant</div><div class="kpi-value" id="budget-detail-remaining">0 €</div></div>
+          </div>
+          <div class="card mt-md">
+            <div class="card-header-row">
+              <h3 id="budget-detail-subtitle">Lignes budgétaires</h3>
+              <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
+            </div>
+            <table class="table">
+              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Prévu (€)</th><th>Réel</th><th>Écart</th><th></th></tr></thead>
+              <tbody id="budget-detail-tbody"></tbody>
+            </table>
+          </div>
+          <div class="chart-card mt-md">
+            <h3>Historique (6 derniers mois)</h3>
+            <div class="chart-container" style="height:200px"><canvas id="chart-budget-history"></canvas></div>
+          </div>
         </div>
       </section>
 
@@ -465,9 +535,11 @@
   <script src="js/storage.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/period-filter.js"></script>
   <script src="js/investments.js"></script>
   <script src="js/expenses.js"></script>
   <script src="js/revenues.js"></script>
+  <script src="js/flux.js"></script>
   <script src="js/comparisons.js"></script>
   <script src="js/categories.js"></script>
   <script src="js/budget.js"></script>

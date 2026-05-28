@@ -483,6 +483,61 @@ body {
   padding: 0 4px;
 }
 
+/* ---- Period Filter ---- */
+#period-filter-container { padding: 0 12px 8px; }
+.period-filter { display: flex; flex-direction: column; gap: 6px; }
+.period-type-btns { display: flex; gap: 4px; }
+.period-type-btn {
+  flex: 1; padding: 5px 2px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--sidebar-bg); color: var(--sidebar-text); font-size: 0.72rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.period-type-btn:hover { background: rgba(255,255,255,0.1); }
+.period-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.period-nav { display: flex; align-items: center; gap: 4px; }
+.period-arrow { background: none; border: 1px solid rgba(255,255,255,0.15); color: var(--sidebar-text); border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.period-arrow:hover { background: rgba(255,255,255,0.1); }
+.period-label { flex: 1; text-align: center; font-size: 0.8rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.period-range-inputs { display: flex; align-items: center; gap: 4px; }
+.period-range-input { flex: 1; min-width: 0; padding: 4px 6px; font-size: 0.72rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; }
+.period-range-sep { color: var(--sidebar-text); font-size: 0.75rem; flex-shrink: 0; }
+
+/* ---- Flux ---- */
+.flux-filters { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.flux-filters select { min-width: 180px; }
+.flux-toggle-row { display: flex; gap: 0.5rem; margin: 1rem 0 0.75rem; }
+.flux-toggle-btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.875rem; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+.flux-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+.flux-toggle-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.kpi-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+@media (max-width: 900px) { .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .kpi-grid-4 { grid-template-columns: 1fr 1fr; } }
+.mt-md { margin-top: 1rem; }
+
+/* ---- Budget thematic ---- */
+.budget-themes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.budget-theme-card { display: flex; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); cursor: pointer; overflow: hidden; transition: box-shadow 0.15s, transform 0.1s; }
+.budget-theme-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-1px); }
+.budget-card-accent { width: 6px; flex-shrink: 0; }
+.budget-card-body { flex: 1; padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.budget-card-top { display: flex; align-items: center; justify-content: space-between; }
+.budget-card-name { font-weight: 600; font-size: 0.9375rem; }
+.budget-progress-wrap { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.budget-progress-bar { height: 100%; border-radius: 999px; transition: width 0.4s; }
+.budget-card-bottom { display: flex; justify-content: space-between; align-items: center; }
+.trend-arrow { font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+.trend-arrow.negative { background: rgba(239,68,68,0.1); color: var(--danger); }
+.trend-arrow.positive { background: rgba(16,185,129,0.1); color: var(--success); }
+.budget-detail-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.budget-smart-message { flex: 1; padding: 0.75rem 1rem; background: var(--primary-light); border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.875rem; line-height: 1.5; }
+.budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
+.card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.card-header-row h3 { margin: 0; }
+.color-picker-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.color-opt input[type=radio] { display: none; }
+.color-swatch { display: block; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s; }
+.color-opt input[type=radio]:checked + .color-swatch { border-color: var(--text); }
+
 /* ---- Categories ---- */
 .new-category-bar {
   display: flex;
@@ -602,9 +657,12 @@ body {
         <button class="mode-btn active" id="mode-expenses" data-mode="expenses">💳 Dépenses</button>
       </div>
 
+      <!-- Period filter -->
+      <div id="period-filter-container"></div>
+
       <nav class="sidebar-nav">
         <!-- Investments mode nav -->
-        <div id="nav-investments-group">
+        <div id="nav-investments-group" style="display:none">
           <a href="#" class="nav-item" data-section="pea">
             <span class="nav-icon">🏦</span><span>PEA</span>
           </a>
@@ -618,11 +676,8 @@ body {
 
         <!-- Expenses mode nav -->
         <div id="nav-expenses-group">
-          <a href="#" class="nav-item" data-section="revenues">
-            <span class="nav-icon">💵</span><span>Revenus</span>
-          </a>
-          <a href="#" class="nav-item active" data-section="expenses">
-            <span class="nav-icon">💳</span><span>Dépenses</span>
+          <a href="#" class="nav-item active" data-section="flux">
+            <span class="nav-icon">💸</span><span>Flux</span>
           </a>
           <a href="#" class="nav-item" data-section="comparisons">
             <span class="nav-icon">⚖️</span><span>Comparaisons</span>
@@ -771,6 +826,61 @@ body {
           </div>
           <div id="investments-empty" class="empty-state hidden">
             <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLUX -->
+      <section class="section" id="section-flux">
+        <div class="section-header">
+          <h1>Flux</h1>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn-primary" id="add-expense-flux-btn">+ Dépense</button>
+            <button class="btn-secondary" id="add-revenue-flux-btn">+ Revenu</button>
+          </div>
+        </div>
+        <div class="kpi-grid-4">
+          <div class="kpi-card success"><div class="kpi-label">Revenus</div><div class="kpi-value positive" id="flux-kpi-revenus">0 €</div></div>
+          <div class="kpi-card danger"><div class="kpi-label">Dépenses</div><div class="kpi-value" id="flux-kpi-depenses">0 €</div></div>
+          <div class="kpi-card" id="flux-kpi-solde-card"><div class="kpi-label">Solde net</div><div class="kpi-value" id="flux-kpi-solde">0 €</div></div>
+          <div class="kpi-card primary"><div class="kpi-label">Taux d'épargne</div><div class="kpi-value" id="flux-kpi-epargne">— %</div></div>
+        </div>
+        <div class="flux-filters">
+          <select id="flux-filter-cat"><option value="">Toutes catégories</option></select>
+          <select id="flux-filter-subcat" disabled><option value="">Toutes sous-catégories</option></select>
+        </div>
+        <div class="chart-card">
+          <h3>Revenus vs Dépenses (6 derniers mois)</h3>
+          <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
+        </div>
+        <div class="flux-toggle-row">
+          <button class="flux-toggle-btn active" id="flux-btn-depenses" onclick="Flux.setView('depenses')">💳 Dépenses</button>
+          <button class="flux-toggle-btn" id="flux-btn-revenus" onclick="Flux.setView('revenus')">💵 Revenus</button>
+        </div>
+        <div id="flux-view-depenses">
+          <div class="chart-card">
+            <h3>Répartition des dépenses</h3>
+            <div class="chart-container" style="height:220px"><canvas id="chart-flux-donut"></canvas></div>
+          </div>
+          <div class="card mt-md">
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
+                <tbody id="flux-expenses-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="flux-expenses-empty">Aucune dépense pour cette période.</p>
+          </div>
+        </div>
+        <div id="flux-view-revenus" class="hidden">
+          <div class="card">
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Date</th><th>Description</th><th>Catégorie</th><th>Montant</th><th></th></tr></thead>
+                <tbody id="flux-revenus-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="flux-revenus-empty">Aucun revenu pour cette période.</p>
           </div>
         </div>
       </section>
@@ -950,26 +1060,41 @@ body {
       <!-- BUDGET -->
       <section class="section hidden" id="section-budget">
         <div class="section-header">
-          <h1>Budget mensuel</h1>
-          <button class="btn-primary" id="add-budget-btn">+ Catégorie</button>
+          <h1 id="budget-section-title">Budgets</h1>
+          <button class="btn-primary" id="add-budget-btn">+ Nouveau budget</button>
         </div>
-        <div class="kpi-grid-3">
-          <div class="kpi-card primary">
-            <div class="kpi-label">Budget total</div>
-            <div class="kpi-value" id="budget-total">0 €</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-label">Dépensé ce mois</div>
-            <div class="kpi-value" id="budget-spent">0 €</div>
-          </div>
-          <div class="kpi-card" id="budget-left-card">
-            <div class="kpi-label">Restant</div>
-            <div class="kpi-value" id="budget-left">0 €</div>
+        <!-- List view -->
+        <div id="budget-list-view">
+          <div id="budget-themes-grid" class="budget-themes-grid"></div>
+          <div id="budget-empty" class="empty-state hidden">
+            <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
         </div>
-        <div id="budget-grid" class="budget-grid"></div>
-        <div id="budget-empty" class="empty-state hidden">
-          <p>Aucun budget défini. Cliquez sur <strong>+ Catégorie</strong> pour définir vos budgets mensuels.</p>
+        <!-- Detail view -->
+        <div id="budget-detail-view" class="hidden">
+          <div class="budget-detail-header">
+            <button class="btn-secondary btn-sm" onclick="Budget.showList()">← Retour</button>
+            <div id="budget-detail-message" class="budget-smart-message"></div>
+          </div>
+          <div class="kpi-grid-3" style="margin-top:1rem">
+            <div class="kpi-card primary"><div class="kpi-label">Budget prévu</div><div class="kpi-value" id="budget-detail-planned">0 €</div></div>
+            <div class="kpi-card warning"><div class="kpi-label">Dépensé</div><div class="kpi-value" id="budget-detail-spent">0 €</div></div>
+            <div class="kpi-card" id="budget-detail-remaining-card"><div class="kpi-label">Restant</div><div class="kpi-value" id="budget-detail-remaining">0 €</div></div>
+          </div>
+          <div class="card mt-md">
+            <div class="card-header-row">
+              <h3 id="budget-detail-subtitle">Lignes budgétaires</h3>
+              <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
+            </div>
+            <table class="table">
+              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Prévu (€)</th><th>Réel</th><th>Écart</th><th></th></tr></thead>
+              <tbody id="budget-detail-tbody"></tbody>
+            </table>
+          </div>
+          <div class="chart-card mt-md">
+            <h3>Historique (6 derniers mois)</h3>
+            <div class="chart-container" style="height:200px"><canvas id="chart-budget-history"></canvas></div>
+          </div>
         </div>
       </section>
 
@@ -1051,6 +1176,7 @@ const Storage = {
     PATRIMONY: 'invest_patrimony',
     REVENUES: 'invest_revenues',
     CATEGORIES: 'invest_categories',
+    BUDGET_THEMES: 'invest_budgets_v2',
   },
 
   get(key) {
@@ -1079,6 +1205,9 @@ const Storage = {
   getBudgets() { return this.get(this.KEYS.BUDGETS) || {}; },
   saveBudgets(data) { this.set(this.KEYS.BUDGETS, data); },
 
+  getBudgetThemes() { return this.get(this.KEYS.BUDGET_THEMES) || []; },
+  saveBudgetThemes(data) { this.set(this.KEYS.BUDGET_THEMES, data); },
+
   getPatrimony() { return this.get(this.KEYS.PATRIMONY) || []; },
   savePatrimony(data) { this.set(this.KEYS.PATRIMONY, data); },
 
@@ -1089,6 +1218,7 @@ const Storage = {
     return ['Logement','Alimentation','Transport','Santé','Loisirs','Vêtements','Éducation','Restaurants','Abonnements','Épargne','Autre']
       .map((name, i) => ({ id: 'dcat' + i, name, subcategories: [] }));
   },
+
   getCategories() {
     const saved = this.get(this.KEYS.CATEGORIES);
     if (saved && saved.length > 0) return saved;
@@ -1103,6 +1233,7 @@ const Storage = {
       investments: this.getInvestments(),
       expenses: this.getExpenses(),
       budgets: this.getBudgets(),
+      budgetThemes: this.getBudgetThemes(),
       patrimony: this.getPatrimony(),
       revenues: this.getRevenues(),
       categories: this.getCategories(),
@@ -1114,6 +1245,7 @@ const Storage = {
     if (data.investments) this.saveInvestments(data.investments);
     if (data.expenses) this.saveExpenses(data.expenses);
     if (data.budgets) this.saveBudgets(data.budgets);
+    if (data.budgetThemes) this.saveBudgetThemes(data.budgetThemes);
     if (data.patrimony) this.savePatrimony(data.patrimony);
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);
@@ -1411,6 +1543,55 @@ const Charts = {
     });
   },
 
+  fluxBar(labels, revData, depData) {
+    this.create('chart-flux-bar', {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  fluxDonut(labels, data) {
+    if (!labels.length) { this.destroy('chart-flux-donut'); return; }
+    const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+    this.create('chart-flux-donut', {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  budgetHistory(labels, data, color) {
+    this.create('chart-budget-history', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Dépenses réelles',
+          data,
+          borderColor: color || '#6366f1',
+          backgroundColor: (color || '#6366f1') + '22',
+          fill: true, tension: 0.4, pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
   patrimony(assets, liabilities) {
     const assetsByCat = {}, liabByCat = {};
     assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });
@@ -1433,6 +1614,268 @@ const Charts = {
         scales: { y: { ticks: { callback: (v) => Utils.formatCurrency(v) } } },
       },
     });
+  },
+};
+
+  </script>
+  <script>
+const PeriodFilter = {
+  _STORAGE_KEY: 'invest_period_filter',
+  _listeners: [],
+
+  get() {
+    const saved = Storage.get(this._STORAGE_KEY);
+    if (saved) return saved;
+    // Default: current month
+    const now = new Date();
+    return {
+      type: 'month',
+      year: now.getFullYear(),
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      quarter: Math.ceil((now.getMonth() + 1) / 3),
+      semester: now.getMonth() < 6 ? 1 : 2,
+      start: '',
+      end: '',
+    };
+  },
+
+  set(state) {
+    Storage.set(this._STORAGE_KEY, state);
+    this._notify();
+  },
+
+  getDateRange() {
+    const s = this.get();
+    switch (s.type) {
+      case 'month': {
+        const [y, m] = s.month.split('-').map(Number);
+        const last = new Date(y, m, 0).getDate();
+        return {
+          start: `${y}-${String(m).padStart(2, '0')}-01`,
+          end: `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`,
+        };
+      }
+      case 'quarter': {
+        const y = s.year;
+        const q = s.quarter;
+        const startM = (q - 1) * 3 + 1;
+        const endM = q * 3;
+        const lastDay = new Date(y, endM, 0).getDate();
+        return {
+          start: `${y}-${String(startM).padStart(2, '0')}-01`,
+          end: `${y}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        };
+      }
+      case 'semester': {
+        const y = s.year;
+        const sem = s.semester;
+        const startM = sem === 1 ? 1 : 7;
+        const endM = sem === 1 ? 6 : 12;
+        const lastDay = new Date(y, endM, 0).getDate();
+        return {
+          start: `${y}-${String(startM).padStart(2, '0')}-01`,
+          end: `${y}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        };
+      }
+      case 'year': {
+        const y = s.year;
+        return { start: `${y}-01-01`, end: `${y}-12-31` };
+      }
+      case 'range': {
+        return { start: s.start || '', end: s.end || '' };
+      }
+      default: {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const last = new Date(y, m, 0).getDate();
+        return {
+          start: `${y}-${String(m).padStart(2, '0')}-01`,
+          end: `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`,
+        };
+      }
+    }
+  },
+
+  getLabel() {
+    const s = this.get();
+    const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    switch (s.type) {
+      case 'month': {
+        const [y, m] = s.month.split('-').map(Number);
+        return `${MONTHS_FR[m - 1]} ${y}`;
+      }
+      case 'quarter':
+        return `T${s.quarter} ${s.year}`;
+      case 'semester':
+        return `S${s.semester} ${s.year}`;
+      case 'year':
+        return `${s.year}`;
+      case 'range': {
+        const fmt = (d) => d ? new Intl.DateTimeFormat('fr-FR').format(new Date(d + 'T00:00:00')) : '?';
+        return `${fmt(s.start)} → ${fmt(s.end)}`;
+      }
+      default:
+        return '';
+    }
+  },
+
+  onChange(cb) {
+    this._listeners.push(cb);
+  },
+
+  _notify() {
+    this._listeners.forEach(cb => { try { cb(); } catch(e) { console.error(e); } });
+  },
+
+  // Navigate to previous period
+  _prev() {
+    const s = { ...this.get() };
+    switch (s.type) {
+      case 'month': {
+        const [y, m] = s.month.split('-').map(Number);
+        const d = new Date(y, m - 2, 1);
+        s.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        break;
+      }
+      case 'quarter': {
+        s.quarter--;
+        if (s.quarter < 1) { s.quarter = 4; s.year--; }
+        break;
+      }
+      case 'semester': {
+        s.semester--;
+        if (s.semester < 1) { s.semester = 2; s.year--; }
+        break;
+      }
+      case 'year':
+        s.year--;
+        break;
+    }
+    this.set(s);
+  },
+
+  // Navigate to next period
+  _next() {
+    const s = { ...this.get() };
+    switch (s.type) {
+      case 'month': {
+        const [y, m] = s.month.split('-').map(Number);
+        const d = new Date(y, m, 1);
+        s.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        break;
+      }
+      case 'quarter': {
+        s.quarter++;
+        if (s.quarter > 4) { s.quarter = 1; s.year++; }
+        break;
+      }
+      case 'semester': {
+        s.semester++;
+        if (s.semester > 2) { s.semester = 1; s.year++; }
+        break;
+      }
+      case 'year':
+        s.year++;
+        break;
+    }
+    this.set(s);
+  },
+
+  renderUI() {
+    const container = document.getElementById('period-filter-container');
+    if (!container) return;
+    container.innerHTML = this._buildHTML();
+    this._bindEvents(container);
+    this._updateUI(container);
+  },
+
+  _buildHTML() {
+    return `
+      <div class="period-filter">
+        <div class="period-type-btns">
+          <button class="period-type-btn" data-type="month">Mois</button>
+          <button class="period-type-btn" data-type="quarter">T</button>
+          <button class="period-type-btn" data-type="semester">S</button>
+          <button class="period-type-btn" data-type="year">Année</button>
+          <button class="period-type-btn" data-type="range">Plage</button>
+        </div>
+        <div class="period-nav" id="period-nav-row">
+          <button class="period-arrow" id="period-prev" title="Période précédente">&#8592;</button>
+          <span class="period-label" id="period-label"></span>
+          <button class="period-arrow" id="period-next" title="Période suivante">&#8594;</button>
+        </div>
+        <div class="period-range-inputs hidden" id="period-range-inputs">
+          <input type="date" id="period-range-start" class="period-range-input" title="Début">
+          <span class="period-range-sep">→</span>
+          <input type="date" id="period-range-end" class="period-range-input" title="Fin">
+        </div>
+      </div>`;
+  },
+
+  _bindEvents(container) {
+    // Type buttons
+    container.querySelectorAll('.period-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = { ...this.get() };
+        s.type = btn.dataset.type;
+        // Sync year from current selection if needed
+        if (s.type === 'quarter' || s.type === 'semester' || s.type === 'year') {
+          if (!s.year) s.year = new Date().getFullYear();
+        }
+        this.set(s);
+        this._updateUI(container);
+      });
+    });
+
+    // Prev/next
+    document.getElementById('period-prev').addEventListener('click', () => {
+      this._prev();
+      this._updateUI(container);
+    });
+    document.getElementById('period-next').addEventListener('click', () => {
+      this._next();
+      this._updateUI(container);
+    });
+
+    // Range inputs
+    document.getElementById('period-range-start').addEventListener('change', (e) => {
+      const s = { ...this.get() };
+      s.start = e.target.value;
+      this.set(s);
+    });
+    document.getElementById('period-range-end').addEventListener('change', (e) => {
+      const s = { ...this.get() };
+      s.end = e.target.value;
+      this.set(s);
+    });
+  },
+
+  _updateUI(container) {
+    const s = this.get();
+    // Highlight active type button
+    container.querySelectorAll('.period-type-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.type === s.type);
+    });
+    // Update label
+    const labelEl = document.getElementById('period-label');
+    if (labelEl) labelEl.textContent = this.getLabel();
+    // Show/hide nav vs range
+    const navRow = document.getElementById('period-nav-row');
+    const rangeInputs = document.getElementById('period-range-inputs');
+    if (s.type === 'range') {
+      if (navRow) navRow.classList.add('hidden');
+      if (rangeInputs) {
+        rangeInputs.classList.remove('hidden');
+        const startEl = document.getElementById('period-range-start');
+        const endEl = document.getElementById('period-range-end');
+        if (startEl) startEl.value = s.start || '';
+        if (endEl) endEl.value = s.end || '';
+      }
+    } else {
+      if (navRow) navRow.classList.remove('hidden');
+      if (rangeInputs) rangeInputs.classList.add('hidden');
+    }
   },
 };
 
@@ -1881,6 +2324,170 @@ const Revenues = {
 
   </script>
   <script>
+const Flux = {
+  activeView: 'depenses',
+
+  init() {
+    PeriodFilter.onChange(() => { if (document.getElementById('section-flux') && !document.getElementById('section-flux').classList.contains('hidden')) this.render(); });
+
+    const catFilter = document.getElementById('flux-filter-cat');
+    if (catFilter) {
+      catFilter.addEventListener('change', () => {
+        this._updateSubcatFilter(catFilter.value);
+        this.render();
+      });
+    }
+    const subcatFilter = document.getElementById('flux-filter-subcat');
+    if (subcatFilter) subcatFilter.addEventListener('change', () => this.render());
+
+    this._populateCatFilter();
+  },
+
+  _populateCatFilter() {
+    const catFilter = document.getElementById('flux-filter-cat');
+    if (!catFilter) return;
+    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
+    Storage.getCategories().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name; opt.textContent = cat.name;
+      catFilter.appendChild(opt);
+    });
+  },
+
+  _updateSubcatFilter(catName) {
+    const subcatFilter = document.getElementById('flux-filter-subcat');
+    if (!subcatFilter) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length && catName) {
+      subcatFilter.disabled = false;
+      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>' +
+        subcats.map(s => `<option value="${s}">${s}</option>`).join('');
+    } else {
+      subcatFilter.disabled = true;
+      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>';
+    }
+  },
+
+  setView(view) {
+    this.activeView = view;
+    document.getElementById('flux-view-depenses').classList.toggle('hidden', view !== 'depenses');
+    document.getElementById('flux-view-revenus').classList.toggle('hidden', view !== 'revenus');
+    document.getElementById('flux-btn-depenses').classList.toggle('active', view === 'depenses');
+    document.getElementById('flux-btn-revenus').classList.toggle('active', view === 'revenus');
+    this.render();
+  },
+
+  render() {
+    const { start, end } = PeriodFilter.getDateRange();
+    const catFilter = document.getElementById('flux-filter-cat')?.value || '';
+    const subcatFilter = document.getElementById('flux-filter-subcat')?.value || '';
+
+    const allExpenses = Storage.getExpenses();
+    const allRevenues = Storage.getRevenues();
+
+    let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    let revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
+
+    if (catFilter) {
+      expenses = expenses.filter(e => e.category === catFilter);
+      if (subcatFilter) expenses = expenses.filter(e => e.subcategory === subcatFilter);
+    }
+
+    const totalRev = revenues.reduce((s, r) => s + r.amount, 0);
+    const totalDep = expenses.reduce((s, e) => s + e.amount, 0);
+    const solde = totalRev - totalDep;
+    const tauxEpargne = totalRev > 0 ? (solde / totalRev * 100).toFixed(1) : '—';
+
+    document.getElementById('flux-kpi-revenus').textContent = Utils.formatCurrency(totalRev);
+    document.getElementById('flux-kpi-depenses').textContent = Utils.formatCurrency(totalDep);
+    const soldeEl = document.getElementById('flux-kpi-solde');
+    soldeEl.textContent = Utils.formatCurrency(solde);
+    soldeEl.className = 'kpi-value ' + (solde >= 0 ? 'positive' : 'negative');
+    document.getElementById('flux-kpi-solde-card').className = 'kpi-card ' + (solde >= 0 ? 'success' : 'danger');
+    const epEl = document.getElementById('flux-kpi-epargne');
+    epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
+    epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
+
+    this._renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter);
+
+    if (this.activeView === 'depenses') {
+      this._renderDonut(expenses);
+      this._renderExpensesTable(expenses);
+    } else {
+      this._renderRevenuesTable(revenues);
+    }
+  },
+
+  _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const labels = months.map(m => { const [y, mo] = m.split('-').map(Number); return MONTHS_FR[mo-1] + ' ' + String(y).slice(2); });
+
+    const revByMonth = months.map(m => allRevenues.filter(r => r.date.startsWith(m)).reduce((s, r) => s + r.amount, 0));
+    const depByMonth = months.map(m => {
+      let exp = allExpenses.filter(e => e.date.startsWith(m));
+      if (catFilter) { exp = exp.filter(e => e.category === catFilter); if (subcatFilter) exp = exp.filter(e => e.subcategory === subcatFilter); }
+      return exp.reduce((s, e) => s + e.amount, 0);
+    });
+
+    Charts.fluxBar(labels, revByMonth, depByMonth);
+  },
+
+  _renderDonut(expenses) {
+    const byCategory = {};
+    expenses.forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+    let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    if (entries.length > 6) {
+      const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
+      entries = [...entries.slice(0, 6), ['Autres', autres]];
+    }
+    Charts.fluxDonut(entries.map(([k]) => k), entries.map(([, v]) => v));
+  },
+
+  _renderExpensesTable(expenses) {
+    const tbody = document.getElementById('flux-expenses-tbody');
+    const empty = document.getElementById('flux-expenses-empty');
+    if (!tbody) return;
+    const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+    empty.classList.toggle('hidden', sorted.length > 0);
+    tbody.innerHTML = sorted.map(exp => `<tr>
+      <td>${Utils.formatDate(exp.date)}</td>
+      <td>${exp.description}</td>
+      <td><span class="badge badge-category">${exp.category}</span>${exp.subcategory ? `<span class="badge badge-subcategory">${exp.subcategory}</span>` : ''}</td>
+      <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
+      <td class="actions-cell">
+        <button class="btn-icon" onclick="Expenses.edit('${exp.id}')">✏️</button>
+        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+  },
+
+  _renderRevenuesTable(revenues) {
+    const tbody = document.getElementById('flux-revenus-tbody');
+    const empty = document.getElementById('flux-revenus-empty');
+    if (!tbody) return;
+    const sorted = [...revenues].sort((a, b) => b.date.localeCompare(a.date));
+    empty.classList.toggle('hidden', sorted.length > 0);
+    tbody.innerHTML = sorted.map(rev => `<tr>
+      <td>${Utils.formatDate(rev.date)}</td>
+      <td>${rev.description}</td>
+      <td><span class="badge badge-revenue">${rev.category}</span></td>
+      <td><strong class="positive">${Utils.formatCurrency(rev.amount)}</strong></td>
+      <td class="actions-cell">
+        <button class="btn-icon" onclick="Revenues.edit('${rev.id}')">✏️</button>
+        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+  },
+};
+
+  </script>
+  <script>
 const Comparisons = {
   periodA: '',
   periodB: '',
@@ -2081,116 +2688,317 @@ const Categories = {
   </script>
   <script>
 const Budget = {
+  _currentThemeId: null,
+  _THEME_COLORS: ['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#ef4444','#14b8a6'],
+
+  init() {
+    PeriodFilter.onChange(() => {
+      if (document.getElementById('section-budget') && !document.getElementById('section-budget').classList.contains('hidden')) this.render();
+    });
+  },
+
   render() {
-    const budgets = Storage.getBudgets();
-    const expenses = Storage.getExpenses();
-    const month = Utils.getCurrentMonth();
-    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    if (this._currentThemeId) {
+      this._renderDetail(this._currentThemeId);
+    } else {
+      this._renderList();
+    }
+  },
 
-    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
-    const totalSpent = monthExp.reduce((s, e) => s + e.amount, 0);
-    const remaining = totalBudget - totalSpent;
+  _renderList() {
+    this._currentThemeId = null;
+    document.getElementById('budget-list-view').classList.remove('hidden');
+    document.getElementById('budget-detail-view').classList.add('hidden');
+    document.getElementById('budget-section-title').textContent = 'Budgets';
+    document.getElementById('add-budget-btn').textContent = '+ Nouveau budget';
 
-    document.getElementById('budget-total').textContent = Utils.formatCurrency(totalBudget);
-    document.getElementById('budget-spent').textContent = Utils.formatCurrency(totalSpent);
-    const leftEl = document.getElementById('budget-left');
-    leftEl.textContent = Utils.formatCurrency(remaining);
-    document.getElementById('budget-left-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
-
-    const categories = Object.keys(budgets);
-    const grid = document.getElementById('budget-grid');
+    const themes = Storage.getBudgetThemes();
+    const { start, end } = PeriodFilter.getDateRange();
+    const expenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
     const empty = document.getElementById('budget-empty');
+    const grid = document.getElementById('budget-themes-grid');
 
-    if (!categories.length) {
+    if (!themes.length) {
       grid.innerHTML = '';
       empty.classList.remove('hidden');
       return;
     }
     empty.classList.add('hidden');
 
-    grid.innerHTML = categories.map(cat => {
-      const budget = budgets[cat];
-      const spent = monthExp.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
-      const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-      const over = spent > budget;
-      const rem = budget - spent;
-      const barClass = over ? 'over' : pct > 80 ? 'warning' : '';
+    grid.innerHTML = themes.map(theme => {
+      const spent = this._computeSpent(theme, expenses);
+      const planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+      const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
+      const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
+      const remaining = planned - spent;
+
+      const prevSpent = this._getPrevSpent(theme);
+      const trendHtml = prevSpent > 0 ? (spent > prevSpent
+        ? `<span class="trend-arrow negative">↑ ${Utils.formatCurrency(spent - prevSpent)}</span>`
+        : `<span class="trend-arrow positive">↓ ${Utils.formatCurrency(prevSpent - spent)}</span>`)
+        : '';
+
       return `
-        <div class="budget-card ${over ? 'over-budget' : ''}">
-          <div class="budget-card-header">
-            <span class="budget-cat">${cat}</span>
-            <div>
-              <button class="btn-icon" onclick="Budget.edit('${cat}')" title="Modifier">✏️</button>
-              <button class="btn-icon btn-danger" onclick="Budget.delete('${cat}')" title="Supprimer">🗑️</button>
+        <div class="budget-theme-card" onclick="Budget.showDetail('${theme.id}')">
+          <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
+          <div class="budget-card-body">
+            <div class="budget-card-top">
+              <span class="budget-card-name">${theme.name}</span>
+              ${trendHtml}
             </div>
-          </div>
-          <div class="budget-amounts">
-            <span class="${over ? 'negative' : ''}">${Utils.formatCurrency(spent)}</span>
-            <span class="text-muted">/ ${Utils.formatCurrency(budget)}</span>
-          </div>
-          <div class="budget-progress">
-            <div class="progress-bar"><div class="progress-fill ${barClass}" style="width:${pct}%"></div></div>
-            <span class="budget-pct">${pct.toFixed(0)}%</span>
-          </div>
-          <div class="budget-remaining ${over ? 'negative' : 'positive'}">
-            ${over ? `Dépassement: ${Utils.formatCurrency(Math.abs(rem))}` : `Restant: ${Utils.formatCurrency(rem)}`}
+            <div class="budget-progress-wrap">
+              <div class="budget-progress-bar" style="width:${pct.toFixed(1)}%;background:${statusColor}"></div>
+            </div>
+            <div class="budget-card-bottom">
+              <span style="font-size:0.8125rem;color:var(--text-muted)">${PeriodFilter.getLabel()}</span>
+              <span style="font-size:0.875rem;font-weight:600;color:${remaining >= 0 ? 'var(--success)' : 'var(--danger)'}">${Utils.formatCurrency(spent)} / ${Utils.formatCurrency(planned)}</span>
+            </div>
           </div>
         </div>`;
     }).join('');
   },
 
-  openAddForm() { Modal.open('Définir un budget', this._form(null, null)); },
-
-  edit(category) {
-    Modal.open('Modifier le budget', this._form(category, Storage.getBudgets()[category]));
+  _computeSpent(theme, expenses) {
+    return expenses.filter(e =>
+      theme.items.some(item =>
+        item.category === e.category &&
+        (!item.subcategory || item.subcategory === e.subcategory)
+      )
+    ).reduce((s, e) => s + e.amount, 0);
   },
 
-  _form(category, amount) {
-    const isEdit = !!category;
-    const used = Object.keys(Storage.getBudgets());
-    const allCats = Storage.getCategories().map(c => c.name);
-    const available = isEdit
-      ? allCats
-      : allCats.filter(c => !used.includes(c));
+  _getPrevSpent(theme) {
+    const s = PeriodFilter.get();
+    let start, end;
+    if (s.type === 'month') {
+      const [y, m] = s.month.split('-').map(Number);
+      const d = new Date(y, m - 2, 1);
+      const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      start = `${pm}-01`;
+      end = `${pm}-${String(last).padStart(2, '0')}`;
+    } else {
+      return 0;
+    }
+    const prevExpenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
+    return this._computeSpent(theme, prevExpenses);
+  },
 
-    const catField = isEdit
-      ? `<input value="${category}" disabled>`
-      : `<select name="category" required><option value="">Choisir...</option>${available.map(c => `<option value="${c}">${c}</option>`).join('')}</select>`;
+  showDetail(id) {
+    this._currentThemeId = id;
+    this._renderDetail(id);
+  },
 
+  showList() {
+    this._currentThemeId = null;
+    this._renderList();
+  },
+
+  _renderDetail(id) {
+    const theme = Storage.getBudgetThemes().find(t => t.id === id);
+    if (!theme) { this.showList(); return; }
+
+    document.getElementById('budget-list-view').classList.add('hidden');
+    document.getElementById('budget-detail-view').classList.remove('hidden');
+    document.getElementById('budget-section-title').textContent = theme.name;
+    document.getElementById('add-budget-btn').textContent = '+ Ligne';
+
+    const { start, end } = PeriodFilter.getDateRange();
+    const allExpenses = Storage.getExpenses();
+    const periodExpenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+
+    const totalSpent = this._computeSpent(theme, periodExpenses);
+    const totalPlanned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+    const remaining = totalPlanned - totalSpent;
+
+    document.getElementById('budget-detail-planned').textContent = Utils.formatCurrency(totalPlanned);
+    document.getElementById('budget-detail-spent').textContent = Utils.formatCurrency(totalSpent);
+    const remEl = document.getElementById('budget-detail-remaining');
+    remEl.textContent = Utils.formatCurrency(Math.abs(remaining));
+    remEl.className = 'kpi-value ' + (remaining >= 0 ? 'positive' : 'negative');
+    document.getElementById('budget-detail-remaining-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
+
+    // Smart message
+    const daysInPeriod = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
+    const daysPassed = Math.min(daysInPeriod, Math.ceil((new Date() - new Date(start)) / 86400000) + 1);
+    const daysLeft = Math.max(0, daysInPeriod - daysPassed);
+    let msg = `Tu as dépensé <strong>${Utils.formatCurrency(totalSpent)}</strong> sur <strong>${Utils.formatCurrency(totalPlanned)}</strong> prévu.`;
+    if (remaining >= 0) msg += ` Il te reste <strong>${Utils.formatCurrency(remaining)}</strong>` + (daysLeft > 0 ? ` pour ${daysLeft} jour(s).` : '.');
+    else msg += ` Dépassement de <strong class="negative">${Utils.formatCurrency(-remaining)}</strong>.`;
+    document.getElementById('budget-detail-message').innerHTML = msg;
+
+    // Detail table
+    const tbody = document.getElementById('budget-detail-tbody');
+    tbody.innerHTML = theme.items.map((item, idx) => {
+      const real = periodExpenses.filter(e => e.category === item.category && (!item.subcategory || item.subcategory === e.subcategory)).reduce((s, e) => s + e.amount, 0);
+      const ecart = item.planned - real;
+      return `<tr>
+        <td>${item.category}</td>
+        <td>${item.subcategory || '—'}</td>
+        <td><input type="number" value="${item.planned}" min="0" step="1" class="budget-inline-input" onchange="Budget.updatePlanned('${theme.id}', ${idx}, this.value)"></td>
+        <td>${Utils.formatCurrency(real)}</td>
+        <td class="${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
+        <td class="actions-cell"><button class="btn-icon btn-danger" onclick="Budget.deleteItem('${theme.id}', ${idx})">🗑️</button></td>
+      </tr>`;
+    }).join('');
+
+    // History chart: last 6 periods (months)
+    const now = new Date();
+    const histLabels = [], histData = [];
+    const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+      const mExp = allExpenses.filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`);
+      histLabels.push(MONTHS_FR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
+      histData.push(this._computeSpent(theme, mExp));
+    }
+    Charts.budgetHistory(histLabels, histData, theme.color || '#6366f1');
+  },
+
+  updatePlanned(themeId, idx, value) {
+    const themes = Storage.getBudgetThemes();
+    const theme = themes.find(t => t.id === themeId);
+    if (!theme) return;
+    theme.items[idx].planned = parseFloat(value) || 0;
+    Storage.saveBudgetThemes(themes);
+  },
+
+  deleteItem(themeId, idx) {
+    if (!confirm('Supprimer cette ligne ?')) return;
+    const themes = Storage.getBudgetThemes();
+    const theme = themes.find(t => t.id === themeId);
+    if (!theme) return;
+    theme.items.splice(idx, 1);
+    Storage.saveBudgetThemes(themes);
+    this._renderDetail(themeId);
+  },
+
+  openAddForm() {
+    if (this._currentThemeId) {
+      Modal.open('Ajouter une ligne budgétaire', this._itemForm(null, this._currentThemeId));
+    } else {
+      Modal.open('Nouveau budget thématique', this._themeForm());
+    }
+  },
+
+  _themeForm() {
+    const colorOptions = this._THEME_COLORS.map((c, i) =>
+      `<label class="color-opt"><input type="radio" name="color" value="${c}" ${i === 0 ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
+    ).join('');
     return `
-      <form onsubmit="Budget.save(event, ${isEdit ? `'${category}'` : 'null'})">
+      <form onsubmit="Budget.saveTheme(event)">
         <div class="form-grid">
-          <div class="form-group"><label>Catégorie *</label>${catField}</div>
-          <div class="form-group"><label>Budget mensuel (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${amount || ''}"></div>
+          <div class="form-group form-full">
+            <label>Nom du budget *</label>
+            <input name="name" required placeholder="ex: Alimentation">
+          </div>
+          <div class="form-group form-full">
+            <label>Couleur</label>
+            <div class="color-picker-row">${colorOptions}</div>
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+          <button type="submit" class="btn-primary">Créer</button>
         </div>
       </form>`;
   },
 
-  save(event, existingCat) {
-    event.preventDefault();
-    const fd = new FormData(event.target);
-    const category = existingCat || fd.get('category');
-    const amount = parseFloat(fd.get('amount'));
-    const budgets = Storage.getBudgets();
-    budgets[category] = amount;
-    Storage.saveBudgets(budgets);
-    Modal.close();
-    this.render();
-    Dashboard.render();
-    Expenses.render();
+  _itemForm(item, themeId) {
+    const cats = Storage.getCategories();
+    const catOptions = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    return `
+      <form onsubmit="Budget.saveItem(event, '${themeId}', ${item ? item._idx : 'null'})">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select name="category" required onchange="Budget._updateItemSubcats(this.value)">${catOptions}</select>
+          </div>
+          <div class="form-group">
+            <label>Sous-catégorie</label>
+            <select name="subcategory" id="budget-item-subcat" disabled><option value="">—</option></select>
+          </div>
+          <div class="form-group form-full">
+            <label>Montant prévu (€) *</label>
+            <input name="planned" type="number" step="1" min="0" required placeholder="ex: 300">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Ajouter</button>
+        </div>
+      </form>`;
   },
 
-  delete(category) {
-    if (!confirm(`Supprimer le budget "${category}" ?`)) return;
-    const budgets = Storage.getBudgets();
-    delete budgets[category];
-    Storage.saveBudgets(budgets);
-    this.render();
-    Dashboard.render();
+  _updateItemSubcats(catName) {
+    const sel = document.getElementById('budget-item-subcat');
+    if (!sel) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length) {
+      sel.disabled = false;
+      sel.innerHTML = '<option value="">—</option>' + subcats.map(s => `<option value="${s}">${s}</option>`).join('');
+    } else {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">—</option>';
+    }
+  },
+
+  saveTheme(event) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const themes = Storage.getBudgetThemes();
+    themes.push({ id: 'theme_' + Date.now(), name: fd.get('name').trim(), color: fd.get('color'), items: [] });
+    Storage.saveBudgetThemes(themes);
+    Modal.close();
+    this._renderList();
+  },
+
+  saveItem(event, themeId) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const themes = Storage.getBudgetThemes();
+    const theme = themes.find(t => t.id === themeId);
+    if (!theme) return;
+    theme.items.push({ category: fd.get('category'), subcategory: fd.get('subcategory') || '', planned: parseFloat(fd.get('planned')) || 0 });
+    Storage.saveBudgetThemes(themes);
+    Modal.close();
+    this._renderDetail(themeId);
+  },
+
+  deleteTheme(id) {
+    if (!confirm('Supprimer ce budget ?')) return;
+    Storage.saveBudgetThemes(Storage.getBudgetThemes().filter(t => t.id !== id));
+    this.showList();
+  },
+
+  suggest() {
+    const id = this._currentThemeId;
+    if (!id) return;
+    const theme = Storage.getBudgetThemes().find(t => t.id === id);
+    if (!theme) return;
+    const allExpenses = Storage.getExpenses();
+    const now = new Date();
+    // Average over last 3 months
+    const totals = theme.items.map(item => {
+      let sum = 0;
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+        sum += allExpenses
+          .filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`)
+          .filter(e => e.category === item.category && (!item.subcategory || item.subcategory === e.subcategory))
+          .reduce((s, e) => s + e.amount, 0);
+      }
+      return Math.ceil(sum / 3);
+    });
+    const themes = Storage.getBudgetThemes();
+    const t = themes.find(t => t.id === id);
+    t.items.forEach((item, i) => { item.planned = totals[i]; });
+    Storage.saveBudgetThemes(themes);
+    this._renderDetail(id);
   },
 };
 
@@ -2431,9 +3239,9 @@ const APP_MODES = {
     default: 'pea',
   },
   expenses: {
-    sections: ['revenues', 'expenses', 'comparisons', 'budget', 'categories'],
+    sections: ['flux', 'comparisons', 'budget', 'categories'],
     navGroupId: 'nav-expenses-group',
-    default: 'expenses',
+    default: 'flux',
   },
 };
 
@@ -2462,6 +3270,7 @@ function navigateTo(sectionId) {
     pea: 'investments',
     assurance_vie: 'investments',
     autre_compte: 'investments',
+    flux: 'flux',
     revenues: 'revenues',
     expenses: 'expenses',
     comparisons: 'comparisons',
@@ -2500,6 +3309,9 @@ function navigateTo(sectionId) {
       document.getElementById('investments-section-title').textContent = 'Autre';
       Investments.render('autre');
       break;
+    case 'flux':
+      Flux.render();
+      break;
     case 'revenues':
       Revenues.render();
       break;
@@ -2522,8 +3334,11 @@ function navigateTo(sectionId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  PeriodFilter.renderUI();
   Expenses.init();
   Revenues.init();
+  Flux.init();
+  Budget.init();
   Comparisons.init();
 
   // Populate revenue category filter
@@ -2560,8 +3375,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Action buttons
   document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
-  document.getElementById('add-expense-btn').addEventListener('click', () => Expenses.openAddForm());
-  document.getElementById('add-revenue-btn').addEventListener('click', () => Revenues.openAddForm());
+  document.getElementById('add-expense-btn')?.addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-btn')?.addEventListener('click', () => Revenues.openAddForm());
+  document.getElementById('add-expense-flux-btn')?.addEventListener('click', () => Expenses.openAddForm());
+  document.getElementById('add-revenue-flux-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
 
@@ -2644,7 +3461,7 @@ document.addEventListener('DOMContentLoaded', () => {
               amount, category: CAT_MAP[catNorm]||'Autre', date: parseExcelDate(row[dateIdx]), notes: '' });
             imported++;
           }
-          Storage.saveExpenses(existing); navigateTo('expenses');
+          Storage.saveExpenses(existing); navigateTo('flux');
           alert(`${imported} dépense(s) importée(s) depuis Excel !`);
         } catch (err) { console.error(err); alert('Erreur lors de l\'importation Excel.'); }
       };
@@ -2669,7 +3486,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nav-expenses-group').style.display = '';
 
   // Default mode is Dépenses, show expenses section
-  navigateTo('expenses');
+  navigateTo('flux');
 });
 
 // ---- PDF Import ----
@@ -2837,7 +3654,7 @@ function confirmPDFImport() {
   document.getElementById('modal').classList.remove('modal-wide');
   Modal.close();
   window._pdfTransactions = null;
-  navigateTo('expenses');
+  navigateTo('flux');
   alert(`${imported} dépense(s) importée(s) !`);
 }
 

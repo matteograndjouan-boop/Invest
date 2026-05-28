@@ -192,6 +192,55 @@ const Charts = {
     });
   },
 
+  fluxBar(labels, revData, depData) {
+    this.create('chart-flux-bar', {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
+  fluxDonut(labels, data) {
+    if (!labels.length) { this.destroy('chart-flux-donut'); return; }
+    const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+    this.create('chart-flux-donut', {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  budgetHistory(labels, data, color) {
+    this.create('chart-budget-history', {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Dépenses réelles',
+          data,
+          borderColor: color || '#6366f1',
+          backgroundColor: (color || '#6366f1') + '22',
+          fill: true, tension: 0.4, pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+      },
+    });
+  },
+
   patrimony(assets, liabilities) {
     const assetsByCat = {}, liabByCat = {};
     assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });
