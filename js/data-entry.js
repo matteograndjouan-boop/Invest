@@ -23,8 +23,15 @@ const DataEntry = {
       });
     });
 
-    // End drag on mouseup anywhere
+    // Mouse drag — end on mouseup anywhere
     document.addEventListener('mouseup', () => { this._isDragging = false; });
+    // Touch drag — event delegation on tbody (passive:false to allow preventDefault)
+    const tbody = document.getElementById('donnees-tbody');
+    if (tbody) {
+      tbody.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
+      tbody.addEventListener('touchmove',  (e) => this._onTouchMove(e),  { passive: false });
+    }
+    document.addEventListener('touchend', () => { this._isDragging = false; });
 
     this._populateCatFilter();
   },
@@ -80,6 +87,28 @@ const DataEntry = {
   _onRowMouseenter(key) {
     if (!this._isDragging) return;
     this._selected.add(key);
+    this._refreshRowHighlights();
+    this._updateHeaderButtons();
+  },
+
+  _onTouchStart(e) {
+    if (!this._selectionMode) return;
+    const tr = e.target.closest('tr[data-key]');
+    if (!tr) return;
+    e.preventDefault(); // bloque sélection texte iOS
+    this._isDragging = true;
+    this._toggleKey(tr.dataset.key);
+  },
+
+  _onTouchMove(e) {
+    if (!this._isDragging || !this._selectionMode) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) return;
+    const tr = el.closest('tr[data-key]');
+    if (!tr || this._selected.has(tr.dataset.key)) return;
+    this._selected.add(tr.dataset.key);
     this._refreshRowHighlights();
     this._updateHeaderButtons();
   },
