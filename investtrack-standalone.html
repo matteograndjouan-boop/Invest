@@ -2582,12 +2582,19 @@ const Flux = {
     };
 
     const revByMonth = months.map(m => {
-      const s = `${m}-01`, e = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const mStart = `${m}-01`;
+      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      // Clamp to the actual period bounds (critical for range mode)
+      const s = mStart < start ? start : mStart;
+      const e = mEnd > end ? end : mEnd;
       return allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0);
     });
 
     const depByMonth = months.map(m => {
-      const s = `${m}-01`, e = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const mStart = `${m}-01`;
+      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const s = mStart < start ? start : mStart;
+      const e = mEnd > end ? end : mEnd;
       let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
       if (catFilter) { exp = exp.filter(ex => ex.category === catFilter); if (subcatFilter) exp = exp.filter(ex => ex.subcategory === subcatFilter); }
       return exp.reduce((sum, ex) => sum + ex.amount, 0);
