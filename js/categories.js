@@ -25,7 +25,7 @@ const Categories = {
       const footer = editing ? `
         <div class="cat-edit-footer">
           <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
-          <button class="btn-danger btn-sm btn-outline-danger" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
+          <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
           <button class="btn-primary btn-sm" onclick="Categories._stopEdit()">Terminer</button>
         </div>` : '';
 
@@ -134,7 +134,6 @@ const Categories = {
       const card = over.closest('.category-card[data-cat-id]');
       if (card && card !== this._dnd.el) {
         const rect = card.getBoundingClientRect();
-        // Avant ou après selon la moitié verticale
         card.classList.add(py < rect.top + rect.height / 2 ? 'dnd-over' : 'dnd-over-after');
       }
     } else {
@@ -158,7 +157,6 @@ const Categories = {
     clone.remove();
     el.classList.remove('dnd-ghost');
 
-    // Lire le flag avant/après avant de nettoyer
     let insertAfter = false;
     if (over) {
       const tgtCard = over.closest('.category-card[data-cat-id]');
@@ -178,10 +176,8 @@ const Categories = {
       const tgtId = tgtCard.dataset.catId;
       if (tgtId === catId) return;
 
-      // Retirer la source
       const si = cats.findIndex(c => c.id === catId);
       const [moved] = cats.splice(si, 1);
-      // Recalculer l'index cible après le retrait (insert correct)
       let ti = cats.findIndex(c => c.id === tgtId);
       if (insertAfter) ti++;
       cats.splice(ti, 0, moved);
