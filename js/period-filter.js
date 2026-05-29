@@ -64,7 +64,10 @@ const PeriodFilter = {
         const fmt = d => d ? new Intl.DateTimeFormat('fr-FR').format(new Date(d+'T00:00:00')) : '?';
         return s.start || s.end ? `${fmt(s.start)} → ${fmt(s.end)}` : 'Choisir une plage';
       }
-      default: return '';
+      default: {
+        const now = new Date();
+        return `${MFR[now.getMonth()]} ${now.getFullYear()}`;
+      }
     }
   },
 
@@ -129,15 +132,13 @@ const PeriodFilter = {
     document.querySelectorAll('.period-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = { ...this.get() };
-        const now = new Date();
         if (s.type === btn.dataset.type) {
-          // Déjà actif → reset au mois courant
-          s.type = 'month';
-          s.year = now.getFullYear();
-          s.month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          // Déjà actif → désactive (aucun filtre, label = mois courant)
+          s.type = null;
         } else {
+          // Réactive ce type avec la dernière valeur mémorisée
           s.type = btn.dataset.type;
-          if (!s.year) s.year = now.getFullYear();
+          if (!s.year) s.year = new Date().getFullYear();
         }
         this.set(s);
         this._closeDropdown();
@@ -162,6 +163,7 @@ const PeriodFilter = {
 
   _openDropdown() {
     const s = this.get();
+    if (!s.type) return; // aucun filtre actif, pas de dropdown
     if (s.type === 'month') { const [y] = s.month.split('-').map(Number); this._dropdownYear = y; }
     else this._dropdownYear = s.year || new Date().getFullYear();
     this._renderDropdown();
@@ -295,11 +297,9 @@ const PeriodFilter = {
 
   _updateArrows() {
     const s = this.get();
-    const nav = document.getElementById('period-nav-row');
-    if (!nav) return;
     const prev = document.getElementById('period-prev');
     const next = document.getElementById('period-next');
-    const hide = s.type === 'range';
+    const hide = s.type === 'range' || !s.type;
     if (prev) prev.style.visibility = hide ? 'hidden' : '';
     if (next) next.style.visibility = hide ? 'hidden' : '';
   },
