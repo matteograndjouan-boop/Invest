@@ -678,7 +678,7 @@ body {
   overflow: hidden;
   transition: box-shadow 0.15s;
 }
-.category-card.dnd-over { border: 2px dashed var(--primary); background: var(--primary-light); }
+.category-card.dnd-over { border-top: 3px solid var(--primary); }
 .category-card.dnd-over-after { border-bottom: 3px solid var(--primary); }
 .category-card.dnd-ghost { opacity: 0.3; }
 .category-card.editing { border-color: var(--primary); }
@@ -2898,8 +2898,7 @@ const Categories = {
       const footer = editing ? `
         <div class="cat-edit-footer">
           <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
-          <button class="btn-danger btn-sm btn-outline-danger" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
-          <button class="btn-primary btn-sm" onclick="Categories._stopEdit()">Terminer</button>
+          <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
         </div>` : '';
 
       return `
@@ -3001,16 +3000,21 @@ const Categories = {
     document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
       el.classList.remove('dnd-over', 'dnd-over-after');
     });
-    if (!over) return;
+
+    if (!over) { this._dnd.dropInfo = null; return; }
 
     if (this._dnd.type === 'cat') {
       const card = over.closest('.category-card[data-cat-id]');
       if (card && card !== this._dnd.el) {
         const rect = card.getBoundingClientRect();
-        // Avant ou après selon la moitié verticale
-        card.classList.add(py < rect.top + rect.height / 2 ? 'dnd-over' : 'dnd-over-after');
+        const insertAfter = py >= rect.top + rect.height / 2;
+        card.classList.add(insertAfter ? 'dnd-over-after' : 'dnd-over');
+        this._dnd.dropInfo = { catId: card.dataset.catId, insertAfter };
+      } else {
+        this._dnd.dropInfo = null;
       }
     } else {
+      this._dnd.dropInfo = null;
       const item = over.closest('.subcat-item[data-cat-id]');
       const list = over.closest('.subcat-list[data-cat-id]');
       if (item && item !== this._dnd.el) item.classList.add('dnd-over');
@@ -3022,44 +3026,34 @@ const Categories = {
     if (!this._dnd) return;
     const px = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
     const py = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-    const { type, catId, subcatIdx, el, clone } = this._dnd;
-
-    clone.style.display = 'none';
-    const over = document.elementFromPoint(px, py);
-    clone.style.display = '';
+    const { type, catId, subcatIdx, el, clone, dropInfo } = this._dnd;
 
     clone.remove();
     el.classList.remove('dnd-ghost');
-
-    // Lire le flag avant/après avant de nettoyer
-    let insertAfter = false;
-    if (over) {
-      const tgtCard = over.closest('.category-card[data-cat-id]');
-      if (tgtCard) insertAfter = tgtCard.classList.contains('dnd-over-after');
-    }
     document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
       el.classList.remove('dnd-over', 'dnd-over-after');
     });
     this._dnd = null;
 
-    if (!over) return;
     const cats = Storage.getCategories();
 
     if (type === 'cat') {
-      const tgtCard = over.closest('.category-card[data-cat-id]');
-      if (!tgtCard) return;
-      const tgtId = tgtCard.dataset.catId;
+      if (!dropInfo) return;
+      const { catId: tgtId, insertAfter } = dropInfo;
       if (tgtId === catId) return;
 
-      // Retirer la source
       const si = cats.findIndex(c => c.id === catId);
       const [moved] = cats.splice(si, 1);
-      // Recalculer l'index cible après le retrait (insert correct)
       let ti = cats.findIndex(c => c.id === tgtId);
       if (insertAfter) ti++;
       cats.splice(ti, 0, moved);
 
     } else {
+      clone.style.display = 'none';
+      const over = document.elementFromPoint(px, py);
+      clone.style.display = '';
+      if (!over) return;
+
       const tgtItem = over.closest('.subcat-item[data-cat-id]');
       const tgtList = over.closest('.subcat-list[data-cat-id]');
       const tgtCatId = tgtItem?.dataset.catId ?? tgtList?.dataset.catId;
