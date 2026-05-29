@@ -5,7 +5,7 @@ const Storage = {
     BUDGETS: 'invest_budgets',
     PATRIMONY: 'invest_patrimony',
     REVENUES: 'invest_revenues',
-    CATEGORIES: 'invest_categories',
+    CATEGORIES: 'invest_categories_v2',
     BUDGET_THEMES: 'invest_budgets_v2',
   },
 
