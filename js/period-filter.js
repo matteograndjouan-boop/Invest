@@ -129,8 +129,16 @@ const PeriodFilter = {
     document.querySelectorAll('.period-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = { ...this.get() };
-        s.type = btn.dataset.type;
-        if (!s.year) s.year = new Date().getFullYear();
+        const now = new Date();
+        if (s.type === btn.dataset.type) {
+          // Déjà actif → reset au mois courant
+          s.type = 'month';
+          s.year = now.getFullYear();
+          s.month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+          s.type = btn.dataset.type;
+          if (!s.year) s.year = now.getFullYear();
+        }
         this.set(s);
         this._closeDropdown();
         this._updateLabel();
