@@ -1,5 +1,6 @@
 const Categories = {
-  _dnd: null, // état drag en cours
+  _dnd: null,
+  _editingCatId: null, // catégorie en mode édition
 
   render() {
     const cats = Storage.getCategories();
@@ -12,29 +13,69 @@ const Categories = {
     }
 
     container.innerHTML = cats.map(cat => {
+      const editing = this._editingCatId === cat.id;
+
       const subcatRows = cat.subcategories.map((sub, idx) => `
         <div class="subcat-item" data-cat-id="${cat.id}" data-subcat-idx="${idx}">
           <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})">⠿</span>
-          <span>${sub}</span>
-          <button class="btn-icon btn-icon-danger" onclick="Categories.deleteSubcat('${cat.id}', ${idx})" title="Supprimer">🗑️</button>
+          <span class="subcat-name">${sub}</span>
+          ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
         </div>`).join('');
 
+      const footer = editing ? `
+        <div class="cat-edit-footer">
+          <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
+          <button class="btn-danger btn-sm btn-outline-danger" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
+          <button class="btn-primary btn-sm" onclick="Categories._stopEdit()">Terminer</button>
+        </div>` : '';
+
       return `
-        <div class="category-card" data-cat-id="${cat.id}" id="cat-${cat.id}">
+        <div class="category-card${editing ? ' editing' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
           <div class="category-card-header">
             <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)">⠿</span>
             <h3>${cat.name}</h3>
-            <button class="btn-icon btn-icon-danger" onclick="Categories.deleteCategory('${cat.id}')" title="Supprimer la catégorie">🗑️</button>
+            ${!editing ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>` : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">Terminer</button>`}
           </div>
           <div class="subcat-list" data-cat-id="${cat.id}">
             ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
           </div>
-          <div class="subcat-add-row">
-            <input type="text" id="subcat-input-${cat.id}" placeholder="Nouvelle sous-catégorie…" class="subcat-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addSubcat('${cat.id}')}">
-            <button class="btn-primary btn-sm" onclick="Categories.addSubcat('${cat.id}')">+ Ajouter</button>
-          </div>
+          ${footer}
         </div>`;
     }).join('');
+  },
+
+  _startEdit(catId) { this._editingCatId = catId; this.render(); },
+  _stopEdit()       { this._editingCatId = null;  this.render(); },
+
+  _openAddSubcatModal(catId) {
+    const cat = Storage.getCategories().find(c => c.id === catId);
+    if (!cat) return;
+    Modal.open(`Ajouter une sous-catégorie à "${cat.name}"`, `
+      <form onsubmit="Categories._confirmAddSubcat(event,'${catId}')">
+        <div class="form-group">
+          <label>Nom de la sous-catégorie</label>
+          <input name="subcat_name" required autofocus placeholder="ex: Boulangerie" style="width:100%">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Ajouter</button>
+        </div>
+      </form>`);
+  },
+
+  _confirmAddSubcat(event, catId) {
+    event.preventDefault();
+    const name = new FormData(event.target).get('subcat_name').trim();
+    if (!name) return;
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    if (cat.subcategories.includes(name)) { alert('Cette sous-catégorie existe déjà.'); return; }
+    cat.subcategories.push(name);
+    Storage.saveCategories(cats);
+    Modal.close();
+    this._editingCatId = catId;
+    this.render();
   },
 
   // ---- Drag & Drop ----
@@ -80,19 +121,25 @@ const Categories = {
     clone.style.left = (px - ox) + 'px';
     clone.style.top  = (py - oy) + 'px';
 
-    // Highlight drop target
     clone.style.display = 'none';
     const over = document.elementFromPoint(px, py);
     clone.style.display = '';
-    document.querySelectorAll('.dnd-over').forEach(el => el.classList.remove('dnd-over'));
+
+    document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
+      el.classList.remove('dnd-over', 'dnd-over-after');
+    });
     if (!over) return;
 
     if (this._dnd.type === 'cat') {
-      const card = over.closest('.category-card');
-      if (card && card !== this._dnd.el) card.classList.add('dnd-over');
+      const card = over.closest('.category-card[data-cat-id]');
+      if (card && card !== this._dnd.el) {
+        const rect = card.getBoundingClientRect();
+        // Avant ou après selon la moitié verticale
+        card.classList.add(py < rect.top + rect.height / 2 ? 'dnd-over' : 'dnd-over-after');
+      }
     } else {
-      const item = over.closest('.subcat-item');
-      const list = over.closest('.subcat-list');
+      const item = over.closest('.subcat-item[data-cat-id]');
+      const list = over.closest('.subcat-list[data-cat-id]');
       if (item && item !== this._dnd.el) item.classList.add('dnd-over');
       else if (list) list.classList.add('dnd-over');
     }
@@ -110,7 +157,16 @@ const Categories = {
 
     clone.remove();
     el.classList.remove('dnd-ghost');
-    document.querySelectorAll('.dnd-over').forEach(el => el.classList.remove('dnd-over'));
+
+    // Lire le flag avant/après avant de nettoyer
+    let insertAfter = false;
+    if (over) {
+      const tgtCard = over.closest('.category-card[data-cat-id]');
+      if (tgtCard) insertAfter = tgtCard.classList.contains('dnd-over-after');
+    }
+    document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
+      el.classList.remove('dnd-over', 'dnd-over-after');
+    });
     this._dnd = null;
 
     if (!over) return;
@@ -121,9 +177,13 @@ const Categories = {
       if (!tgtCard) return;
       const tgtId = tgtCard.dataset.catId;
       if (tgtId === catId) return;
+
+      // Retirer la source
       const si = cats.findIndex(c => c.id === catId);
-      const ti = cats.findIndex(c => c.id === tgtId);
       const [moved] = cats.splice(si, 1);
+      // Recalculer l'index cible après le retrait (insert correct)
+      let ti = cats.findIndex(c => c.id === tgtId);
+      if (insertAfter) ti++;
       cats.splice(ti, 0, moved);
 
     } else {
@@ -138,9 +198,8 @@ const Categories = {
 
       const [movedSub] = srcCat.subcategories.splice(subcatIdx, 1);
 
-      if (tgtItem && !(tgtItem.dataset.catId === catId && parseInt(tgtItem.dataset.subcatIdx) === subcatIdx)) {
+      if (tgtItem) {
         let ti = parseInt(tgtItem.dataset.subcatIdx);
-        // Si même catégorie et on a retiré avant la cible, ajuster l'index
         if (tgtCatId === catId && ti > subcatIdx) ti--;
         tgtCat.subcategories.splice(ti, 0, movedSub);
       } else {
@@ -174,24 +233,12 @@ const Categories = {
     if (!cat) return;
     if (!confirm(`Supprimer la catégorie "${cat.name}" et toutes ses sous-catégories ?`)) return;
     Storage.saveCategories(cats.filter(c => c.id !== id));
+    this._editingCatId = null;
     this.render();
     Expenses._populateCatFilter();
   },
 
-  addSubcat(catId) {
-    const input = document.getElementById(`subcat-input-${catId}`);
-    if (!input) return;
-    const name = input.value.trim();
-    if (!name) return;
-    const cats = Storage.getCategories();
-    const cat = cats.find(c => c.id === catId);
-    if (!cat) return;
-    if (cat.subcategories.includes(name)) { alert('Cette sous-catégorie existe déjà.'); return; }
-    cat.subcategories.push(name);
-    Storage.saveCategories(cats);
-    input.value = '';
-    this.render();
-  },
+  addSubcat(catId) { this._openAddSubcatModal(catId); },
 
   deleteSubcat(catId, idx) {
     const cats = Storage.getCategories();
@@ -206,6 +253,7 @@ const Categories = {
     if (!confirm('Réinitialiser toutes les catégories aux valeurs par défaut ?')) return;
     Storage.saveCategories([]);
     Storage.getCategories();
+    this._editingCatId = null;
     this.render();
   },
 

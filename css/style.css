@@ -672,7 +672,9 @@ body {
   transition: box-shadow 0.15s;
 }
 .category-card.dnd-over { border: 2px dashed var(--primary); background: var(--primary-light); }
+.category-card.dnd-over-after { border-bottom: 3px solid var(--primary); }
 .category-card.dnd-ghost { opacity: 0.3; }
+.category-card.editing { border-color: var(--primary); }
 .category-card-header {
   display: flex;
   align-items: center;
@@ -682,6 +684,13 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .category-card-header h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; flex: 1; }
+.cat-edit-btn {
+  padding: 4px 10px; font-size: 0.8rem; font-weight: 500; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.cat-edit-btn:hover { background: var(--bg); }
+.cat-edit-btn.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 .cat-drag-handle {
   cursor: grab; font-size: 1rem; color: var(--text-muted); padding: 2px 4px;
   touch-action: none; user-select: none; -webkit-user-select: none;
@@ -710,6 +719,19 @@ body {
   touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0;
 }
 .subcat-handle:active { cursor: grabbing; }
+.subcat-name { flex: 1; font-size: 0.875rem; }
+.subcat-delete-btn {
+  background: none; border: none; cursor: pointer; padding: 2px 5px;
+  color: var(--danger, #ef4444); font-size: 0.8rem; border-radius: 4px; flex-shrink: 0;
+  line-height: 1;
+}
+.subcat-delete-btn:hover { background: var(--danger-bg, #fee2e2); }
+.cat-edit-footer {
+  display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border); background: var(--bg);
+  flex-wrap: wrap;
+}
+.cat-edit-footer .btn-sm { flex: 1; min-width: 80px; text-align: center; }
 .subcat-add-row {
   display: flex;
   gap: 0.5rem;
