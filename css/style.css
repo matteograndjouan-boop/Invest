@@ -671,7 +671,7 @@ body {
   overflow: hidden;
   transition: box-shadow 0.15s;
 }
-.category-card.dnd-over { border: 2px dashed var(--primary); background: var(--primary-light); }
+.category-card.dnd-over { border-top: 3px solid var(--primary); }
 .category-card.dnd-over-after { border-bottom: 3px solid var(--primary); }
 .category-card.dnd-ghost { opacity: 0.3; }
 .category-card.editing { border-color: var(--primary); }

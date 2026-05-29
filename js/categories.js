@@ -26,7 +26,6 @@ const Categories = {
         <div class="cat-edit-footer">
           <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
           <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
-          <button class="btn-primary btn-sm" onclick="Categories._stopEdit()">Terminer</button>
         </div>` : '';
 
       return `
@@ -100,7 +99,7 @@ const Categories = {
     el.classList.add('dnd-ghost');
 
     this._dnd = { type, catId, subcatIdx, el, clone,
-      ox: px - rect.left, oy: py - rect.top, isTouch };
+      ox: px - rect.left, oy: py - rect.top, isTouch, dropInfo: null };
 
     const onMove = (e) => this._dndMove(e);
     const onEnd  = (e) => {
@@ -128,15 +127,21 @@ const Categories = {
     document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
       el.classList.remove('dnd-over', 'dnd-over-after');
     });
-    if (!over) return;
+
+    if (!over) { this._dnd.dropInfo = null; return; }
 
     if (this._dnd.type === 'cat') {
       const card = over.closest('.category-card[data-cat-id]');
       if (card && card !== this._dnd.el) {
         const rect = card.getBoundingClientRect();
-        card.classList.add(py < rect.top + rect.height / 2 ? 'dnd-over' : 'dnd-over-after');
+        const insertAfter = py >= rect.top + rect.height / 2;
+        card.classList.add(insertAfter ? 'dnd-over-after' : 'dnd-over');
+        this._dnd.dropInfo = { catId: card.dataset.catId, insertAfter };
+      } else {
+        this._dnd.dropInfo = null;
       }
     } else {
+      this._dnd.dropInfo = null;
       const item = over.closest('.subcat-item[data-cat-id]');
       const list = over.closest('.subcat-list[data-cat-id]');
       if (item && item !== this._dnd.el) item.classList.add('dnd-over');
@@ -148,32 +153,20 @@ const Categories = {
     if (!this._dnd) return;
     const px = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
     const py = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-    const { type, catId, subcatIdx, el, clone } = this._dnd;
-
-    clone.style.display = 'none';
-    const over = document.elementFromPoint(px, py);
-    clone.style.display = '';
+    const { type, catId, subcatIdx, el, clone, dropInfo } = this._dnd;
 
     clone.remove();
     el.classList.remove('dnd-ghost');
-
-    let insertAfter = false;
-    if (over) {
-      const tgtCard = over.closest('.category-card[data-cat-id]');
-      if (tgtCard) insertAfter = tgtCard.classList.contains('dnd-over-after');
-    }
     document.querySelectorAll('.dnd-over, .dnd-over-after').forEach(el => {
       el.classList.remove('dnd-over', 'dnd-over-after');
     });
     this._dnd = null;
 
-    if (!over) return;
     const cats = Storage.getCategories();
 
     if (type === 'cat') {
-      const tgtCard = over.closest('.category-card[data-cat-id]');
-      if (!tgtCard) return;
-      const tgtId = tgtCard.dataset.catId;
+      if (!dropInfo) return;
+      const { catId: tgtId, insertAfter } = dropInfo;
       if (tgtId === catId) return;
 
       const si = cats.findIndex(c => c.id === catId);
@@ -183,6 +176,11 @@ const Categories = {
       cats.splice(ti, 0, moved);
 
     } else {
+      clone.style.display = 'none';
+      const over = document.elementFromPoint(px, py);
+      clone.style.display = '';
+      if (!over) return;
+
       const tgtItem = over.closest('.subcat-item[data-cat-id]');
       const tgtList = over.closest('.subcat-list[data-cat-id]');
       const tgtCatId = tgtItem?.dataset.catId ?? tgtList?.dataset.catId;
