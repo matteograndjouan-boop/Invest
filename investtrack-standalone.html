@@ -4126,15 +4126,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const amount = parseFloat(String(row[valeurIdx]).replace(',','.').replace(/[^0-9.-]/g,'')) || 0;
             if (amount <= 0) continue;
             const subCat = String(row[subCatIdx]||'').trim(); const comment = String(row[commentIdx]||'').trim();
-            const description = [subCat, comment].filter(Boolean).join(' – ') || 'Import';
+            const description = comment || subCat || 'Import';
             const date = parseExcelDate(row[dateIdx]);
             if (isRevenue) {
-              existingRevenues.push({ id: Utils.generateId(), description, amount, category: 'Revenus', date, notes: '' });
+              existingRevenues.push({ id: Utils.generateId(), description, amount, category: 'Revenus', subcategory: subCat, date, notes: '' });
               importedRev++;
             } else {
               const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
               existing.push({ id: Utils.generateId(), description, amount,
-                category: CAT_MAP[catNorm]||'Autre', subcategory: '', date, notes: '' });
+                category: CAT_MAP[catNorm]||'Autre', subcategory: subCat, date, notes: '' });
               imported++;
             }
           }
