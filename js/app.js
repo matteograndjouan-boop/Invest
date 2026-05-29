@@ -309,9 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const subCatIdx = idx(['sous']); const commentIdx = idx(['commentaire']);
           const valeurIdx = idx(['valeur']); const positifIdx = idx(['positif']);
           const CAT_MAP = {
-            'epargne':'Épargne','transport':'Transport','sante':'Santé','loisir':'Loisirs',
-            'loisirs':'Loisirs','alimentation':'Alimentation','abonnements':'Abonnements',
-            'divers':'Autre','logement':'Logement','vetements':'Vêtements','education':'Éducation','restaurants':'Restaurants',
+            'abonnements':'Abonnements','alimentation':'Alimentation','divers':'Divers',
+            'epargne':'Epargne','logement':'Logement','loisir':'Loisir','loisirs':'Loisir',
+            'revenus':'Revenus','sante':'Santé','shopping':'Shopping','transport':'Transport',
           };
           const parseExcelDate = (v) => {
             if (!v && v !== 0) return '';

@@ -45,8 +45,19 @@ const Storage = {
   saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
 
   _defaultCategories() {
-    return ['Logement','Alimentation','Transport','Santé','Loisirs','Vêtements','Éducation','Restaurants','Abonnements','Épargne','Autre']
-      .map((name, i) => ({ id: 'dcat' + i, name, subcategories: [] }));
+    const data = [
+      { name: 'Abonnements',  subcategories: ['Internet', 'Téléphone', 'Youtube'] },
+      { name: 'Alimentation', subcategories: ['Boulangerie', 'Courses', 'Izly', 'Resto'] },
+      { name: 'Divers',       subcategories: ['Autre', 'Frais bancaires'] },
+      { name: 'Epargne',      subcategories: ['Bourso', 'Garance', 'Green Got'] },
+      { name: 'Logement',     subcategories: ['Loyer Paris', 'Airbnb Reims'] },
+      { name: 'Loisir',       subcategories: ['Sport', 'Culture'] },
+      { name: 'Revenus',      subcategories: ['CAF', 'Famille', 'Opmobility', 'Ticket Resto', 'Autre'] },
+      { name: 'Santé',        subcategories: ['Médecin', 'Pharmacie', 'CPAM'] },
+      { name: 'Shopping',     subcategories: ['Electronique', 'Maison', 'Vêtements'] },
+      { name: 'Transport',    subcategories: ['Bus', 'Train', 'Tram'] },
+    ];
+    return data.map((c, i) => ({ id: 'dcat' + i, ...c }));
   },
 
   getCategories() {
