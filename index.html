@@ -489,6 +489,7 @@
       <section class="section hidden" id="section-categories">
         <div class="section-header">
           <h1>Catégories</h1>
+          <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser aux catégories par défaut</button>
         </div>
         <div class="new-category-bar">
           <input type="text" id="new-category-input" placeholder="Nom de la nouvelle catégorie…" class="new-category-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addCategory()}">

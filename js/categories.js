@@ -91,6 +91,13 @@ const Categories = {
     this.render();
   },
 
+  resetToDefaults() {
+    if (!confirm('Réinitialiser toutes les catégories aux valeurs par défaut ? Vos catégories personnalisées seront supprimées.')) return;
+    Storage.saveCategories([]);
+    const defaults = Storage.getCategories(); // re-déclenche _defaultCategories()
+    this.render();
+  },
+
   getCategoryNames() {
     return Storage.getCategories().map(c => c.name);
   },
