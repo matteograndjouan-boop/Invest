@@ -669,35 +669,47 @@ body {
   border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: hidden;
+  transition: box-shadow 0.15s;
 }
+.category-card.dnd-over { border: 2px dashed var(--primary); background: var(--primary-light); }
+.category-card.dnd-ghost { opacity: 0.3; }
 .category-card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-.category-card-header h3 {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+.category-card-header h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; flex: 1; }
+.cat-drag-handle {
+  cursor: grab; font-size: 1rem; color: var(--text-muted); padding: 2px 4px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
 }
+.cat-drag-handle:active { cursor: grabbing; }
 .subcat-list {
   padding: 0.375rem 0.5rem;
   min-height: 2rem;
 }
+.subcat-list.dnd-over { background: var(--primary-light); border-radius: 6px; }
 .py-xs { padding-top: 0.375rem; padding-bottom: 0.375rem; }
 .subcat-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.25rem;
   padding: 0.3rem 0.5rem;
   border-radius: 6px;
   transition: background 0.15s;
 }
 .subcat-item:hover { background: var(--bg); }
+.subcat-item.dnd-over { background: var(--primary-light); border: 1px dashed var(--primary); }
+.subcat-item.dnd-ghost { opacity: 0.3; }
 .subcat-item span { font-size: 0.875rem; }
+.subcat-handle {
+  cursor: grab; font-size: 0.95rem; color: var(--text-muted); padding: 0 3px;
+  touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0;
+}
+.subcat-handle:active { cursor: grabbing; }
 .subcat-add-row {
   display: flex;
   gap: 0.5rem;
