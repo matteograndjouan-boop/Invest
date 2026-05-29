@@ -134,25 +134,34 @@ const Categories = {
       const card = over.closest('.category-card[data-cat-id]');
       if (card && card !== this._dnd.el) {
         const rect = card.getBoundingClientRect();
-        const insertAfter = py >= rect.top + rect.height / 2;
+        const insertAfter = px >= rect.left + rect.width / 2;
         card.classList.add(insertAfter ? 'dnd-over-after' : 'dnd-over');
         this._dnd.dropInfo = { catId: card.dataset.catId, insertAfter };
       } else {
         this._dnd.dropInfo = null;
       }
     } else {
-      this._dnd.dropInfo = null;
       const item = over.closest('.subcat-item[data-cat-id]');
       const list = over.closest('.subcat-list[data-cat-id]');
-      if (item && item !== this._dnd.el) item.classList.add('dnd-over');
-      else if (list) list.classList.add('dnd-over');
+      if (item && item !== this._dnd.el) {
+        const rect = item.getBoundingClientRect();
+        const insertAfter = py >= rect.top + rect.height / 2;
+        item.classList.add(insertAfter ? 'dnd-over-after' : 'dnd-over');
+        this._dnd.dropInfo = {
+          type: 'item', catId: item.dataset.catId,
+          subcatIdx: parseInt(item.dataset.subcatIdx), insertAfter
+        };
+      } else if (list) {
+        list.classList.add('dnd-over');
+        this._dnd.dropInfo = { type: 'list', catId: list.dataset.catId };
+      } else {
+        this._dnd.dropInfo = null;
+      }
     }
   },
 
   _dndEnd(e) {
     if (!this._dnd) return;
-    const px = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-    const py = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
     const { type, catId, subcatIdx, el, clone, dropInfo } = this._dnd;
 
     clone.remove();
@@ -162,13 +171,12 @@ const Categories = {
     });
     this._dnd = null;
 
+    if (!dropInfo) return;
     const cats = Storage.getCategories();
 
     if (type === 'cat') {
-      if (!dropInfo) return;
       const { catId: tgtId, insertAfter } = dropInfo;
       if (tgtId === catId) return;
-
       const si = cats.findIndex(c => c.id === catId);
       const [moved] = cats.splice(si, 1);
       let ti = cats.findIndex(c => c.id === tgtId);
@@ -176,28 +184,23 @@ const Categories = {
       cats.splice(ti, 0, moved);
 
     } else {
-      clone.style.display = 'none';
-      const over = document.elementFromPoint(px, py);
-      clone.style.display = '';
-      if (!over) return;
-
-      const tgtItem = over.closest('.subcat-item[data-cat-id]');
-      const tgtList = over.closest('.subcat-list[data-cat-id]');
-      const tgtCatId = tgtItem?.dataset.catId ?? tgtList?.dataset.catId;
-      if (!tgtCatId) return;
-
       const srcCat = cats.find(c => c.id === catId);
-      const tgtCat = cats.find(c => c.id === tgtCatId);
-      if (!srcCat || !tgtCat) return;
+      if (!srcCat) return;
 
-      const [movedSub] = srcCat.subcategories.splice(subcatIdx, 1);
-
-      if (tgtItem) {
-        let ti = parseInt(tgtItem.dataset.subcatIdx);
-        if (tgtCatId === catId && ti > subcatIdx) ti--;
-        tgtCat.subcategories.splice(ti, 0, movedSub);
-      } else {
+      if (dropInfo.type === 'list') {
+        const tgtCat = cats.find(c => c.id === dropInfo.catId);
+        if (!tgtCat) return;
+        const [movedSub] = srcCat.subcategories.splice(subcatIdx, 1);
         tgtCat.subcategories.push(movedSub);
+      } else {
+        const tgtCatId = dropInfo.catId;
+        const tgtCat = cats.find(c => c.id === tgtCatId);
+        if (!tgtCat) return;
+        const [movedSub] = srcCat.subcategories.splice(subcatIdx, 1);
+        let ti = dropInfo.subcatIdx;
+        if (tgtCatId === catId && ti > subcatIdx) ti--;
+        if (dropInfo.insertAfter) ti++;
+        tgtCat.subcategories.splice(ti, 0, movedSub);
       }
     }
 
