@@ -831,6 +831,12 @@ body {
 .donut-legend-pct { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
 .donut-legend-val { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
 
+/* ---- Flux Summary Table ---- */
+.summary-bar-wrap { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
+.summary-bar { height: 6px; border-radius: 999px; background: var(--primary); opacity: 0.55; flex-shrink: 0; min-width: 2px; }
+.summary-row-hint { font-size: 0.7rem; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
+tr:hover .summary-row-hint { opacity: 1; }
+
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
 .type-expense { background: rgba(239,68,68,0.12); color: #dc2626; }

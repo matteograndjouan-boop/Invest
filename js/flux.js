@@ -119,7 +119,7 @@ const Flux = {
 
     this._renderBarChart(allExpenses, allRevenues, catFilter);
     this._renderDonut(expenses, catFilter);
-    this._renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter);
+    this._renderSummaryTable(allExpenses, start, end, catFilter);
   },
 
   _renderBarChart(allExpenses, allRevenues, catFilter) {
@@ -205,41 +205,51 @@ const Flux = {
     }
   },
 
-  _renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter) {
+  _renderSummaryTable(allExpenses, start, end, catFilter) {
     let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
     if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
-    const revenues = catFilter ? [] : allRevenues.filter(r => r.date >= start && r.date <= end);
 
-    const all = [
-      ...expenses.map(e => ({ ...e, _type: 'expense' })),
-      ...revenues.map(r => ({ ...r, _type: 'revenue' })),
-    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
-
-    const tbody = document.getElementById('flux-recent-tbody');
-    const empty = document.getElementById('flux-recent-empty');
+    const tbody = document.getElementById('flux-summary-tbody');
+    const empty = document.getElementById('flux-summary-empty');
+    const title = document.getElementById('flux-summary-title');
+    const thLabel = document.getElementById('flux-summary-th-label');
     if (!tbody) return;
 
-    if (!all.length) {
+    if (title) title.textContent = catFilter ? `Répartition — ${catFilter}` : 'Répartition par catégorie';
+    if (thLabel) thLabel.textContent = catFilter ? 'Sous-catégorie' : 'Catégorie';
+
+    if (!expenses.length) {
       tbody.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
-    tbody.innerHTML = all.map(t => {
-      const isExp = t._type === 'expense';
-      const amtCls = isExp ? 'negative' : 'positive';
-      const amtSign = isExp ? '−' : '+';
-      const badge = isExp
-        ? '<span class="type-badge type-expense">Dépense</span>'
-        : '<span class="type-badge type-revenue">Revenu</span>';
-      const [y, m, d] = t.date.split('-');
-      return `<tr>
-        <td>${d}/${m}/${y.slice(2)}</td>
-        <td>${t.description || '—'}</td>
-        <td>${t.category || '—'}</td>
-        <td class="${amtCls} text-right">${amtSign}${Utils.formatCurrency(t.amount)}</td>
-        <td>${badge}</td>
+    const groups = {};
+    expenses.forEach(e => {
+      const key = catFilter ? (e.subcategory || '—') : e.category;
+      if (!groups[key]) groups[key] = { amount: 0, count: 0 };
+      groups[key].amount += e.amount;
+      groups[key].count++;
+    });
+
+    const total = Object.values(groups).reduce((s, g) => s + g.amount, 0);
+    const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
+
+    tbody.innerHTML = sorted.map(([label, g]) => {
+      const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
+      const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
+      const clickAttr = !catFilter ? `onclick="Flux._setPillFilter('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
+      return `<tr ${clickAttr}>
+        <td>${label}${!catFilter ? ' <span class="summary-row-hint">→</span>' : ''}</td>
+        <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
+        <td class="text-right">
+          <div class="summary-bar-wrap">
+            <div class="summary-bar" style="width:${barW}%"></div>
+            <span>${pct}%</span>
+          </div>
+        </td>
+        <td class="text-right" style="color:var(--text-muted)">${g.count}</td>
       </tr>`;
     }).join('');
   },

@@ -250,17 +250,17 @@
         </div>
         <div class="card mt-md">
           <div class="card-header-row">
-            <h3>Transactions récentes</h3>
+            <h3 id="flux-summary-title">Répartition par catégorie</h3>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
-              <thead>
-                <tr><th>Date</th><th>Description</th><th>Catégorie</th><th class="text-right">Montant</th><th>Type</th></tr>
+              <thead id="flux-summary-thead">
+                <tr><th id="flux-summary-th-label">Catégorie</th><th class="text-right">Dépenses</th><th class="text-right">% du total</th><th class="text-right">Transactions</th></tr>
               </thead>
-              <tbody id="flux-recent-tbody"></tbody>
+              <tbody id="flux-summary-tbody"></tbody>
             </table>
           </div>
-          <div id="flux-recent-empty" class="empty-state hidden"><p>Aucune transaction sur cette période.</p></div>
+          <div id="flux-summary-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
         </div>
       </section>
 
