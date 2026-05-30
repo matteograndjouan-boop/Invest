@@ -7,6 +7,7 @@ const Storage = {
     REVENUES: 'invest_revenues',
     CATEGORIES: 'invest_categories_v2',
     BUDGET_THEMES: 'invest_budgets_v2',
+    DATE_MODE: 'invest_date_mode',
   },
 
   get(key) {
@@ -59,6 +60,9 @@ const Storage = {
     ];
     return data.map((c, i) => ({ id: 'dcat' + i, ...c }));
   },
+
+  getDateMode() { return this.get(this.KEYS.DATE_MODE) || 'transaction'; },
+  setDateMode(mode) { this.set(this.KEYS.DATE_MODE, mode); },
 
   getCategories() {
     const saved = this.get(this.KEYS.CATEGORIES);

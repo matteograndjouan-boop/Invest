@@ -65,10 +65,10 @@ const Budget = {
     const themes = rawThemes.map(t => this._migrate({ ...t }));
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
-    const expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    const expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
 
     const prev = this._prevPeriod();
-    const prevExpenses = prev ? allExpenses.filter(e => e.date >= prev.start && e.date <= prev.end) : [];
+    const prevExpenses = prev ? allExpenses.filter(e => Utils.getExpenseDate(e) >= prev.start && Utils.getExpenseDate(e) <= prev.end) : [];
 
     const empty = document.getElementById('budget-empty');
     const grid = document.getElementById('budget-themes-grid');
@@ -202,7 +202,7 @@ const Budget = {
 
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
-    const periodExpenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    const periodExpenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
 
     const totalSpent = this._computeSpent(theme, periodExpenses);
     const totalPlanned = theme.planned || 0;
@@ -260,7 +260,7 @@ const Budget = {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-      const mExp = allExpenses.filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`);
+      const mExp = allExpenses.filter(e => Utils.getExpenseDate(e) >= `${m}-01` && Utils.getExpenseDate(e) <= `${m}-${String(last).padStart(2,'0')}`);
       histLabels.push(MONTHS_FR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
       histData.push(this._computeSpent(theme, mExp));
     }
@@ -378,7 +378,7 @@ const Budget = {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-      const mExp = allExpenses.filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`);
+      const mExp = allExpenses.filter(e => Utils.getExpenseDate(e) >= `${m}-01` && Utils.getExpenseDate(e) <= `${m}-${String(last).padStart(2,'0')}`);
       sum += this._computeSpent(theme, mExp);
     }
     const suggested = Math.ceil(sum / 3);

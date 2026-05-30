@@ -307,8 +307,12 @@ const DataEntry = {
             <input name="amount" type="number" step="0.01" min="0" required value="${item?.amount || ''}">
           </div>
           <div class="form-group">
-            <label>Date *</label>
+            <label>Date de transaction *</label>
             <input name="date" type="date" required value="${item?.date || today}">
+          </div>
+          <div class="form-group" id="de-effective-date-group">
+            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="date" value="${item?.effectiveDate || ''}">
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
@@ -364,6 +368,7 @@ const DataEntry = {
     const newType = fd.get('entry_type');
     const isRevenue = newType === 'revenue';
 
+    const effectiveDate = !isRevenue ? (fd.get('effectiveDate') || '') : '';
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),
@@ -371,6 +376,7 @@ const DataEntry = {
       category: isRevenue ? fd.get('rev_category') : fd.get('category'),
       subcategory: isRevenue ? '' : (fd.get('subcategory') || ''),
       date: fd.get('date'),
+      ...(!isRevenue && effectiveDate && { effectiveDate }),
       notes: (fd.get('notes') || '').trim(),
     };
 

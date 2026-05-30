@@ -54,7 +54,7 @@ const Flux = {
     const start = `${pm}-01`;
     const end = `${pm}-${String(last).padStart(2, '0')}`;
     return {
-      expenses: Storage.getExpenses().filter(e => e.date >= start && e.date <= end),
+      expenses: Storage.getExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
       revenues: Storage.getRevenues().filter(r => r.date >= start && r.date <= end),
     };
   },
@@ -79,7 +79,7 @@ const Flux = {
     const allExpenses = Storage.getExpenses();
     const allRevenues = Storage.getRevenues();
 
-    let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
 
     if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
@@ -152,7 +152,7 @@ const Flux = {
     const depByMonth = months.map(m => {
       const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
       const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-      let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
+      let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
       if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
       return exp.reduce((sum, ex) => sum + ex.amount, 0);
     });
@@ -169,7 +169,7 @@ const Flux = {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
-      .filter(e => e.date >= start && e.date <= end)
+      .filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
 
     let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
@@ -240,7 +240,7 @@ const Flux = {
         const s = mStart < start ? start : mStart;
         const e = mEnd   > end   ? end   : mEnd;
         labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
-        let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
+        let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
         if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
         depData.push(exp.reduce((sum, ex) => sum + ex.amount, 0));
         if (!catFilter) revData.push(allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0));
@@ -258,7 +258,7 @@ const Flux = {
   },
 
   _renderSummaryTable(allExpenses, start, end, catFilter) {
-    let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
 
     const tbody = document.getElementById('flux-summary-tbody');

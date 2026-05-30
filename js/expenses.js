@@ -117,7 +117,11 @@ const Expenses = {
             <label>Sous-catégorie</label>
             <select name="subcategory" id="exp-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
           </div>
-          <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
+          <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
+          <div class="form-group">
+            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="date" value="${exp?.effectiveDate || ''}" placeholder="Si différente de la transaction">
+          </div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
         <div class="form-actions">
@@ -143,6 +147,7 @@ const Expenses = {
   save(event, id) {
     event.preventDefault();
     const fd = new FormData(event.target);
+    const effectiveDate = fd.get('effectiveDate') || '';
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),
@@ -150,6 +155,7 @@ const Expenses = {
       category: fd.get('category'),
       subcategory: fd.get('subcategory') || '',
       date: fd.get('date'),
+      ...(effectiveDate && { effectiveDate }),
       notes: (fd.get('notes') || '').trim(),
     };
     const list = Storage.getExpenses();

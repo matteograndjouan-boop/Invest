@@ -104,6 +104,21 @@ const PeriodFilter = {
     container.innerHTML = this._buildHTML();
     this._bindEvents();
     this._updateLabel();
+    this._updateDateModeToggle();
+  },
+
+  _setDateMode(mode) {
+    Storage.setDateMode(mode);
+    this._updateDateModeToggle();
+    this._notify();
+  },
+
+  _updateDateModeToggle() {
+    const mode = Storage.getDateMode();
+    const t = document.getElementById('date-mode-transaction');
+    const e = document.getElementById('date-mode-effective');
+    if (t) t.classList.toggle('active', mode === 'transaction');
+    if (e) e.classList.toggle('active', mode === 'effective');
   },
 
   _buildHTML() {
@@ -124,6 +139,11 @@ const PeriodFilter = {
             <div class="period-dropdown hidden" id="period-dropdown"></div>
           </div>
           <button class="period-arrow" id="period-next">&#8594;</button>
+        </div>
+        <div class="date-mode-toggle">
+          <span class="date-mode-label">Date :</span>
+          <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
+          <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
         </div>
       </div>`;
   },

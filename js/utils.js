@@ -22,6 +22,12 @@ const Utils = {
     return new Intl.DateTimeFormat('fr-FR').format(new Date(dateStr + 'T00:00:00'));
   },
 
+  // Returns the date to use for period filtering based on date mode setting
+  getExpenseDate(expense) {
+    if (Storage.getDateMode() === 'effective' && expense.effectiveDate) return expense.effectiveDate;
+    return expense.date;
+  },
+
   getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
