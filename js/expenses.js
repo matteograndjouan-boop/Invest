@@ -119,8 +119,8 @@ const Expenses = {
           </div>
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
-            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="date" value="${exp?.effectiveDate || ''}" placeholder="Si différente de la transaction">
+            <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="month" value="${exp?.effectiveDate || ''}">
           </div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>

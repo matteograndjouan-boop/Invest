@@ -24,7 +24,11 @@ const Utils = {
 
   // Returns the date to use for period filtering based on date mode setting
   getExpenseDate(expense) {
-    if (Storage.getDateMode() === 'effective' && expense.effectiveDate) return expense.effectiveDate;
+    if (Storage.getDateMode() === 'effective' && expense.effectiveDate) {
+      const ed = expense.effectiveDate;
+      // YYYY-MM format → treat as first day of the month for range comparisons
+      return ed.length === 7 ? ed + '-01' : ed;
+    }
     return expense.date;
   },
 

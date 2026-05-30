@@ -784,6 +784,9 @@ body {
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ---- Effective Date Badge ---- */
+.effective-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: rgba(99,102,241,0.1); color: var(--primary); white-space: nowrap; }
+
 /* ---- Date Mode Toggle ---- */
 .date-mode-toggle { display: flex; align-items: center; gap: 0.3rem; margin-left: 0.75rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
 .date-mode-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }

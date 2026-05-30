@@ -791,6 +791,9 @@ body {
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ---- Effective Date Badge ---- */
+.effective-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: rgba(99,102,241,0.1); color: var(--primary); white-space: nowrap; }
+
 /* ---- Date Mode Toggle ---- */
 .date-mode-toggle { display: flex; align-items: center; gap: 0.3rem; margin-left: 0.75rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
 .date-mode-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
@@ -1441,6 +1444,7 @@ tr:hover .summary-row-hint { opacity: 1; }
             <thead>
               <tr>
                 <th class="sortable" data-col="date">Date <span class="sort-icon">↕</span></th>
+                <th>Mois eff.</th>
                 <th>Type</th>
                 <th class="sortable" data-col="description">Description <span class="sort-icon">↕</span></th>
                 <th class="sortable" data-col="category">Catégorie <span class="sort-icon">↕</span></th>
@@ -1653,7 +1657,11 @@ const Utils = {
 
   // Returns the date to use for period filtering based on date mode setting
   getExpenseDate(expense) {
-    if (Storage.getDateMode() === 'effective' && expense.effectiveDate) return expense.effectiveDate;
+    if (Storage.getDateMode() === 'effective' && expense.effectiveDate) {
+      const ed = expense.effectiveDate;
+      // YYYY-MM format → treat as first day of the month for range comparisons
+      return ed.length === 7 ? ed + '-01' : ed;
+    }
     return expense.date;
   },
 
@@ -2681,8 +2689,8 @@ const Expenses = {
           </div>
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
-            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="date" value="${exp?.effectiveDate || ''}" placeholder="Si différente de la transaction">
+            <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="month" value="${exp?.effectiveDate || ''}">
           </div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
@@ -3770,6 +3778,7 @@ const DataEntry = {
       return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}"
         ${sel ? `onmousedown="DataEntry._onRowMousedown('${key}',event)" onmouseenter="DataEntry._onRowMouseenter('${key}')"` : ''}>
         <td class="donnees-date">${Utils.formatDate(row.date)}</td>
+        <td class="donnees-effective-date">${row.effectiveDate ? (() => { const [y,m] = row.effectiveDate.split('-'); const MFR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']; return `<span class="effective-badge">${MFR[+m-1]} ${y}</span>`; })() : ''}</td>
         <td>${typeBadge}</td>
         <td class="donnees-desc">${row.description || '—'}</td>
         <td>${catBadge}</td>
@@ -3846,8 +3855,8 @@ const DataEntry = {
             <input name="date" type="date" required value="${item?.date || today}">
           </div>
           <div class="form-group" id="de-effective-date-group">
-            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="date" value="${item?.effectiveDate || ''}">
+            <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="month" value="${item?.effectiveDate || ''}">
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>

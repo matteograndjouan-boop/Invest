@@ -235,6 +235,7 @@ const DataEntry = {
       return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}"
         ${sel ? `onmousedown="DataEntry._onRowMousedown('${key}',event)" onmouseenter="DataEntry._onRowMouseenter('${key}')"` : ''}>
         <td class="donnees-date">${Utils.formatDate(row.date)}</td>
+        <td class="donnees-effective-date">${row.effectiveDate ? (() => { const [y,m] = row.effectiveDate.split('-'); const MFR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']; return `<span class="effective-badge">${MFR[+m-1]} ${y}</span>`; })() : ''}</td>
         <td>${typeBadge}</td>
         <td class="donnees-desc">${row.description || '—'}</td>
         <td>${catBadge}</td>
@@ -311,8 +312,8 @@ const DataEntry = {
             <input name="date" type="date" required value="${item?.date || today}">
           </div>
           <div class="form-group" id="de-effective-date-group">
-            <label>Date effective <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="date" value="${item?.effectiveDate || ''}">
+            <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
+            <input name="effectiveDate" type="month" value="${item?.effectiveDate || ''}">
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
