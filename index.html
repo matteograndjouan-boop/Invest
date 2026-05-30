@@ -453,7 +453,7 @@
             <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
           <div id="budget-summary-wrap" class="card mt-md hidden">
-            <h3 style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
+            <h3 id="budget-summary-title" style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
@@ -477,11 +477,11 @@
           </div>
           <div class="card mt-md">
             <div class="card-header-row">
-              <h3 id="budget-detail-subtitle">Lignes budgétaires</h3>
+              <h3 id="budget-detail-subtitle">Dépenses par sous-catégorie</h3>
               <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
             </div>
-            <table class="table">
-              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Prévu (€)</th><th>Réel</th><th>Écart</th><th></th></tr></thead>
+            <table class="data-table">
+              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th class="text-right">Réel</th><th class="text-right">Opérations</th></tr></thead>
               <tbody id="budget-detail-tbody"></tbody>
             </table>
           </div>

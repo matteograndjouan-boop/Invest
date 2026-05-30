@@ -842,6 +842,18 @@ tr:hover .summary-row-hint { opacity: 1; }
 .type-expense { background: rgba(239,68,68,0.12); color: #dc2626; }
 .type-revenue { background: rgba(16,185,129,0.12); color: #059669; }
 
+/* ---- Budget Subtitle & Period ---- */
+.budget-subtitle { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem; }
+.budget-card-period-label { font-size: 0.72rem; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.budget-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.budget-card-warning { font-size: 0.775rem; color: var(--warning); font-weight: 600; }
+
+/* ---- Category Checkboxes in Budget Form ---- */
+.cat-checkbox-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
+.cat-checkbox-opt { display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: 0.8125rem; cursor: pointer; transition: all 0.15s; }
+.cat-checkbox-opt:hover { border-color: var(--primary); color: var(--primary); }
+.cat-checkbox-opt input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
+
 /* ---- Budget Cards Improved ---- */
 .budget-card-amount { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
 .budget-card-planned { font-size: 0.775rem; color: var(--text-muted); }

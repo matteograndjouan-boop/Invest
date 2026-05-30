@@ -849,6 +849,18 @@ tr:hover .summary-row-hint { opacity: 1; }
 .type-expense { background: rgba(239,68,68,0.12); color: #dc2626; }
 .type-revenue { background: rgba(16,185,129,0.12); color: #059669; }
 
+/* ---- Budget Subtitle & Period ---- */
+.budget-subtitle { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem; }
+.budget-card-period-label { font-size: 0.72rem; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.budget-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.budget-card-warning { font-size: 0.775rem; color: var(--warning); font-weight: 600; }
+
+/* ---- Category Checkboxes in Budget Form ---- */
+.cat-checkbox-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
+.cat-checkbox-opt { display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: 0.8125rem; cursor: pointer; transition: all 0.15s; }
+.cat-checkbox-opt:hover { border-color: var(--primary); color: var(--primary); }
+.cat-checkbox-opt input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
+
 /* ---- Budget Cards Improved ---- */
 .budget-card-amount { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
 .budget-card-planned { font-size: 0.775rem; color: var(--text-muted); }
@@ -1359,7 +1371,7 @@ tr:hover .summary-row-hint { opacity: 1; }
             <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
           <div id="budget-summary-wrap" class="card mt-md hidden">
-            <h3 style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
+            <h3 id="budget-summary-title" style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
@@ -1383,11 +1395,11 @@ tr:hover .summary-row-hint { opacity: 1; }
           </div>
           <div class="card mt-md">
             <div class="card-header-row">
-              <h3 id="budget-detail-subtitle">Lignes budgétaires</h3>
+              <h3 id="budget-detail-subtitle">Dépenses par sous-catégorie</h3>
               <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
             </div>
-            <table class="table">
-              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Prévu (€)</th><th>Réel</th><th>Écart</th><th></th></tr></thead>
+            <table class="data-table">
+              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th class="text-right">Réel</th><th class="text-right">Opérations</th></tr></thead>
               <tbody id="budget-detail-tbody"></tbody>
             </table>
           </div>
@@ -3886,7 +3898,7 @@ const Budget = {
 
   init() {
     PeriodFilter.onChange(() => {
-      if (document.getElementById('section-budget') && !document.getElementById('section-budget').classList.contains('hidden')) this.render();
+      if (!document.getElementById('section-budget').classList.contains('hidden')) this.render();
     });
   },
 
@@ -3898,46 +3910,120 @@ const Budget = {
     }
   },
 
+  // Migrate old {items} format → new {categories, planned} format
+  _migrate(theme) {
+    if (!theme.categories) {
+      if (theme.items && theme.items.length) {
+        theme.categories = [...new Set(theme.items.map(i => i.category).filter(Boolean))];
+        if (theme.planned == null) theme.planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+      } else {
+        theme.categories = [];
+      }
+    }
+    if (theme.planned == null) theme.planned = 0;
+    return theme;
+  },
+
+  _computeSpent(theme, expenses) {
+    const cats = (theme.categories || []);
+    if (!cats.length) return 0;
+    return expenses.filter(e => cats.includes(e.category)).reduce((s, e) => s + e.amount, 0);
+  },
+
+  _prevPeriod() {
+    const s = PeriodFilter.get();
+    if (s.type !== 'month') return null;
+    const [y, m] = s.month.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return { start: `${pm}-01`, end: `${pm}-${String(last).padStart(2, '0')}` };
+  },
+
+  _prevMonthLabel() {
+    const s = PeriodFilter.get();
+    if (s.type !== 'month') return 'période préc.';
+    const [y, m] = s.month.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    const MFR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    return MFR[d.getMonth()];
+  },
+
   _renderList() {
     this._currentThemeId = null;
     document.getElementById('budget-list-view').classList.remove('hidden');
     document.getElementById('budget-detail-view').classList.add('hidden');
-    document.getElementById('budget-section-title').textContent = 'Budgets';
     document.getElementById('add-budget-btn').textContent = '+ Nouveau budget';
 
-    const themes = Storage.getBudgetThemes();
+    const rawThemes = Storage.getBudgetThemes();
+    const themes = rawThemes.map(t => this._migrate({ ...t }));
     const { start, end } = PeriodFilter.getDateRange();
-    const expenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
+    const allExpenses = Storage.getExpenses();
+    const expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+
+    const prev = this._prevPeriod();
+    const prevExpenses = prev ? allExpenses.filter(e => e.date >= prev.start && e.date <= prev.end) : [];
+
     const empty = document.getElementById('budget-empty');
     const grid = document.getElementById('budget-themes-grid');
     const summaryWrap = document.getElementById('budget-summary-wrap');
     const summaryTbody = document.getElementById('budget-summary-tbody');
+    const summaryTitle = document.getElementById('budget-summary-title');
+
+    // Update header
+    const titleEl = document.getElementById('budget-section-title');
+    if (titleEl) titleEl.textContent = `Budgets — ${PeriodFilter.getLabel()}`;
+
+    // Subtitle
+    let subtitleEl = document.getElementById('budget-subtitle');
+    if (!subtitleEl) {
+      subtitleEl = document.createElement('div');
+      subtitleEl.id = 'budget-subtitle';
+      subtitleEl.className = 'budget-subtitle';
+      const header = document.querySelector('#section-budget .section-header');
+      if (header) header.insertAdjacentElement('afterend', subtitleEl);
+    }
 
     if (!themes.length) {
       grid.innerHTML = '';
       empty.classList.remove('hidden');
       if (summaryWrap) summaryWrap.classList.add('hidden');
+      subtitleEl.textContent = '';
       return;
     }
     empty.classList.add('hidden');
 
+    const overBudgetCount = themes.filter(t => {
+      const spent = this._computeSpent(t, expenses);
+      return (t.planned || 0) > 0 && spent > t.planned;
+    }).length;
+    subtitleEl.textContent = `${themes.length} budget${themes.length > 1 ? 's' : ''} actif${themes.length > 1 ? 's' : ''}${overBudgetCount > 0 ? ` · ${overBudgetCount} dépassement${overBudgetCount > 1 ? 's' : ''}` : ''}`;
+
+    const periodLabel = PeriodFilter.getLabel();
+    const prevLabel = this._prevMonthLabel();
+
     grid.innerHTML = themes.map(theme => {
       const spent = this._computeSpent(theme, expenses);
-      const planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+      const planned = theme.planned || 0;
       const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
       const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
       const remaining = planned - spent;
-      const overBudget = pct >= 100;
+      const overBudget = planned > 0 && spent > planned;
 
-      const prevSpent = this._getPrevSpent(theme);
-      const trendHtml = prevSpent > 0 ? (spent > prevSpent
-        ? `<span class="trend-arrow negative">↑ ${Utils.formatCurrency(spent - prevSpent)}</span>`
-        : `<span class="trend-arrow positive">↓ ${Utils.formatCurrency(prevSpent - spent)}</span>`)
-        : '';
+      let trendHtml = '';
+      if (prev) {
+        const prevSpent = this._computeSpent(theme, prevExpenses);
+        if (prevSpent > 0) {
+          const diffPct = Math.round((spent - prevSpent) / prevSpent * 100);
+          if (diffPct > 0) trendHtml = `<span class="trend-arrow negative">↑ +${diffPct}% vs ${prevLabel}</span>`;
+          else if (diffPct < 0) trendHtml = `<span class="trend-arrow positive">↓ ${diffPct}% vs ${prevLabel}</span>`;
+          else trendHtml = `<span class="trend-arrow" style="color:var(--text-muted)">= vs ${prevLabel}</span>`;
+        }
+      }
 
-      const statusText = planned > 0
-        ? `${pct.toFixed(0)}% · ${remaining >= 0 ? Utils.formatCurrency(remaining) + ' restants' : Utils.formatCurrency(-remaining) + ' dépassé'}`
-        : 'Aucun montant prévu';
+      const statusLine = overBudget
+        ? `<span class="budget-card-warning">⚠ Dépassement +${Utils.formatCurrency(spent - planned)}</span>`
+        : `<span class="budget-card-status">${planned > 0 ? `${pct.toFixed(0)}% · ${Utils.formatCurrency(Math.abs(remaining))} ${remaining >= 0 ? 'restants' : 'dépassé'}` : 'Aucun montant prévu'}</span>`;
 
       return `
         <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
@@ -3945,14 +4031,14 @@ const Budget = {
           <div class="budget-card-body">
             <div class="budget-card-top">
               <span class="budget-card-name">${theme.name}</span>
-              ${trendHtml}
+              <span class="budget-card-period-label">${periodLabel}</span>
             </div>
             <div class="budget-card-amount" style="color:${theme.color || '#6366f1'}">${Utils.formatCurrency(spent)}</div>
-            <div class="budget-card-planned">sur ${Utils.formatCurrency(planned)} prévu</div>
+            <div class="budget-card-planned">/ ${Utils.formatCurrency(planned)} prévu</div>
             <div class="budget-progress-wrap">
               <div class="budget-progress-bar" style="width:${pct.toFixed(1)}%;background:${statusColor}"></div>
             </div>
-            <div class="budget-card-status" style="color:${remaining >= 0 ? 'var(--text-muted)' : 'var(--danger)'}">${statusText}</div>
+            <div class="budget-card-footer">${statusLine}${trendHtml}</div>
           </div>
         </div>`;
     }).join('') + `
@@ -3964,9 +4050,10 @@ const Budget = {
     // Summary table
     if (summaryWrap && summaryTbody) {
       summaryWrap.classList.remove('hidden');
+      if (summaryTitle) summaryTitle.textContent = `Récap ${periodLabel} — Réel vs Prévu`;
       summaryTbody.innerHTML = themes.map(theme => {
         const spent = this._computeSpent(theme, expenses);
-        const planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+        const planned = theme.planned || 0;
         const ecart = planned - spent;
         const ecartPct = planned > 0 ? (ecart / planned * 100) : 0;
         const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
@@ -3975,42 +4062,16 @@ const Budget = {
           : pct >= 80
           ? '<span class="status-badge status-warn">Attention</span>'
           : '<span class="status-badge status-ok">OK</span>';
-        return `<tr>
+        return `<tr onclick="Budget.showDetail('${theme.id}')" style="cursor:pointer">
           <td><span class="budget-dot" style="background:${theme.color || '#6366f1'}"></span>${theme.name}</td>
           <td class="text-right">${Utils.formatCurrency(planned)}</td>
           <td class="text-right">${Utils.formatCurrency(spent)}</td>
           <td class="text-right ${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
-          <td class="text-right ${ecartPct >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${ecartPct.toFixed(1)}%</td>
+          <td class="text-right ${ecartPct >= 0 ? 'positive' : 'negative'}">${ecartPct >= 0 ? '+' : ''}${ecartPct.toFixed(1)}%</td>
           <td>${statusBadge}</td>
         </tr>`;
       }).join('');
     }
-  },
-
-  _computeSpent(theme, expenses) {
-    return expenses.filter(e =>
-      theme.items.some(item =>
-        item.category === e.category &&
-        (!item.subcategory || item.subcategory === e.subcategory)
-      )
-    ).reduce((s, e) => s + e.amount, 0);
-  },
-
-  _getPrevSpent(theme) {
-    const s = PeriodFilter.get();
-    let start, end;
-    if (s.type === 'month') {
-      const [y, m] = s.month.split('-').map(Number);
-      const d = new Date(y, m - 2, 1);
-      const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      start = `${pm}-01`;
-      end = `${pm}-${String(last).padStart(2, '0')}`;
-    } else {
-      return 0;
-    }
-    const prevExpenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
-    return this._computeSpent(theme, prevExpenses);
   },
 
   showDetail(id) {
@@ -4024,20 +4085,21 @@ const Budget = {
   },
 
   _renderDetail(id) {
-    const theme = Storage.getBudgetThemes().find(t => t.id === id);
-    if (!theme) { this.showList(); return; }
+    const raw = Storage.getBudgetThemes().find(t => t.id === id);
+    if (!raw) { this.showList(); return; }
+    const theme = this._migrate({ ...raw });
 
     document.getElementById('budget-list-view').classList.add('hidden');
     document.getElementById('budget-detail-view').classList.remove('hidden');
     document.getElementById('budget-section-title').textContent = theme.name;
-    document.getElementById('add-budget-btn').textContent = '+ Ligne';
+    document.getElementById('add-budget-btn').textContent = '✏️ Modifier le prévu';
 
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
     const periodExpenses = allExpenses.filter(e => e.date >= start && e.date <= end);
 
     const totalSpent = this._computeSpent(theme, periodExpenses);
-    const totalPlanned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+    const totalPlanned = theme.planned || 0;
     const remaining = totalPlanned - totalSpent;
 
     document.getElementById('budget-detail-planned').textContent = Utils.formatCurrency(totalPlanned);
@@ -4047,7 +4109,6 @@ const Budget = {
     remEl.className = 'kpi-value ' + (remaining >= 0 ? 'positive' : 'negative');
     document.getElementById('budget-detail-remaining-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
 
-    // Smart message
     const daysInPeriod = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
     const daysPassed = Math.min(daysInPeriod, Math.ceil((new Date() - new Date(start)) / 86400000) + 1);
     const daysLeft = Math.max(0, daysInPeriod - daysPassed);
@@ -4056,22 +4117,36 @@ const Budget = {
     else msg += ` Dépassement de <strong class="negative">${Utils.formatCurrency(-remaining)}</strong>.`;
     document.getElementById('budget-detail-message').innerHTML = msg;
 
-    // Detail table
-    const tbody = document.getElementById('budget-detail-tbody');
-    tbody.innerHTML = theme.items.map((item, idx) => {
-      const real = periodExpenses.filter(e => e.category === item.category && (!item.subcategory || item.subcategory === e.subcategory)).reduce((s, e) => s + e.amount, 0);
-      const ecart = item.planned - real;
-      return `<tr>
-        <td>${item.category}</td>
-        <td>${item.subcategory || '—'}</td>
-        <td><input type="number" value="${item.planned}" min="0" step="1" class="budget-inline-input" onchange="Budget.updatePlanned('${theme.id}', ${idx}, this.value)"></td>
-        <td>${Utils.formatCurrency(real)}</td>
-        <td class="${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
-        <td class="actions-cell"><button class="btn-icon btn-danger" onclick="Budget.deleteItem('${theme.id}', ${idx})">🗑️</button></td>
-      </tr>`;
-    }).join('');
+    // Breakdown table — from real expense data
+    const subtitleEl = document.getElementById('budget-detail-subtitle');
+    if (subtitleEl) subtitleEl.textContent = `Dépenses par sous-catégorie · ${PeriodFilter.getLabel()}`;
 
-    // History chart: last 6 periods (months)
+    const cats = theme.categories || [];
+    const catExpenses = periodExpenses.filter(e => cats.includes(e.category));
+
+    const groups = {};
+    catExpenses.forEach(e => {
+      const key = `${e.category}|||${e.subcategory || ''}`;
+      if (!groups[key]) groups[key] = { category: e.category, subcategory: e.subcategory || '', amount: 0, count: 0 };
+      groups[key].amount += e.amount;
+      groups[key].count++;
+    });
+
+    const tbody = document.getElementById('budget-detail-tbody');
+    const rows = Object.values(groups).sort((a, b) => b.amount - a.amount);
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Aucune dépense dans ce budget sur ${PeriodFilter.getLabel()}.</td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(g => `<tr>
+        <td>${g.category}</td>
+        <td>${g.subcategory || '—'}</td>
+        <td class="text-right">${Utils.formatCurrency(g.amount)}</td>
+        <td class="text-right" style="color:var(--text-muted)">${g.count} op.</td>
+      </tr>`).join('');
+    }
+
+    // History chart
     const now = new Date();
     const histLabels = [], histData = [];
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -4086,35 +4161,22 @@ const Budget = {
     Charts.budgetHistory(histLabels, histData, theme.color || '#6366f1');
   },
 
-  updatePlanned(themeId, idx, value) {
-    const themes = Storage.getBudgetThemes();
-    const theme = themes.find(t => t.id === themeId);
-    if (!theme) return;
-    theme.items[idx].planned = parseFloat(value) || 0;
-    Storage.saveBudgetThemes(themes);
-  },
-
-  deleteItem(themeId, idx) {
-    if (!confirm('Supprimer cette ligne ?')) return;
-    const themes = Storage.getBudgetThemes();
-    const theme = themes.find(t => t.id === themeId);
-    if (!theme) return;
-    theme.items.splice(idx, 1);
-    Storage.saveBudgetThemes(themes);
-    this._renderDetail(themeId);
-  },
-
   openAddForm() {
     if (this._currentThemeId) {
-      Modal.open('Ajouter une ligne budgétaire', this._itemForm(null, this._currentThemeId));
+      const raw = Storage.getBudgetThemes().find(t => t.id === this._currentThemeId);
+      if (raw) Modal.open('Modifier le budget prévu', this._editPlannedForm(this._migrate({ ...raw })));
     } else {
-      Modal.open('Nouveau budget thématique', this._themeForm());
+      Modal.open('Nouveau budget', this._themeForm());
     }
   },
 
   _themeForm() {
     const colorOptions = this._THEME_COLORS.map((c, i) =>
       `<label class="color-opt"><input type="radio" name="color" value="${c}" ${i === 0 ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
+    ).join('');
+    const cats = Storage.getCategories();
+    const catCheckboxes = cats.map(c =>
+      `<label class="cat-checkbox-opt"><input type="checkbox" name="categories" value="${c.name}"> ${c.name}</label>`
     ).join('');
     return `
       <form onsubmit="Budget.saveTheme(event)">
@@ -4127,6 +4189,14 @@ const Budget = {
             <label>Couleur</label>
             <div class="color-picker-row">${colorOptions}</div>
           </div>
+          <div class="form-group form-full">
+            <label>Montant prévu (€) *</label>
+            <input name="planned" type="number" step="1" min="0" required placeholder="ex: 400">
+          </div>
+          <div class="form-group form-full">
+            <label>Catégories incluses *</label>
+            <div class="cat-checkbox-grid">${catCheckboxes || '<em style="color:var(--text-muted)">Aucune catégorie définie — créez-en dans l\'onglet Données > Catégories.</em>'}</div>
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
@@ -4135,65 +4205,48 @@ const Budget = {
       </form>`;
   },
 
-  _itemForm(item, themeId) {
-    const cats = Storage.getCategories();
-    const catOptions = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  _editPlannedForm(theme) {
     return `
-      <form onsubmit="Budget.saveItem(event, '${themeId}', ${item ? item._idx : 'null'})">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Catégorie *</label>
-            <select name="category" required onchange="Budget._updateItemSubcats(this.value)">${catOptions}</select>
-          </div>
-          <div class="form-group">
-            <label>Sous-catégorie</label>
-            <select name="subcategory" id="budget-item-subcat" disabled><option value="">—</option></select>
-          </div>
-          <div class="form-group form-full">
-            <label>Montant prévu (€) *</label>
-            <input name="planned" type="number" step="1" min="0" required placeholder="ex: 300">
-          </div>
+      <form onsubmit="Budget.savePlanned(event, '${theme.id}')">
+        <div class="form-group">
+          <label>Montant prévu (€)</label>
+          <input name="planned" type="number" step="1" min="0" value="${theme.planned || 0}" required>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn-primary">Ajouter</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
         </div>
       </form>`;
   },
 
-  _updateItemSubcats(catName) {
-    const sel = document.getElementById('budget-item-subcat');
-    if (!sel) return;
-    const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = '<option value="">—</option>' + subcats.map(s => `<option value="${s}">${s}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+  savePlanned(event, themeId) {
+    event.preventDefault();
+    const themes = Storage.getBudgetThemes();
+    const theme = themes.find(t => t.id === themeId);
+    if (!theme) return;
+    theme.planned = parseFloat(new FormData(event.target).get('planned')) || 0;
+    Storage.saveBudgetThemes(themes);
+    Modal.close();
+    this._renderDetail(themeId);
   },
 
   saveTheme(event) {
     event.preventDefault();
     const fd = new FormData(event.target);
+    const categories = fd.getAll('categories');
+    if (!categories.length) { alert('Sélectionne au moins une catégorie.'); return; }
     const themes = Storage.getBudgetThemes();
-    themes.push({ id: 'theme_' + Date.now(), name: fd.get('name').trim(), color: fd.get('color'), items: [] });
+    themes.push({
+      id: 'theme_' + Date.now(),
+      name: fd.get('name').trim(),
+      color: fd.get('color'),
+      planned: parseFloat(fd.get('planned')) || 0,
+      categories,
+      items: [],
+    });
     Storage.saveBudgetThemes(themes);
     Modal.close();
     this._renderList();
-  },
-
-  saveItem(event, themeId) {
-    event.preventDefault();
-    const fd = new FormData(event.target);
-    const themes = Storage.getBudgetThemes();
-    const theme = themes.find(t => t.id === themeId);
-    if (!theme) return;
-    theme.items.push({ category: fd.get('category'), subcategory: fd.get('subcategory') || '', planned: parseFloat(fd.get('planned')) || 0 });
-    Storage.saveBudgetThemes(themes);
-    Modal.close();
-    this._renderDetail(themeId);
   },
 
   deleteTheme(id) {
@@ -4205,28 +4258,23 @@ const Budget = {
   suggest() {
     const id = this._currentThemeId;
     if (!id) return;
-    const theme = Storage.getBudgetThemes().find(t => t.id === id);
-    if (!theme) return;
+    const raw = Storage.getBudgetThemes().find(t => t.id === id);
+    if (!raw) return;
+    const theme = this._migrate({ ...raw });
     const allExpenses = Storage.getExpenses();
     const now = new Date();
-    // Average over last 3 months
-    const totals = theme.items.map(item => {
-      let sum = 0;
-      for (let i = 1; i <= 3; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-        sum += allExpenses
-          .filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`)
-          .filter(e => e.category === item.category && (!item.subcategory || item.subcategory === e.subcategory))
-          .reduce((s, e) => s + e.amount, 0);
-      }
-      return Math.ceil(sum / 3);
-    });
+    let sum = 0;
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+      const mExp = allExpenses.filter(e => e.date >= `${m}-01` && e.date <= `${m}-${String(last).padStart(2,'0')}`);
+      sum += this._computeSpent(theme, mExp);
+    }
+    const suggested = Math.ceil(sum / 3);
     const themes = Storage.getBudgetThemes();
     const t = themes.find(t => t.id === id);
-    t.items.forEach((item, i) => { item.planned = totals[i]; });
-    Storage.saveBudgetThemes(themes);
+    if (t) { t.planned = suggested; Storage.saveBudgetThemes(themes); }
     this._renderDetail(id);
   },
 };
