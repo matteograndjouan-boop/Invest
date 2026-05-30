@@ -308,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const dateIdx = idx(['date treso', 'date']); const catIdx = idx(['categorie']);
           const subCatIdx = idx(['sous']); const commentIdx = idx(['commentaire']);
           const valeurIdx = idx(['valeur']); const positifIdx = idx(['positif']);
+          const moisReelIdx = idx(['mois reel', 'mois reel', 'mois effectif', 'periode', 'mois']);
           const CAT_MAP = {
             'abonnements':'Abonnements','alimentation':'Alimentation','divers':'Divers',
             'epargne':'Epargne','logement':'Logement','loisir':'Loisir','loisirs':'Loisir',
@@ -319,6 +320,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const s = String(v); const parts = s.split('/');
             if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
             return s;
+          };
+          const MONTH_NAMES_FR = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+          const parseExcelMonth = (v) => {
+            if (!v && v !== 0) return '';
+            if (typeof v === 'number') {
+              const d = new Date(Math.round((v-25569)*86400*1000));
+              return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            }
+            const s = String(v).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+            // "mars 2026" or "mars-2026"
+            const textMatch = s.match(/([a-z]+)[\s\-]+(\d{4})/);
+            if (textMatch) {
+              const mi = MONTH_NAMES_FR.indexOf(textMatch[1]);
+              if (mi >= 0) return `${textMatch[2]}-${String(mi+1).padStart(2,'0')}`;
+            }
+            // "03/2026" or "2026/03"
+            const slashParts = s.split('/');
+            if (slashParts.length === 2) {
+              if (slashParts[0].length === 4) return `${slashParts[0]}-${slashParts[1].padStart(2,'0')}`;
+              if (slashParts[1].length === 4) return `${slashParts[1]}-${slashParts[0].padStart(2,'0')}`;
+            }
+            // "2026-03"
+            if (/^\d{4}-\d{2}$/.test(s)) return s;
+            return '';
           };
           const existing = Storage.getExpenses();
           const existingRevenues = Storage.getRevenues();
@@ -333,13 +358,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const subCat = String(row[subCatIdx]||'').trim(); const comment = String(row[commentIdx]||'').trim();
             const description = comment || subCat || 'Import';
             const date = parseExcelDate(row[dateIdx]);
+            const moisReel = moisReelIdx >= 0 ? parseExcelMonth(row[moisReelIdx]) : '';
             if (isRevenue) {
               existingRevenues.push({ id: Utils.generateId(), description, amount, category: 'Revenus', subcategory: subCat, date, notes: '' });
               importedRev++;
             } else {
               const catNorm = cat.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
               existing.push({ id: Utils.generateId(), description, amount,
-                category: CAT_MAP[catNorm]||'Autre', subcategory: subCat, date, notes: '' });
+                category: CAT_MAP[catNorm]||'Autre', subcategory: subCat, date,
+                ...(moisReel && { effectiveDate: moisReel }), notes: '' });
               imported++;
             }
           }
