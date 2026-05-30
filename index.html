@@ -213,24 +213,54 @@
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card success"><div class="kpi-label">Revenus</div><div class="kpi-value positive" id="flux-kpi-revenus">0 €</div></div>
-          <div class="kpi-card danger"><div class="kpi-label">Dépenses</div><div class="kpi-value" id="flux-kpi-depenses">0 €</div></div>
-          <div class="kpi-card" id="flux-kpi-solde-card"><div class="kpi-label">Solde net</div><div class="kpi-value" id="flux-kpi-solde">0 €</div></div>
-          <div class="kpi-card primary"><div class="kpi-label">Taux d'épargne</div><div class="kpi-value" id="flux-kpi-epargne">— %</div></div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Revenus</div>
+            <div class="kpi-value positive" id="flux-kpi-revenus">0 €</div>
+            <div class="kpi-trend" id="flux-trend-revenus"></div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Dépenses</div>
+            <div class="kpi-value" id="flux-kpi-depenses">0 €</div>
+            <div class="kpi-trend" id="flux-trend-depenses"></div>
+          </div>
+          <div class="kpi-card" id="flux-kpi-solde-card">
+            <div class="kpi-label">Solde net</div>
+            <div class="kpi-value" id="flux-kpi-solde">0 €</div>
+            <div class="kpi-trend" id="flux-trend-solde"></div>
+          </div>
+          <div class="kpi-card primary">
+            <div class="kpi-label">Taux d'épargne</div>
+            <div class="kpi-value" id="flux-kpi-epargne">— %</div>
+            <div class="kpi-trend" id="flux-trend-epargne"></div>
+          </div>
         </div>
-        <div class="flux-filters">
-          <select id="flux-filter-cat"><option value="">Toutes catégories</option></select>
-          <select id="flux-filter-subcat" disabled><option value="">Toutes sous-catégories</option></select>
-        </div>
-        <div class="charts-grid">
+        <div id="flux-cat-pills" class="flux-cat-pills"></div>
+        <div class="flux-charts-row">
           <div class="chart-card">
-            <h3>Revenus vs Dépenses (6 derniers mois)</h3>
-            <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
+            <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
+            <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
           </div>
           <div class="chart-card">
             <h3>Répartition des dépenses</h3>
-            <div class="chart-container" style="height:220px"><canvas id="chart-flux-donut"></canvas></div>
+            <div class="flux-donut-wrap">
+              <div class="chart-container" style="height:240px"><canvas id="chart-flux-donut"></canvas></div>
+              <div id="flux-donut-legend" class="donut-legend"></div>
+            </div>
           </div>
+        </div>
+        <div class="card mt-md">
+          <div class="card-header-row">
+            <h3>Transactions récentes</h3>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr><th>Date</th><th>Description</th><th>Catégorie</th><th class="text-right">Montant</th><th>Type</th></tr>
+              </thead>
+              <tbody id="flux-recent-tbody"></tbody>
+            </table>
+          </div>
+          <div id="flux-recent-empty" class="empty-state hidden"><p>Aucune transaction sur cette période.</p></div>
         </div>
       </section>
 
@@ -417,6 +447,17 @@
           <div id="budget-themes-grid" class="budget-themes-grid"></div>
           <div id="budget-empty" class="empty-state hidden">
             <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
+          </div>
+          <div id="budget-summary-wrap" class="card mt-md hidden">
+            <h3 style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Budget</th><th class="text-right">Prévu</th><th class="text-right">Réel</th><th class="text-right">Écart €</th><th class="text-right">Écart %</th><th>Statut</th></tr>
+                </thead>
+                <tbody id="budget-summary-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
         <!-- Detail view -->

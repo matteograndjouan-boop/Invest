@@ -791,12 +791,101 @@ body {
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ---- KPI Trends ---- */
+.kpi-trend { font-size: 0.72rem; margin-top: 0.2rem; min-height: 1.1rem; line-height: 1.3; }
+.kpi-trend .trend-good { color: var(--success); font-weight: 500; }
+.kpi-trend .trend-bad  { color: var(--danger);  font-weight: 500; }
+.kpi-trend .trend-neutral { color: var(--text-muted); }
+
+/* ---- Flux Category Pills ---- */
+.flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+.flux-pill {
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.flux-pill:hover { border-color: var(--primary); color: var(--primary); }
+.flux-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ---- Flux Charts Row ---- */
+.flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start; }
+.flux-donut-wrap { display: flex; gap: 0.75rem; align-items: center; }
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 180px; }
+
+/* ---- Donut Custom Legend ---- */
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; overflow: hidden; }
+.donut-legend-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.donut-legend-item:hover { background: var(--bg); }
+.donut-legend-item.active { background: var(--bg); }
+.donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.donut-legend-name { font-size: 0.78rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.donut-legend-pct { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.donut-legend-val { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+
+/* ---- Type Badges ---- */
+.type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
+.type-expense { background: rgba(239,68,68,0.12); color: #dc2626; }
+.type-revenue { background: rgba(16,185,129,0.12); color: #059669; }
+
+/* ---- Budget Cards Improved ---- */
+.budget-card-amount { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
+.budget-card-planned { font-size: 0.775rem; color: var(--text-muted); }
+.budget-progress-wrap { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.budget-card-status { font-size: 0.775rem; color: var(--text-muted); }
+.budget-theme-card.over-budget { border: 1px solid var(--warning); box-shadow: inset 3px 0 0 var(--warning); }
+.budget-add-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  min-height: 130px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.budget-add-card:hover { border-color: var(--primary); background: var(--primary-light); }
+.budget-add-icon { font-size: 1.75rem; color: var(--text-muted); line-height: 1; }
+.budget-add-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.budget-add-card:hover .budget-add-icon,
+.budget-add-card:hover .budget-add-label { color: var(--primary); }
+
+/* ---- Budget Summary Table ---- */
+.status-badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+.status-ok { background: rgba(16,185,129,0.12); color: #059669; }
+.status-warn { background: rgba(245,158,11,0.15); color: #d97706; }
+.status-over { background: rgba(239,68,68,0.12); color: #dc2626; }
+.budget-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35rem; }
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .charts-grid { grid-template-columns: 1fr; }
+  .flux-charts-row { grid-template-columns: 1fr; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .flux-donut-wrap { flex-direction: column; align-items: flex-start; }
+  .flux-donut-wrap .chart-container { width: 100%; }
 }
 
 @media (max-width: 768px) {
@@ -1024,24 +1113,54 @@ body {
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card success"><div class="kpi-label">Revenus</div><div class="kpi-value positive" id="flux-kpi-revenus">0 €</div></div>
-          <div class="kpi-card danger"><div class="kpi-label">Dépenses</div><div class="kpi-value" id="flux-kpi-depenses">0 €</div></div>
-          <div class="kpi-card" id="flux-kpi-solde-card"><div class="kpi-label">Solde net</div><div class="kpi-value" id="flux-kpi-solde">0 €</div></div>
-          <div class="kpi-card primary"><div class="kpi-label">Taux d'épargne</div><div class="kpi-value" id="flux-kpi-epargne">— %</div></div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Revenus</div>
+            <div class="kpi-value positive" id="flux-kpi-revenus">0 €</div>
+            <div class="kpi-trend" id="flux-trend-revenus"></div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Dépenses</div>
+            <div class="kpi-value" id="flux-kpi-depenses">0 €</div>
+            <div class="kpi-trend" id="flux-trend-depenses"></div>
+          </div>
+          <div class="kpi-card" id="flux-kpi-solde-card">
+            <div class="kpi-label">Solde net</div>
+            <div class="kpi-value" id="flux-kpi-solde">0 €</div>
+            <div class="kpi-trend" id="flux-trend-solde"></div>
+          </div>
+          <div class="kpi-card primary">
+            <div class="kpi-label">Taux d'épargne</div>
+            <div class="kpi-value" id="flux-kpi-epargne">— %</div>
+            <div class="kpi-trend" id="flux-trend-epargne"></div>
+          </div>
         </div>
-        <div class="flux-filters">
-          <select id="flux-filter-cat"><option value="">Toutes catégories</option></select>
-          <select id="flux-filter-subcat" disabled><option value="">Toutes sous-catégories</option></select>
-        </div>
-        <div class="charts-grid">
+        <div id="flux-cat-pills" class="flux-cat-pills"></div>
+        <div class="flux-charts-row">
           <div class="chart-card">
-            <h3>Revenus vs Dépenses (6 derniers mois)</h3>
-            <div class="chart-container" style="height:220px"><canvas id="chart-flux-bar"></canvas></div>
+            <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
+            <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
           </div>
           <div class="chart-card">
             <h3>Répartition des dépenses</h3>
-            <div class="chart-container" style="height:220px"><canvas id="chart-flux-donut"></canvas></div>
+            <div class="flux-donut-wrap">
+              <div class="chart-container" style="height:240px"><canvas id="chart-flux-donut"></canvas></div>
+              <div id="flux-donut-legend" class="donut-legend"></div>
+            </div>
           </div>
+        </div>
+        <div class="card mt-md">
+          <div class="card-header-row">
+            <h3>Transactions récentes</h3>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr><th>Date</th><th>Description</th><th>Catégorie</th><th class="text-right">Montant</th><th>Type</th></tr>
+              </thead>
+              <tbody id="flux-recent-tbody"></tbody>
+            </table>
+          </div>
+          <div id="flux-recent-empty" class="empty-state hidden"><p>Aucune transaction sur cette période.</p></div>
         </div>
       </section>
 
@@ -1228,6 +1347,17 @@ body {
           <div id="budget-themes-grid" class="budget-themes-grid"></div>
           <div id="budget-empty" class="empty-state hidden">
             <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
+          </div>
+          <div id="budget-summary-wrap" class="card mt-md hidden">
+            <h3 style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Budget</th><th class="text-right">Prévu</th><th class="text-right">Réel</th><th class="text-right">Écart €</th><th class="text-right">Écart %</th><th>Statut</th></tr>
+                </thead>
+                <tbody id="budget-summary-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
         <!-- Detail view -->
@@ -1753,27 +1883,38 @@ const Charts = {
     });
   },
 
-  fluxBar(labels, revData, depData, activeCategory) {
-    const title = activeCategory ? `Dépenses — ${activeCategory} (6 derniers mois)` : 'Revenus vs Dépenses (6 derniers mois)';
-    // Update chart card title if present
-    const card = document.getElementById('chart-flux-bar')?.closest('.chart-card');
-    if (card) { const h3 = card.querySelector('h3'); if (h3) h3.textContent = title; }
+  fluxBar(labels, revData, depData, soldeData, activeCategory) {
+    const barDatasets = activeCategory
+      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4, type: 'bar' }]
+      : [
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
+        ];
+
+    const soldeDataset = soldeData ? {
+      label: 'Solde net',
+      data: soldeData,
+      type: 'line',
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139,92,246,0.08)',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: '#8b5cf6',
+      fill: false,
+      tension: 0.3,
+      yAxisID: 'y',
+    } : null;
 
     this.create('chart-flux-bar', {
       type: 'bar',
-      data: {
-        labels,
-        datasets: activeCategory
-          ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 }]
-          : [
-              { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
-              { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
-            ],
-      },
+      data: { labels, datasets: soldeDataset ? [...barDatasets, soldeDataset] : barDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
       },
     });
   },
@@ -1782,11 +1923,10 @@ const Charts = {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
     const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
 
-    // Dim non-selected slices when a filter is active
     const bgColors = labels.map((label, i) => {
       const c = BASE_COLORS[i % BASE_COLORS.length];
       if (!activeLabel || label === activeLabel) return c;
-      return c + '38'; // ~22% opacity for dimmed slices
+      return c + '38';
     });
     const offsets = labels.map(l => l === activeLabel ? 14 : 0);
     const borderWidths = labels.map(l => l === activeLabel ? 3 : 2);
@@ -1798,7 +1938,11 @@ const Charts = {
         datasets: [{ data, backgroundColor: bgColors, borderWidth: borderWidths, borderColor: '#fff', offset: offsets }],
       },
       options: {
-        ...this._doughnutOptions(Utils.formatCurrency),
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
         onClick: onClickFn
           ? (event, elements) => {
               if (elements.length > 0) onClickFn(labels[elements[0].index]);
@@ -2613,93 +2757,82 @@ const Revenues = {
 </script>
 <script>
 const Flux = {
-  _activeFilter: null, // catégorie active par clic sur le graphique
+  _activeFilter: null,
+  _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
     });
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (catFilter) {
-      catFilter.addEventListener('change', () => {
-        this._activeFilter = null; // reset click filter when dropdown changes
-        this._updateSubcatFilter(catFilter.value);
-        this.render();
-      });
-    }
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (subcatFilter) subcatFilter.addEventListener('change', () => this.render());
-    this._populateCatFilter();
+    this._renderCatPills();
   },
 
-  _populateCatFilter() {
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (!catFilter) return;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name; opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
+  _renderCatPills() {
+    const container = document.getElementById('flux-cat-pills');
+    if (!container) return;
+    const cats = Storage.getCategories().map(c => c.name);
+    const active = this._activeFilter;
+    container.innerHTML =
+      `<button class="flux-pill${!active ? ' active' : ''}" onclick="Flux._setPillFilter(null)">Toutes</button>` +
+      cats.map(c =>
+        `<button class="flux-pill${active === c ? ' active' : ''}" onclick="Flux._setPillFilter('${c}')">${c}</button>`
+      ).join('');
   },
 
-  _updateSubcatFilter(catName) {
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (!subcatFilter) return;
-    const subcats = Categories.getSubcats(catName);
-    if (subcats.length && catName) {
-      subcatFilter.disabled = false;
-      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>' +
-        subcats.map(s => `<option value="${s}">${s}</option>`).join('');
-    } else {
-      subcatFilter.disabled = true;
-      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>';
-    }
-  },
-
-  // Appelé au clic sur un segment du donut
-  toggleFilter(label) {
-    if (!label || label === 'Autres') return; // "Autres" ne filtre pas
-    this._activeFilter = (this._activeFilter === label) ? null : label;
+  _setPillFilter(cat) {
+    this._activeFilter = cat;
+    this._renderCatPills();
     this.render();
   },
 
-  _getEffectiveCatFilter() {
-    // Le filtre clic prend la priorité sur le dropdown
-    if (this._activeFilter) return this._activeFilter;
-    return document.getElementById('flux-filter-cat')?.value || '';
-  },
-
-  _renderFilterBadge(catFilter) {
-    let badge = document.getElementById('flux-active-filter');
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.id = 'flux-active-filter';
-      badge.className = 'flux-active-filter-badge';
-      const filtersRow = document.querySelector('.flux-filters');
-      if (filtersRow) filtersRow.after(badge);
-    }
-    if (catFilter) {
-      badge.innerHTML = `Filtre actif : <strong>${catFilter}</strong> <button class="filter-badge-clear" onclick="Flux.clearFilter()">✕ effacer</button>`;
-      badge.style.display = '';
-    } else {
-      badge.style.display = 'none';
-    }
+  toggleFilter(label) {
+    if (!label || label === 'Autres') return;
+    this._activeFilter = (this._activeFilter === label) ? null : label;
+    this._renderCatPills();
+    this.render();
   },
 
   clearFilter() {
     this._activeFilter = null;
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (catFilter) catFilter.value = '';
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (subcatFilter) { subcatFilter.disabled = true; subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>'; }
+    this._renderCatPills();
     this.render();
+  },
+
+  _getEffectiveCatFilter() {
+    return this._activeFilter || '';
+  },
+
+  _getPrevPeriodData() {
+    const s = PeriodFilter.get();
+    if (s.type !== 'month') return null;
+    const [y, m] = s.month.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const start = `${pm}-01`;
+    const end = `${pm}-${String(last).padStart(2, '0')}`;
+    return {
+      expenses: Storage.getExpenses().filter(e => e.date >= start && e.date <= end),
+      revenues: Storage.getRevenues().filter(r => r.date >= start && r.date <= end),
+    };
+  },
+
+  _renderKpiTrend(id, current, prev, lowerIsBetter) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (prev == null || prev === 0) { el.innerHTML = ''; return; }
+    const diff = current - prev;
+    const pct = Math.abs((diff / prev) * 100).toFixed(1);
+    const isUp = diff > 0;
+    const isGood = lowerIsBetter ? !isUp : isUp;
+    const arrow = isUp ? '↑' : '↓';
+    const cls = isGood ? 'trend-good' : 'trend-bad';
+    el.innerHTML = `<span class="${cls}">${arrow} ${pct}% vs mois préc.</span>`;
   },
 
   render() {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilter = this._getEffectiveCatFilter();
-    const subcatFilter = this._activeFilter ? '' : (document.getElementById('flux-filter-subcat')?.value || '');
 
     const allExpenses = Storage.getExpenses();
     const allRevenues = Storage.getRevenues();
@@ -2707,10 +2840,7 @@ const Flux = {
     let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
     const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
 
-    if (catFilter) {
-      expenses = expenses.filter(e => e.category === catFilter);
-      if (subcatFilter) expenses = expenses.filter(e => e.subcategory === subcatFilter);
-    }
+    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
 
     const totalRev = revenues.reduce((s, r) => s + r.amount, 0);
     const totalDep = expenses.reduce((s, e) => s + e.amount, 0);
@@ -2727,15 +2857,32 @@ const Flux = {
     epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
     epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
 
-    this._renderFilterBadge(catFilter);
-    this._renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter);
+    // KPI trends
+    const prev = this._getPrevPeriodData();
+    if (prev) {
+      const prevRev = prev.revenues.reduce((s, r) => s + r.amount, 0);
+      let prevExp = prev.expenses;
+      if (catFilter) prevExp = prevExp.filter(e => e.category === catFilter);
+      const prevDep = prevExp.reduce((s, e) => s + e.amount, 0);
+      const prevSolde = prevRev - prevDep;
+      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev, false);
+      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep, true);
+      this._renderKpiTrend('flux-trend-solde', solde, prevSolde, false);
+      const prevEp = prevRev > 0 ? prevSolde / prevRev * 100 : null;
+      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp, false);
+    } else {
+      ['flux-trend-revenus','flux-trend-depenses','flux-trend-solde','flux-trend-epargne']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+    }
+
+    this._renderBarChart(allExpenses, allRevenues, catFilter);
     this._renderDonut(expenses, catFilter);
+    this._renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter);
   },
 
-  _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
+  _renderBarChart(allExpenses, allRevenues, catFilter) {
     const { start, end } = PeriodFilter.getDateRange();
 
-    // Build list of months covered by the selected period
     const months = [];
     let cur = new Date(start + 'T00:00:00');
     const endDate = new Date(end + 'T00:00:00');
@@ -2751,52 +2898,108 @@ const Flux = {
       return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
     });
 
-    const getLastDay = (m) => {
-      const [y, mo] = m.split('-').map(Number);
-      return new Date(y, mo, 0).getDate();
-    };
+    const getLastDay = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
 
     const revByMonth = months.map(m => {
-      const mStart = `${m}-01`;
-      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      // Clamp to the actual period bounds (critical for range mode)
-      const s = mStart < start ? start : mStart;
-      const e = mEnd > end ? end : mEnd;
+      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
       return allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0);
     });
 
     const depByMonth = months.map(m => {
-      const mStart = `${m}-01`;
-      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      const s = mStart < start ? start : mStart;
-      const e = mEnd > end ? end : mEnd;
+      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
       let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
-      if (catFilter) { exp = exp.filter(ex => ex.category === catFilter); if (subcatFilter) exp = exp.filter(ex => ex.subcategory === subcatFilter); }
+      if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
       return exp.reduce((sum, ex) => sum + ex.amount, 0);
     });
 
-    Charts.fluxBar(labels, revByMonth, depByMonth, catFilter || null);
+    const soldeByMonth = revByMonth.map((r, i) => r - depByMonth[i]);
+
+    const titleEl = document.getElementById('flux-bar-title');
+    if (titleEl) titleEl.textContent = catFilter ? `Dépenses — ${catFilter}` : 'Revenus vs Dépenses';
+
+    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth, catFilter || null);
   },
 
   _renderDonut(expenses, activeCategory) {
     const byCategory = {};
-    // Always compute donut from ALL expenses in period (unfiltered) so all slices stay visible
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
       .filter(e => e.date >= start && e.date <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
 
     let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+
     if (entries.length > 6) {
       const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
+
     Charts.fluxDonut(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
       activeCategory || null,
       (label) => this.toggleFilter(label)
     );
+
+    // Custom HTML legend
+    const legend = document.getElementById('flux-donut-legend');
+    if (legend) {
+      if (!entries.length) { legend.innerHTML = ''; return; }
+      legend.innerHTML = entries.map(([label, value], i) => {
+        const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
+        const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+        const isActive = activeCategory && label === activeCategory;
+        const safeName = label.replace(/'/g, "\\'");
+        return `<div class="donut-legend-item${isActive ? ' active' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+          <span class="donut-legend-dot" style="background:${color}"></span>
+          <span class="donut-legend-name">${label}</span>
+          <span class="donut-legend-pct">${pct}%</span>
+          <span class="donut-legend-val">${Utils.formatCurrency(value)}</span>
+        </div>`;
+      }).join('');
+    }
+  },
+
+  _renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter) {
+    let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+    const revenues = catFilter ? [] : allRevenues.filter(r => r.date >= start && r.date <= end);
+
+    const all = [
+      ...expenses.map(e => ({ ...e, _type: 'expense' })),
+      ...revenues.map(r => ({ ...r, _type: 'revenue' })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+
+    const tbody = document.getElementById('flux-recent-tbody');
+    const empty = document.getElementById('flux-recent-empty');
+    if (!tbody) return;
+
+    if (!all.length) {
+      tbody.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    tbody.innerHTML = all.map(t => {
+      const isExp = t._type === 'expense';
+      const amtCls = isExp ? 'negative' : 'positive';
+      const amtSign = isExp ? '−' : '+';
+      const badge = isExp
+        ? '<span class="type-badge type-expense">Dépense</span>'
+        : '<span class="type-badge type-revenue">Revenu</span>';
+      const [y, m, d] = t.date.split('-');
+      return `<tr>
+        <td>${d}/${m}/${y.slice(2)}</td>
+        <td>${t.description || '—'}</td>
+        <td>${t.category || '—'}</td>
+        <td class="${amtCls} text-right">${amtSign}${Utils.formatCurrency(t.amount)}</td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
   },
 };
 
@@ -3593,10 +3796,13 @@ const Budget = {
     const expenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
     const empty = document.getElementById('budget-empty');
     const grid = document.getElementById('budget-themes-grid');
+    const summaryWrap = document.getElementById('budget-summary-wrap');
+    const summaryTbody = document.getElementById('budget-summary-tbody');
 
     if (!themes.length) {
       grid.innerHTML = '';
       empty.classList.remove('hidden');
+      if (summaryWrap) summaryWrap.classList.add('hidden');
       return;
     }
     empty.classList.add('hidden');
@@ -3607,6 +3813,7 @@ const Budget = {
       const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
       const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
       const remaining = planned - spent;
+      const overBudget = pct >= 100;
 
       const prevSpent = this._getPrevSpent(theme);
       const trendHtml = prevSpent > 0 ? (spent > prevSpent
@@ -3614,24 +3821,56 @@ const Budget = {
         : `<span class="trend-arrow positive">↓ ${Utils.formatCurrency(prevSpent - spent)}</span>`)
         : '';
 
+      const statusText = planned > 0
+        ? `${pct.toFixed(0)}% · ${remaining >= 0 ? Utils.formatCurrency(remaining) + ' restants' : Utils.formatCurrency(-remaining) + ' dépassé'}`
+        : 'Aucun montant prévu';
+
       return `
-        <div class="budget-theme-card" onclick="Budget.showDetail('${theme.id}')">
+        <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
           <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
           <div class="budget-card-body">
             <div class="budget-card-top">
               <span class="budget-card-name">${theme.name}</span>
               ${trendHtml}
             </div>
+            <div class="budget-card-amount" style="color:${theme.color || '#6366f1'}">${Utils.formatCurrency(spent)}</div>
+            <div class="budget-card-planned">sur ${Utils.formatCurrency(planned)} prévu</div>
             <div class="budget-progress-wrap">
               <div class="budget-progress-bar" style="width:${pct.toFixed(1)}%;background:${statusColor}"></div>
             </div>
-            <div class="budget-card-bottom">
-              <span style="font-size:0.8125rem;color:var(--text-muted)">${PeriodFilter.getLabel()}</span>
-              <span style="font-size:0.875rem;font-weight:600;color:${remaining >= 0 ? 'var(--success)' : 'var(--danger)'}">${Utils.formatCurrency(spent)} / ${Utils.formatCurrency(planned)}</span>
-            </div>
+            <div class="budget-card-status" style="color:${remaining >= 0 ? 'var(--text-muted)' : 'var(--danger)'}">${statusText}</div>
           </div>
         </div>`;
-    }).join('');
+    }).join('') + `
+      <div class="budget-add-card" onclick="Budget.openAddForm()">
+        <div class="budget-add-icon">+</div>
+        <div class="budget-add-label">Nouveau budget</div>
+      </div>`;
+
+    // Summary table
+    if (summaryWrap && summaryTbody) {
+      summaryWrap.classList.remove('hidden');
+      summaryTbody.innerHTML = themes.map(theme => {
+        const spent = this._computeSpent(theme, expenses);
+        const planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+        const ecart = planned - spent;
+        const ecartPct = planned > 0 ? (ecart / planned * 100) : 0;
+        const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
+        const statusBadge = pct >= 100
+          ? '<span class="status-badge status-over">Dépassé</span>'
+          : pct >= 80
+          ? '<span class="status-badge status-warn">Attention</span>'
+          : '<span class="status-badge status-ok">OK</span>';
+        return `<tr>
+          <td><span class="budget-dot" style="background:${theme.color || '#6366f1'}"></span>${theme.name}</td>
+          <td class="text-right">${Utils.formatCurrency(planned)}</td>
+          <td class="text-right">${Utils.formatCurrency(spent)}</td>
+          <td class="text-right ${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
+          <td class="text-right ${ecartPct >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${ecartPct.toFixed(1)}%</td>
+          <td>${statusBadge}</td>
+        </tr>`;
+      }).join('');
+    }
   },
 
   _computeSpent(theme, expenses) {

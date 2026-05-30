@@ -192,27 +192,38 @@ const Charts = {
     });
   },
 
-  fluxBar(labels, revData, depData, activeCategory) {
-    const title = activeCategory ? `Dépenses — ${activeCategory} (6 derniers mois)` : 'Revenus vs Dépenses (6 derniers mois)';
-    // Update chart card title if present
-    const card = document.getElementById('chart-flux-bar')?.closest('.chart-card');
-    if (card) { const h3 = card.querySelector('h3'); if (h3) h3.textContent = title; }
+  fluxBar(labels, revData, depData, soldeData, activeCategory) {
+    const barDatasets = activeCategory
+      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4, type: 'bar' }]
+      : [
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
+        ];
+
+    const soldeDataset = soldeData ? {
+      label: 'Solde net',
+      data: soldeData,
+      type: 'line',
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139,92,246,0.08)',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: '#8b5cf6',
+      fill: false,
+      tension: 0.3,
+      yAxisID: 'y',
+    } : null;
 
     this.create('chart-flux-bar', {
       type: 'bar',
-      data: {
-        labels,
-        datasets: activeCategory
-          ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 }]
-          : [
-              { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
-              { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
-            ],
-      },
+      data: { labels, datasets: soldeDataset ? [...barDatasets, soldeDataset] : barDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
       },
     });
   },
@@ -221,11 +232,10 @@ const Charts = {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
     const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
 
-    // Dim non-selected slices when a filter is active
     const bgColors = labels.map((label, i) => {
       const c = BASE_COLORS[i % BASE_COLORS.length];
       if (!activeLabel || label === activeLabel) return c;
-      return c + '38'; // ~22% opacity for dimmed slices
+      return c + '38';
     });
     const offsets = labels.map(l => l === activeLabel ? 14 : 0);
     const borderWidths = labels.map(l => l === activeLabel ? 3 : 2);
@@ -237,7 +247,11 @@ const Charts = {
         datasets: [{ data, backgroundColor: bgColors, borderWidth: borderWidths, borderColor: '#fff', offset: offsets }],
       },
       options: {
-        ...this._doughnutOptions(Utils.formatCurrency),
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
         onClick: onClickFn
           ? (event, elements) => {
               if (elements.length > 0) onClickFn(labels[elements[0].index]);

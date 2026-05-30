@@ -1,91 +1,80 @@
 const Flux = {
-  _activeFilter: null, // catégorie active par clic sur le graphique
+  _activeFilter: null,
+  _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
     });
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (catFilter) {
-      catFilter.addEventListener('change', () => {
-        this._activeFilter = null; // reset click filter when dropdown changes
-        this._updateSubcatFilter(catFilter.value);
-        this.render();
-      });
-    }
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (subcatFilter) subcatFilter.addEventListener('change', () => this.render());
-    this._populateCatFilter();
+    this._renderCatPills();
   },
 
-  _populateCatFilter() {
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (!catFilter) return;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name; opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
+  _renderCatPills() {
+    const container = document.getElementById('flux-cat-pills');
+    if (!container) return;
+    const cats = Storage.getCategories().map(c => c.name);
+    const active = this._activeFilter;
+    container.innerHTML =
+      `<button class="flux-pill${!active ? ' active' : ''}" onclick="Flux._setPillFilter(null)">Toutes</button>` +
+      cats.map(c =>
+        `<button class="flux-pill${active === c ? ' active' : ''}" onclick="Flux._setPillFilter('${c}')">${c}</button>`
+      ).join('');
   },
 
-  _updateSubcatFilter(catName) {
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (!subcatFilter) return;
-    const subcats = Categories.getSubcats(catName);
-    if (subcats.length && catName) {
-      subcatFilter.disabled = false;
-      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>' +
-        subcats.map(s => `<option value="${s}">${s}</option>`).join('');
-    } else {
-      subcatFilter.disabled = true;
-      subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>';
-    }
-  },
-
-  // Appelé au clic sur un segment du donut
-  toggleFilter(label) {
-    if (!label || label === 'Autres') return; // "Autres" ne filtre pas
-    this._activeFilter = (this._activeFilter === label) ? null : label;
+  _setPillFilter(cat) {
+    this._activeFilter = cat;
+    this._renderCatPills();
     this.render();
   },
 
-  _getEffectiveCatFilter() {
-    // Le filtre clic prend la priorité sur le dropdown
-    if (this._activeFilter) return this._activeFilter;
-    return document.getElementById('flux-filter-cat')?.value || '';
-  },
-
-  _renderFilterBadge(catFilter) {
-    let badge = document.getElementById('flux-active-filter');
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.id = 'flux-active-filter';
-      badge.className = 'flux-active-filter-badge';
-      const filtersRow = document.querySelector('.flux-filters');
-      if (filtersRow) filtersRow.after(badge);
-    }
-    if (catFilter) {
-      badge.innerHTML = `Filtre actif : <strong>${catFilter}</strong> <button class="filter-badge-clear" onclick="Flux.clearFilter()">✕ effacer</button>`;
-      badge.style.display = '';
-    } else {
-      badge.style.display = 'none';
-    }
+  toggleFilter(label) {
+    if (!label || label === 'Autres') return;
+    this._activeFilter = (this._activeFilter === label) ? null : label;
+    this._renderCatPills();
+    this.render();
   },
 
   clearFilter() {
     this._activeFilter = null;
-    const catFilter = document.getElementById('flux-filter-cat');
-    if (catFilter) catFilter.value = '';
-    const subcatFilter = document.getElementById('flux-filter-subcat');
-    if (subcatFilter) { subcatFilter.disabled = true; subcatFilter.innerHTML = '<option value="">Toutes sous-catégories</option>'; }
+    this._renderCatPills();
     this.render();
+  },
+
+  _getEffectiveCatFilter() {
+    return this._activeFilter || '';
+  },
+
+  _getPrevPeriodData() {
+    const s = PeriodFilter.get();
+    if (s.type !== 'month') return null;
+    const [y, m] = s.month.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const start = `${pm}-01`;
+    const end = `${pm}-${String(last).padStart(2, '0')}`;
+    return {
+      expenses: Storage.getExpenses().filter(e => e.date >= start && e.date <= end),
+      revenues: Storage.getRevenues().filter(r => r.date >= start && r.date <= end),
+    };
+  },
+
+  _renderKpiTrend(id, current, prev, lowerIsBetter) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (prev == null || prev === 0) { el.innerHTML = ''; return; }
+    const diff = current - prev;
+    const pct = Math.abs((diff / prev) * 100).toFixed(1);
+    const isUp = diff > 0;
+    const isGood = lowerIsBetter ? !isUp : isUp;
+    const arrow = isUp ? '↑' : '↓';
+    const cls = isGood ? 'trend-good' : 'trend-bad';
+    el.innerHTML = `<span class="${cls}">${arrow} ${pct}% vs mois préc.</span>`;
   },
 
   render() {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilter = this._getEffectiveCatFilter();
-    const subcatFilter = this._activeFilter ? '' : (document.getElementById('flux-filter-subcat')?.value || '');
 
     const allExpenses = Storage.getExpenses();
     const allRevenues = Storage.getRevenues();
@@ -93,10 +82,7 @@ const Flux = {
     let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
     const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
 
-    if (catFilter) {
-      expenses = expenses.filter(e => e.category === catFilter);
-      if (subcatFilter) expenses = expenses.filter(e => e.subcategory === subcatFilter);
-    }
+    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
 
     const totalRev = revenues.reduce((s, r) => s + r.amount, 0);
     const totalDep = expenses.reduce((s, e) => s + e.amount, 0);
@@ -113,15 +99,32 @@ const Flux = {
     epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
     epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
 
-    this._renderFilterBadge(catFilter);
-    this._renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter);
+    // KPI trends
+    const prev = this._getPrevPeriodData();
+    if (prev) {
+      const prevRev = prev.revenues.reduce((s, r) => s + r.amount, 0);
+      let prevExp = prev.expenses;
+      if (catFilter) prevExp = prevExp.filter(e => e.category === catFilter);
+      const prevDep = prevExp.reduce((s, e) => s + e.amount, 0);
+      const prevSolde = prevRev - prevDep;
+      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev, false);
+      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep, true);
+      this._renderKpiTrend('flux-trend-solde', solde, prevSolde, false);
+      const prevEp = prevRev > 0 ? prevSolde / prevRev * 100 : null;
+      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp, false);
+    } else {
+      ['flux-trend-revenus','flux-trend-depenses','flux-trend-solde','flux-trend-epargne']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+    }
+
+    this._renderBarChart(allExpenses, allRevenues, catFilter);
     this._renderDonut(expenses, catFilter);
+    this._renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter);
   },
 
-  _renderBarChart(allExpenses, allRevenues, catFilter, subcatFilter) {
+  _renderBarChart(allExpenses, allRevenues, catFilter) {
     const { start, end } = PeriodFilter.getDateRange();
 
-    // Build list of months covered by the selected period
     const months = [];
     let cur = new Date(start + 'T00:00:00');
     const endDate = new Date(end + 'T00:00:00');
@@ -137,51 +140,107 @@ const Flux = {
       return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
     });
 
-    const getLastDay = (m) => {
-      const [y, mo] = m.split('-').map(Number);
-      return new Date(y, mo, 0).getDate();
-    };
+    const getLastDay = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
 
     const revByMonth = months.map(m => {
-      const mStart = `${m}-01`;
-      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      // Clamp to the actual period bounds (critical for range mode)
-      const s = mStart < start ? start : mStart;
-      const e = mEnd > end ? end : mEnd;
+      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
       return allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0);
     });
 
     const depByMonth = months.map(m => {
-      const mStart = `${m}-01`;
-      const mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      const s = mStart < start ? start : mStart;
-      const e = mEnd > end ? end : mEnd;
+      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
       let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
-      if (catFilter) { exp = exp.filter(ex => ex.category === catFilter); if (subcatFilter) exp = exp.filter(ex => ex.subcategory === subcatFilter); }
+      if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
       return exp.reduce((sum, ex) => sum + ex.amount, 0);
     });
 
-    Charts.fluxBar(labels, revByMonth, depByMonth, catFilter || null);
+    const soldeByMonth = revByMonth.map((r, i) => r - depByMonth[i]);
+
+    const titleEl = document.getElementById('flux-bar-title');
+    if (titleEl) titleEl.textContent = catFilter ? `Dépenses — ${catFilter}` : 'Revenus vs Dépenses';
+
+    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth, catFilter || null);
   },
 
   _renderDonut(expenses, activeCategory) {
     const byCategory = {};
-    // Always compute donut from ALL expenses in period (unfiltered) so all slices stay visible
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
       .filter(e => e.date >= start && e.date <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
 
     let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+
     if (entries.length > 6) {
       const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
+
     Charts.fluxDonut(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
       activeCategory || null,
       (label) => this.toggleFilter(label)
     );
+
+    // Custom HTML legend
+    const legend = document.getElementById('flux-donut-legend');
+    if (legend) {
+      if (!entries.length) { legend.innerHTML = ''; return; }
+      legend.innerHTML = entries.map(([label, value], i) => {
+        const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
+        const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+        const isActive = activeCategory && label === activeCategory;
+        const safeName = label.replace(/'/g, "\\'");
+        return `<div class="donut-legend-item${isActive ? ' active' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+          <span class="donut-legend-dot" style="background:${color}"></span>
+          <span class="donut-legend-name">${label}</span>
+          <span class="donut-legend-pct">${pct}%</span>
+          <span class="donut-legend-val">${Utils.formatCurrency(value)}</span>
+        </div>`;
+      }).join('');
+    }
+  },
+
+  _renderRecentTransactions(allExpenses, allRevenues, start, end, catFilter) {
+    let expenses = allExpenses.filter(e => e.date >= start && e.date <= end);
+    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+    const revenues = catFilter ? [] : allRevenues.filter(r => r.date >= start && r.date <= end);
+
+    const all = [
+      ...expenses.map(e => ({ ...e, _type: 'expense' })),
+      ...revenues.map(r => ({ ...r, _type: 'revenue' })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+
+    const tbody = document.getElementById('flux-recent-tbody');
+    const empty = document.getElementById('flux-recent-empty');
+    if (!tbody) return;
+
+    if (!all.length) {
+      tbody.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    tbody.innerHTML = all.map(t => {
+      const isExp = t._type === 'expense';
+      const amtCls = isExp ? 'negative' : 'positive';
+      const amtSign = isExp ? '−' : '+';
+      const badge = isExp
+        ? '<span class="type-badge type-expense">Dépense</span>'
+        : '<span class="type-badge type-revenue">Revenu</span>';
+      const [y, m, d] = t.date.split('-');
+      return `<tr>
+        <td>${d}/${m}/${y.slice(2)}</td>
+        <td>${t.description || '—'}</td>
+        <td>${t.category || '—'}</td>
+        <td class="${amtCls} text-right">${amtSign}${Utils.formatCurrency(t.amount)}</td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
   },
 };

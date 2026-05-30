@@ -28,10 +28,13 @@ const Budget = {
     const expenses = Storage.getExpenses().filter(e => e.date >= start && e.date <= end);
     const empty = document.getElementById('budget-empty');
     const grid = document.getElementById('budget-themes-grid');
+    const summaryWrap = document.getElementById('budget-summary-wrap');
+    const summaryTbody = document.getElementById('budget-summary-tbody');
 
     if (!themes.length) {
       grid.innerHTML = '';
       empty.classList.remove('hidden');
+      if (summaryWrap) summaryWrap.classList.add('hidden');
       return;
     }
     empty.classList.add('hidden');
@@ -42,6 +45,7 @@ const Budget = {
       const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
       const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
       const remaining = planned - spent;
+      const overBudget = pct >= 100;
 
       const prevSpent = this._getPrevSpent(theme);
       const trendHtml = prevSpent > 0 ? (spent > prevSpent
@@ -49,24 +53,56 @@ const Budget = {
         : `<span class="trend-arrow positive">↓ ${Utils.formatCurrency(prevSpent - spent)}</span>`)
         : '';
 
+      const statusText = planned > 0
+        ? `${pct.toFixed(0)}% · ${remaining >= 0 ? Utils.formatCurrency(remaining) + ' restants' : Utils.formatCurrency(-remaining) + ' dépassé'}`
+        : 'Aucun montant prévu';
+
       return `
-        <div class="budget-theme-card" onclick="Budget.showDetail('${theme.id}')">
+        <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
           <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
           <div class="budget-card-body">
             <div class="budget-card-top">
               <span class="budget-card-name">${theme.name}</span>
               ${trendHtml}
             </div>
+            <div class="budget-card-amount" style="color:${theme.color || '#6366f1'}">${Utils.formatCurrency(spent)}</div>
+            <div class="budget-card-planned">sur ${Utils.formatCurrency(planned)} prévu</div>
             <div class="budget-progress-wrap">
               <div class="budget-progress-bar" style="width:${pct.toFixed(1)}%;background:${statusColor}"></div>
             </div>
-            <div class="budget-card-bottom">
-              <span style="font-size:0.8125rem;color:var(--text-muted)">${PeriodFilter.getLabel()}</span>
-              <span style="font-size:0.875rem;font-weight:600;color:${remaining >= 0 ? 'var(--success)' : 'var(--danger)'}">${Utils.formatCurrency(spent)} / ${Utils.formatCurrency(planned)}</span>
-            </div>
+            <div class="budget-card-status" style="color:${remaining >= 0 ? 'var(--text-muted)' : 'var(--danger)'}">${statusText}</div>
           </div>
         </div>`;
-    }).join('');
+    }).join('') + `
+      <div class="budget-add-card" onclick="Budget.openAddForm()">
+        <div class="budget-add-icon">+</div>
+        <div class="budget-add-label">Nouveau budget</div>
+      </div>`;
+
+    // Summary table
+    if (summaryWrap && summaryTbody) {
+      summaryWrap.classList.remove('hidden');
+      summaryTbody.innerHTML = themes.map(theme => {
+        const spent = this._computeSpent(theme, expenses);
+        const planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
+        const ecart = planned - spent;
+        const ecartPct = planned > 0 ? (ecart / planned * 100) : 0;
+        const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
+        const statusBadge = pct >= 100
+          ? '<span class="status-badge status-over">Dépassé</span>'
+          : pct >= 80
+          ? '<span class="status-badge status-warn">Attention</span>'
+          : '<span class="status-badge status-ok">OK</span>';
+        return `<tr>
+          <td><span class="budget-dot" style="background:${theme.color || '#6366f1'}"></span>${theme.name}</td>
+          <td class="text-right">${Utils.formatCurrency(planned)}</td>
+          <td class="text-right">${Utils.formatCurrency(spent)}</td>
+          <td class="text-right ${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
+          <td class="text-right ${ecartPct >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${ecartPct.toFixed(1)}%</td>
+          <td>${statusBadge}</td>
+        </tr>`;
+      }).join('');
+    }
   },
 
   _computeSpent(theme, expenses) {
