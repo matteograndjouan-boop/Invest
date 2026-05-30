@@ -207,31 +207,52 @@ const Flux = {
   },
 
   _renderMonthlyChart(allExpenses, allRevenues, catFilter) {
-    const now = new Date();
+    const { start, end } = PeriodFilter.getDateRange();
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = [], depData = [], revData = [];
 
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2, '0')}`;
+    // Count months in range to decide granularity
+    const startD = new Date(start + 'T00:00:00');
+    const endD   = new Date(end   + 'T00:00:00');
+    const monthDiff =
+      (endD.getFullYear() - startD.getFullYear()) * 12 +
+      (endD.getMonth()    - startD.getMonth());
 
-      labels.push(MONTHS_FR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
-
-      let exp = allExpenses.filter(e => e.date >= mStart && e.date <= mEnd);
-      if (catFilter) exp = exp.filter(e => e.category === catFilter);
-      depData.push(exp.reduce((s, e) => s + e.amount, 0));
-
-      if (!catFilter) {
-        revData.push(allRevenues.filter(r => r.date >= mStart && r.date <= mEnd).reduce((s, r) => s + r.amount, 0));
+    if (monthDiff === 0) {
+      // Single month → daily breakdown
+      let cur = new Date(startD);
+      while (cur <= endD) {
+        const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+        labels.push(String(cur.getDate()));
+        let exp = allExpenses.filter(e => e.date === day);
+        if (catFilter) exp = exp.filter(e => e.category === catFilter);
+        depData.push(exp.reduce((s, e) => s + e.amount, 0));
+        if (!catFilter) revData.push(allRevenues.filter(r => r.date === day).reduce((s, r) => s + r.amount, 0));
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else {
+      // Multi-month → one point per month
+      let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+      while (cur <= endD) {
+        const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+        const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+        const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
+        const s = mStart < start ? start : mStart;
+        const e = mEnd   > end   ? end   : mEnd;
+        labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
+        let exp = allExpenses.filter(ex => ex.date >= s && ex.date <= e);
+        if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
+        depData.push(exp.reduce((sum, ex) => sum + ex.amount, 0));
+        if (!catFilter) revData.push(allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0));
+        cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
       }
     }
 
     const titleEl = document.getElementById('flux-monthly-title');
+    const periodLabel = PeriodFilter.getLabel();
     if (titleEl) titleEl.textContent = catFilter
-      ? `Évolution — ${catFilter} (12 derniers mois)`
-      : 'Évolution des dépenses (12 derniers mois)';
+      ? `Évolution — ${catFilter} · ${periodLabel}`
+      : `Évolution des dépenses · ${periodLabel}`;
 
     Charts.fluxMonthly(labels, depData, catFilter ? null : revData, catFilter);
   },
