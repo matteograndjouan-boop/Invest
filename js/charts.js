@@ -265,6 +265,48 @@ const Charts = {
     });
   },
 
+  fluxMonthly(labels, depData, revData, activeCategory) {
+    const datasets = [];
+    if (revData) {
+      datasets.push({
+        label: 'Revenus',
+        data: revData,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: true,
+        tension: 0.35,
+      });
+    }
+    datasets.push({
+      label: activeCategory || 'Dépenses',
+      data: depData,
+      borderColor: activeCategory ? '#6366f1' : '#ef4444',
+      backgroundColor: activeCategory ? 'rgba(99,102,241,0.08)' : 'rgba(239,68,68,0.08)',
+      borderWidth: 2,
+      pointRadius: 3,
+      fill: true,
+      tension: 0.35,
+    });
+
+    this.create('chart-flux-monthly', {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  },
+
   budgetHistory(labels, data, color) {
     this.create('chart-budget-history', {
       type: 'line',
