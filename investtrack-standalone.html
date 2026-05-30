@@ -4818,7 +4818,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const dateIdx = idx(['date treso', 'date']); const catIdx = idx(['categorie']);
           const subCatIdx = idx(['sous']); const commentIdx = idx(['commentaire']);
           const valeurIdx = idx(['valeur']); const positifIdx = idx(['positif']);
-          const moisReelIdx = idx(['mois reel', 'mois reel', 'mois effectif', 'periode', 'mois']);
+          let moisReelIdx = idx(['mois reel', 'mois effectif', 'mois eff', 'mois reel']);
           const CAT_MAP = {
             'abonnements':'Abonnements','alimentation':'Alimentation','divers':'Divers',
             'epargne':'Epargne','logement':'Logement','loisir':'Loisir','loisirs':'Loisir',
@@ -4832,29 +4832,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return s;
           };
           const MONTH_NAMES_FR = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+          const MONTH_ABBR_FR  = ['janv','fevr','mars','avr','mai','juin','juil','aout','sept','oct','nov','dec'];
           const parseExcelMonth = (v) => {
             if (!v && v !== 0) return '';
             if (typeof v === 'number') {
               const d = new Date(Math.round((v-25569)*86400*1000));
               return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             }
-            const s = String(v).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-            // "mars 2026" or "mars-2026"
-            const textMatch = s.match(/([a-z]+)[\s\-]+(\d{4})/);
+            const s = String(v).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\./g,'');
+            // "mars 2026", "janv 2026", "mars-2026"
+            const textMatch = s.match(/([a-z]+)[\s\-]*(\d{4})/);
             if (textMatch) {
-              const mi = MONTH_NAMES_FR.indexOf(textMatch[1]);
+              let mi = MONTH_NAMES_FR.indexOf(textMatch[1]);
+              if (mi < 0) mi = MONTH_ABBR_FR.indexOf(textMatch[1]);
+              if (mi < 0) mi = MONTH_NAMES_FR.findIndex(m => m.startsWith(textMatch[1]));
               if (mi >= 0) return `${textMatch[2]}-${String(mi+1).padStart(2,'0')}`;
             }
-            // "03/2026" or "2026/03"
-            const slashParts = s.split('/');
-            if (slashParts.length === 2) {
-              if (slashParts[0].length === 4) return `${slashParts[0]}-${slashParts[1].padStart(2,'0')}`;
-              if (slashParts[1].length === 4) return `${slashParts[1]}-${slashParts[0].padStart(2,'0')}`;
+            // "03/2026", "2026/03", "03-2026"
+            const sepMatch = s.match(/^(\d{1,4})[\/\-](\d{1,4})$/);
+            if (sepMatch) {
+              const [, a, b] = sepMatch;
+              if (a.length === 4) return `${a}-${b.padStart(2,'0')}`;
+              if (b.length === 4) return `${b}-${a.padStart(2,'0')}`;
             }
+            // "01/03/2026" full date → extract year-month
+            const fullDate = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (fullDate) return `${fullDate[3]}-${fullDate[2].padStart(2,'0')}`;
             // "2026-03"
             if (/^\d{4}-\d{2}$/.test(s)) return s;
             return '';
           };
+          // Auto-detect mois réel column by content if not found by name
+          if (moisReelIdx < 0) {
+            const knownCols = new Set([dateIdx, catIdx, subCatIdx, commentIdx, valeurIdx, positifIdx].filter(i => i >= 0));
+            const MONTH_CONTENT_RE = /^(janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|janv|fevr|avr|juil|sept|oct|nov|dec)[\s.\-]*\d{4}$|^\d{1,2}[\/\-]\d{4}$|^\d{4}[\/\-]\d{2}$/;
+            for (let col = 0; col < headers.length; col++) {
+              if (knownCols.has(col)) continue;
+              const samples = rows.slice(1, Math.min(8, rows.length)).map(r => r[col]).filter(v => v !== '' && v != null);
+              if (samples.length > 0 && samples.every(v => {
+                const s = String(v).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\./g,'');
+                return MONTH_CONTENT_RE.test(s);
+              })) { moisReelIdx = col; break; }
+            }
+          }
           const existing = Storage.getExpenses();
           const existingRevenues = Storage.getRevenues();
           let imported = 0; let importedRev = 0;
