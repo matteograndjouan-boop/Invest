@@ -791,6 +791,10 @@ body {
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ---- Month/Year Picker ---- */
+.month-year-picker { display: flex; gap: 0.4rem; }
+.month-year-picker select { flex: 1; min-width: 0; }
+
 /* ---- Effective Date Badge ---- */
 .effective-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: rgba(99,102,241,0.1); color: var(--primary); white-space: nowrap; }
 
@@ -1634,6 +1638,34 @@ const Storage = {
 const Utils = {
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  },
+
+  // Builds a month+year two-select picker. value = 'YYYY-MM' or ''
+  monthYearPicker(value) {
+    const MFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const now = new Date();
+    const parts = (value || '').split('-');
+    const selYear = parts[0] ? parseInt(parts[0]) : null;
+    const selMonth = parts[1] ? parseInt(parts[1]) : null;
+    const monthOpts = MFR.map((m, i) => {
+      const v = String(i + 1).padStart(2, '0');
+      return `<option value="${v}" ${selMonth === i + 1 ? 'selected' : ''}>${m}</option>`;
+    }).join('');
+    const yearOpts = [];
+    for (let y = now.getFullYear() - 3; y <= now.getFullYear() + 3; y++) {
+      yearOpts.push(`<option value="${y}" ${selYear === y ? 'selected' : ''}>${y}</option>`);
+    }
+    return `<div class="month-year-picker">
+      <select name="effectiveMonth"><option value="">Mois</option>${monthOpts}</select>
+      <select name="effectiveYear"><option value="">Année</option>${yearOpts.join('')}</select>
+    </div>`;
+  },
+
+  // Reads effectiveDate from FormData (effectiveMonth + effectiveYear)
+  getEffectiveDateFromForm(fd) {
+    const m = fd.get('effectiveMonth') || '';
+    const y = fd.get('effectiveYear') || '';
+    return m && y ? `${y}-${m}` : '';
   },
 
   formatCurrency(amount) {
@@ -2690,7 +2722,7 @@ const Expenses = {
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
             <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="month" value="${exp?.effectiveDate || ''}">
+            ${Utils.monthYearPicker(exp?.effectiveDate || '')}
           </div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
@@ -2717,7 +2749,7 @@ const Expenses = {
   save(event, id) {
     event.preventDefault();
     const fd = new FormData(event.target);
-    const effectiveDate = fd.get('effectiveDate') || '';
+    const effectiveDate = Utils.getEffectiveDateFromForm(fd);
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),
@@ -3856,7 +3888,7 @@ const DataEntry = {
           </div>
           <div class="form-group" id="de-effective-date-group">
             <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="month" value="${item?.effectiveDate || ''}">
+            ${Utils.monthYearPicker(item?.effectiveDate || '')}
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
@@ -3912,7 +3944,7 @@ const DataEntry = {
     const newType = fd.get('entry_type');
     const isRevenue = newType === 'revenue';
 
-    const effectiveDate = !isRevenue ? (fd.get('effectiveDate') || '') : '';
+    const effectiveDate = !isRevenue ? Utils.getEffectiveDateFromForm(fd) : '';
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),

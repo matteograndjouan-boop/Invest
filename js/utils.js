@@ -3,6 +3,34 @@ const Utils = {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   },
 
+  // Builds a month+year two-select picker. value = 'YYYY-MM' or ''
+  monthYearPicker(value) {
+    const MFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const now = new Date();
+    const parts = (value || '').split('-');
+    const selYear = parts[0] ? parseInt(parts[0]) : null;
+    const selMonth = parts[1] ? parseInt(parts[1]) : null;
+    const monthOpts = MFR.map((m, i) => {
+      const v = String(i + 1).padStart(2, '0');
+      return `<option value="${v}" ${selMonth === i + 1 ? 'selected' : ''}>${m}</option>`;
+    }).join('');
+    const yearOpts = [];
+    for (let y = now.getFullYear() - 3; y <= now.getFullYear() + 3; y++) {
+      yearOpts.push(`<option value="${y}" ${selYear === y ? 'selected' : ''}>${y}</option>`);
+    }
+    return `<div class="month-year-picker">
+      <select name="effectiveMonth"><option value="">Mois</option>${monthOpts}</select>
+      <select name="effectiveYear"><option value="">Année</option>${yearOpts.join('')}</select>
+    </div>`;
+  },
+
+  // Reads effectiveDate from FormData (effectiveMonth + effectiveYear)
+  getEffectiveDateFromForm(fd) {
+    const m = fd.get('effectiveMonth') || '';
+    const y = fd.get('effectiveYear') || '';
+    return m && y ? `${y}-${m}` : '';
+  },
+
   formatCurrency(amount) {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',

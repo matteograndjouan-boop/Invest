@@ -313,7 +313,7 @@ const DataEntry = {
           </div>
           <div class="form-group" id="de-effective-date-group">
             <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="month" value="${item?.effectiveDate || ''}">
+            ${Utils.monthYearPicker(item?.effectiveDate || '')}
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
@@ -369,7 +369,7 @@ const DataEntry = {
     const newType = fd.get('entry_type');
     const isRevenue = newType === 'revenue';
 
-    const effectiveDate = !isRevenue ? (fd.get('effectiveDate') || '') : '';
+    const effectiveDate = !isRevenue ? Utils.getEffectiveDateFromForm(fd) : '';
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),

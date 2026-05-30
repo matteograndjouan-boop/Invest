@@ -120,7 +120,7 @@ const Expenses = {
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
             <label>Mois effectif <span style="font-weight:400;color:var(--text-muted)">(optionnel)</span></label>
-            <input name="effectiveDate" type="month" value="${exp?.effectiveDate || ''}">
+            ${Utils.monthYearPicker(exp?.effectiveDate || '')}
           </div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${exp?.notes || ''}</textarea></div>
         </div>
@@ -147,7 +147,7 @@ const Expenses = {
   save(event, id) {
     event.preventDefault();
     const fd = new FormData(event.target);
-    const effectiveDate = fd.get('effectiveDate') || '';
+    const effectiveDate = Utils.getEffectiveDateFromForm(fd);
     const data = {
       id: id || Utils.generateId(),
       description: fd.get('description').trim(),

@@ -784,6 +784,10 @@ body {
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ---- Month/Year Picker ---- */
+.month-year-picker { display: flex; gap: 0.4rem; }
+.month-year-picker select { flex: 1; min-width: 0; }
+
 /* ---- Effective Date Badge ---- */
 .effective-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: rgba(99,102,241,0.1); color: var(--primary); white-space: nowrap; }
 
