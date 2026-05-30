@@ -100,12 +100,12 @@ const APP_MODES = {
     default: 'pea',
   },
   expenses: {
-    sections: ['flux', 'comparisons', 'budget', 'categories'],
+    sections: ['flux', 'comparisons', 'budget'],
     navGroupId: 'nav-expenses-group',
     default: 'flux',
   },
   donnees: {
-    sections: ['donnees'],
+    sections: ['donnees', 'categories'],
     navGroupId: 'nav-donnees-group',
     default: 'donnees',
   },
