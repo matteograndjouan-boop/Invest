@@ -4174,28 +4174,33 @@ const Budget = {
     const colorOptions = this._THEME_COLORS.map((c, i) =>
       `<label class="color-opt"><input type="radio" name="color" value="${c}" ${i === 0 ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
     ).join('');
-    const cats = Storage.getCategories();
-    const catCheckboxes = cats.map(c =>
-      `<label class="cat-checkbox-opt"><input type="checkbox" name="categories" value="${c.name}"> ${c.name}</label>`
-    ).join('');
+    // Only offer categories that don't already have a budget
+    const existing = new Set(Storage.getBudgetThemes().map(t => {
+      const m = this._migrate({ ...t });
+      return (m.categories || [])[0];
+    }).filter(Boolean));
+    const cats = Storage.getCategories().filter(c => !existing.has(c.name));
+    if (!cats.length) {
+      return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
+        Toutes tes catégories ont déjà un budget.<br>Crée d'abord de nouvelles catégories dans Données > Catégories.
+        <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div>
+      </div>`;
+    }
+    const catOptions = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     return `
       <form onsubmit="Budget.saveTheme(event)">
         <div class="form-grid">
           <div class="form-group form-full">
-            <label>Nom du budget *</label>
-            <input name="name" required placeholder="ex: Alimentation">
-          </div>
-          <div class="form-group form-full">
-            <label>Couleur</label>
-            <div class="color-picker-row">${colorOptions}</div>
+            <label>Catégorie *</label>
+            <select name="category" required>${catOptions}</select>
           </div>
           <div class="form-group form-full">
             <label>Montant prévu (€) *</label>
             <input name="planned" type="number" step="1" min="0" required placeholder="ex: 400">
           </div>
           <div class="form-group form-full">
-            <label>Catégories incluses *</label>
-            <div class="cat-checkbox-grid">${catCheckboxes || '<em style="color:var(--text-muted)">Aucune catégorie définie — créez-en dans l\'onglet Données > Catégories.</em>'}</div>
+            <label>Couleur</label>
+            <div class="color-picker-row">${colorOptions}</div>
           </div>
         </div>
         <div class="form-actions">
@@ -4233,15 +4238,14 @@ const Budget = {
   saveTheme(event) {
     event.preventDefault();
     const fd = new FormData(event.target);
-    const categories = fd.getAll('categories');
-    if (!categories.length) { alert('Sélectionne au moins une catégorie.'); return; }
+    const category = fd.get('category');
     const themes = Storage.getBudgetThemes();
     themes.push({
       id: 'theme_' + Date.now(),
-      name: fd.get('name').trim(),
+      name: category,
       color: fd.get('color'),
       planned: parseFloat(fd.get('planned')) || 0,
-      categories,
+      categories: [category],
       items: [],
     });
     Storage.saveBudgetThemes(themes);
