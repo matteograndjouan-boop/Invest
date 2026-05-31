@@ -820,6 +820,20 @@ body {
 }
 .flux-pill:hover { border-color: var(--primary); color: var(--primary); }
 .flux-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.flux-multi-btn {
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.flux-multi-btn:hover { border-color: var(--primary); color: var(--primary); }
+.flux-multi-btn.active { border-style: solid; background: var(--primary); border-color: var(--primary); color: #fff; }
 
 /* ---- Flux Charts Row ---- */
 .flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start; }

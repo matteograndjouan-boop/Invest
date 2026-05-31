@@ -228,17 +228,19 @@ const Charts = {
     });
   },
 
-  fluxDonut(labels, data, activeLabel, onClickFn) {
+  fluxDonut(labels, data, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
     const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+    const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
+    const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
 
     const bgColors = labels.map((label, i) => {
       const c = BASE_COLORS[i % BASE_COLORS.length];
-      if (!activeLabel || label === activeLabel) return c;
+      if (!hasFilter || isActive(label)) return c;
       return c + '38';
     });
-    const offsets = labels.map(l => l === activeLabel ? 14 : 0);
-    const borderWidths = labels.map(l => l === activeLabel ? 3 : 2);
+    const offsets = labels.map(l => isActive(l) ? 14 : 0);
+    const borderWidths = labels.map(l => isActive(l) ? 3 : 2);
 
     this.create('chart-flux-donut', {
       type: 'doughnut',

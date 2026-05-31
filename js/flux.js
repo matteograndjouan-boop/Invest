@@ -1,5 +1,6 @@
 const Flux = {
-  _activeFilter: null,
+  _activeFilters: new Set(),
+  _multiMode: false,
   _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
@@ -13,35 +14,56 @@ const Flux = {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
     const cats = Storage.getCategories().map(c => c.name);
-    const active = this._activeFilter;
-    container.innerHTML =
-      `<button class="flux-pill${!active ? ' active' : ''}" onclick="Flux._setPillFilter(null)">Toutes</button>` +
-      cats.map(c =>
-        `<button class="flux-pill${active === c ? ' active' : ''}" onclick="Flux._setPillFilter('${c}')">${c}</button>`
-      ).join('');
+    const active = this._activeFilters;
+    const multi = this._multiMode;
+
+    const multiBtn = `<button class="flux-multi-btn${multi ? ' active' : ''}" onclick="Flux._toggleMultiMode()" title="Activer la sélection multiple">⊕ Multi</button>`;
+    const allBtn = `<button class="flux-pill${!active.size ? ' active' : ''}" onclick="Flux._clearFilters()">Toutes</button>`;
+    const catBtns = cats.map(c =>
+      `<button class="flux-pill${active.has(c) ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')">${c}</button>`
+    ).join('');
+    container.innerHTML = multiBtn + allBtn + catBtns;
   },
 
-  _setPillFilter(cat) {
-    this._activeFilter = cat;
+  _toggleMultiMode() {
+    this._multiMode = !this._multiMode;
+    if (!this._multiMode && this._activeFilters.size > 1) {
+      this._activeFilters = new Set([[...this._activeFilters][0]]);
+    }
     this._renderCatPills();
     this.render();
   },
 
+  _clearFilters() {
+    this._activeFilters = new Set();
+    this._renderCatPills();
+    this.render();
+  },
+
+  _togglePill(cat) {
+    if (this._multiMode) {
+      if (this._activeFilters.has(cat)) this._activeFilters.delete(cat);
+      else this._activeFilters.add(cat);
+    } else {
+      this._activeFilters = this._activeFilters.has(cat) ? new Set() : new Set([cat]);
+    }
+    this._renderCatPills();
+    this.render();
+  },
+
+  // Kept for donut click compatibility
   toggleFilter(label) {
     if (!label || label === 'Autres') return;
-    this._activeFilter = (this._activeFilter === label) ? null : label;
-    this._renderCatPills();
-    this.render();
+    this._togglePill(label);
   },
 
-  clearFilter() {
-    this._activeFilter = null;
-    this._renderCatPills();
-    this.render();
-  },
+  clearFilter() { this._clearFilters(); },
 
-  _getEffectiveCatFilter() {
-    return this._activeFilter || '';
+  _catLabel() {
+    const s = this._activeFilters;
+    if (!s.size) return '';
+    if (s.size === 1) return [...s][0];
+    return `${s.size} catégories`;
   },
 
   _getPrevPeriodData() {
@@ -74,7 +96,7 @@ const Flux = {
 
   render() {
     const { start, end } = PeriodFilter.getDateRange();
-    const catFilter = this._getEffectiveCatFilter();
+    const catFilters = this._activeFilters;
 
     const allExpenses = Storage.getExpenses();
     const allRevenues = Storage.getRevenues();
@@ -82,7 +104,7 @@ const Flux = {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
 
-    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+    if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
 
     const totalRev = revenues.reduce((s, r) => s + r.amount, 0);
     const totalDep = expenses.reduce((s, e) => s + e.amount, 0);
@@ -99,12 +121,11 @@ const Flux = {
     epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
     epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
 
-    // KPI trends
     const prev = this._getPrevPeriodData();
     if (prev) {
       const prevRev = prev.revenues.reduce((s, r) => s + r.amount, 0);
       let prevExp = prev.expenses;
-      if (catFilter) prevExp = prevExp.filter(e => e.category === catFilter);
+      if (catFilters.size) prevExp = prevExp.filter(e => catFilters.has(e.category));
       const prevDep = prevExp.reduce((s, e) => s + e.amount, 0);
       const prevSolde = prevRev - prevDep;
       this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev, false);
@@ -117,13 +138,13 @@ const Flux = {
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     }
 
-    this._renderBarChart(allExpenses, allRevenues, catFilter);
-    this._renderDonut(expenses, catFilter);
-    this._renderMonthlyChart(allExpenses, allRevenues, catFilter);
-    this._renderSummaryTable(allExpenses, start, end, catFilter);
+    this._renderBarChart(allExpenses, allRevenues, catFilters);
+    this._renderDonut(expenses, catFilters);
+    this._renderMonthlyChart(allExpenses, allRevenues, catFilters);
+    this._renderSummaryTable(allExpenses, start, end, catFilters);
   },
 
-  _renderBarChart(allExpenses, allRevenues, catFilter) {
+  _renderBarChart(allExpenses, allRevenues, catFilters) {
     const { start, end } = PeriodFilter.getDateRange();
 
     const months = [];
@@ -153,19 +174,20 @@ const Flux = {
       const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
       const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
       let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
-      if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
+      if (catFilters.size) exp = exp.filter(ex => catFilters.has(ex.category));
       return exp.reduce((sum, ex) => sum + ex.amount, 0);
     });
 
     const soldeByMonth = revByMonth.map((r, i) => r - depByMonth[i]);
+    const catLabel = this._catLabel();
 
     const titleEl = document.getElementById('flux-bar-title');
-    if (titleEl) titleEl.textContent = catFilter ? `Dépenses — ${catFilter}` : 'Revenus vs Dépenses';
+    if (titleEl) titleEl.textContent = catFilters.size ? `Dépenses — ${catLabel}` : 'Revenus vs Dépenses';
 
-    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth, catFilter || null);
+    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth, catLabel || null);
   },
 
-  _renderDonut(expenses, activeCategory) {
+  _renderDonut(expenses, catFilters) {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
@@ -183,18 +205,17 @@ const Flux = {
     Charts.fluxDonut(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
-      activeCategory || null,
+      catFilters,
       (label) => this.toggleFilter(label)
     );
 
-    // Custom HTML legend
     const legend = document.getElementById('flux-donut-legend');
     if (legend) {
       if (!entries.length) { legend.innerHTML = ''; return; }
       legend.innerHTML = entries.map(([label, value], i) => {
         const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
         const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
-        const isActive = activeCategory && label === activeCategory;
+        const isActive = catFilters.size > 0 && catFilters.has(label);
         const safeName = label.replace(/'/g, "\\'");
         return `<div class="donut-legend-item${isActive ? ' active' : ''}" onclick="Flux.toggleFilter('${safeName}')">
           <span class="donut-legend-dot" style="background:${color}"></span>
@@ -206,12 +227,11 @@ const Flux = {
     }
   },
 
-  _renderMonthlyChart(allExpenses, allRevenues, catFilter) {
+  _renderMonthlyChart(allExpenses, allRevenues, catFilters) {
     const { start, end } = PeriodFilter.getDateRange();
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = [], depData = [], revData = [];
 
-    // Count months in range to decide granularity
     const startD = new Date(start + 'T00:00:00');
     const endD   = new Date(end   + 'T00:00:00');
     const monthDiff =
@@ -219,19 +239,17 @@ const Flux = {
       (endD.getMonth()    - startD.getMonth());
 
     if (monthDiff === 0) {
-      // Single month → daily breakdown
       let cur = new Date(startD);
       while (cur <= endD) {
         const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
         labels.push(String(cur.getDate()));
         let exp = allExpenses.filter(e => e.date === day);
-        if (catFilter) exp = exp.filter(e => e.category === catFilter);
+        if (catFilters.size) exp = exp.filter(e => catFilters.has(e.category));
         depData.push(exp.reduce((s, e) => s + e.amount, 0));
-        if (!catFilter) revData.push(allRevenues.filter(r => r.date === day).reduce((s, r) => s + r.amount, 0));
+        if (!catFilters.size) revData.push(allRevenues.filter(r => r.date === day).reduce((s, r) => s + r.amount, 0));
         cur.setDate(cur.getDate() + 1);
       }
     } else {
-      // Multi-month → one point per month
       let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
       while (cur <= endD) {
         const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
@@ -241,25 +259,26 @@ const Flux = {
         const e = mEnd   > end   ? end   : mEnd;
         labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
         let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
-        if (catFilter) exp = exp.filter(ex => ex.category === catFilter);
+        if (catFilters.size) exp = exp.filter(ex => catFilters.has(ex.category));
         depData.push(exp.reduce((sum, ex) => sum + ex.amount, 0));
-        if (!catFilter) revData.push(allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0));
+        if (!catFilters.size) revData.push(allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0));
         cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
       }
     }
 
-    const titleEl = document.getElementById('flux-monthly-title');
+    const catLabel = this._catLabel();
     const periodLabel = PeriodFilter.getLabel();
-    if (titleEl) titleEl.textContent = catFilter
-      ? `Évolution — ${catFilter} · ${periodLabel}`
+    const titleEl = document.getElementById('flux-monthly-title');
+    if (titleEl) titleEl.textContent = catFilters.size
+      ? `Évolution — ${catLabel} · ${periodLabel}`
       : `Évolution des dépenses · ${periodLabel}`;
 
-    Charts.fluxMonthly(labels, depData, catFilter ? null : revData, catFilter);
+    Charts.fluxMonthly(labels, depData, catFilters.size ? null : revData, catLabel || null);
   },
 
-  _renderSummaryTable(allExpenses, start, end, catFilter) {
+  _renderSummaryTable(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
-    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+    if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
 
     const tbody = document.getElementById('flux-summary-tbody');
     const empty = document.getElementById('flux-summary-empty');
@@ -267,8 +286,11 @@ const Flux = {
     const thLabel = document.getElementById('flux-summary-th-label');
     if (!tbody) return;
 
-    if (title) title.textContent = catFilter ? `Répartition — ${catFilter}` : 'Répartition par catégorie';
-    if (thLabel) thLabel.textContent = catFilter ? 'Sous-catégorie' : 'Catégorie';
+    const catLabel = this._catLabel();
+    const showSub = catFilters.size === 1;
+
+    if (title) title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
+    if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
     if (!expenses.length) {
       tbody.innerHTML = '';
@@ -279,7 +301,7 @@ const Flux = {
 
     const groups = {};
     expenses.forEach(e => {
-      const key = catFilter ? (e.subcategory || '—') : e.category;
+      const key = showSub ? (e.subcategory || '—') : e.category;
       if (!groups[key]) groups[key] = { amount: 0, count: 0 };
       groups[key].amount += e.amount;
       groups[key].count++;
@@ -291,9 +313,9 @@ const Flux = {
     tbody.innerHTML = sorted.map(([label, g]) => {
       const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
-      const clickAttr = !catFilter ? `onclick="Flux._setPillFilter('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
+      const clickAttr = !showSub ? `onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
       return `<tr ${clickAttr}>
-        <td>${label}${!catFilter ? ' <span class="summary-row-hint">→</span>' : ''}</td>
+        <td>${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
         <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
         <td class="text-right">
           <div class="summary-bar-wrap">
