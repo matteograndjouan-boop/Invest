@@ -26,14 +26,11 @@
       <nav class="sidebar-nav">
         <!-- Investments mode nav -->
         <div id="nav-investments-group" style="display:none">
-          <a href="#" class="nav-item" data-section="pea">
-            <span class="nav-icon">🏦</span><span>PEA</span>
+          <a href="#" class="nav-item" data-section="portfolio">
+            <span class="nav-icon">◈</span><span>Portefeuille</span>
           </a>
-          <a href="#" class="nav-item" data-section="assurance_vie">
-            <span class="nav-icon">🛡️</span><span>Assurance vie</span>
-          </a>
-          <a href="#" class="nav-item" data-section="autre_compte">
-            <span class="nav-icon">📦</span><span>Autre</span>
+          <a href="#" class="nav-item" data-section="positions">
+            <span class="nav-icon">≡</span><span>Positions</span>
           </a>
         </div>
 
@@ -135,44 +132,74 @@
         </div>
       </section>
 
-      <!-- INVESTMENTS (PEA / Assurance vie / Autre) — shared section, filtered by account -->
-      <section class="section hidden" id="section-investments">
+      <!-- PORTFOLIO overview -->
+      <section class="section hidden" id="section-portfolio">
         <div class="section-header">
-          <h1 id="investments-section-title">Investissements</h1>
+          <h1>Portefeuille</h1>
           <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
         </div>
-        <div class="kpi-grid-3">
+        <div class="kpi-grid">
           <div class="kpi-card primary">
             <div class="kpi-badge">◈</div>
             <div class="kpi-label">Valeur totale</div>
-            <div class="kpi-value" id="inv-total-value">0 €</div>
+            <div class="kpi-value" id="port-total-value">0 €</div>
+            <div class="kpi-sub" id="port-total-sub">—</div>
           </div>
-          <div class="kpi-card" id="inv-gain-card">
+          <div class="kpi-card" id="port-gain-card">
             <div class="kpi-badge">±</div>
-            <div class="kpi-label">Plus/Moins-value</div>
-            <div class="kpi-value" id="inv-total-gain">+0 €</div>
-            <div class="kpi-sub" id="inv-total-gain-pct">+0,00%</div>
+            <div class="kpi-label">Performance</div>
+            <div class="kpi-value" id="port-gain">+0 €</div>
+            <div class="kpi-sub" id="port-gain-pct">+0,00%</div>
           </div>
           <div class="kpi-card info">
             <div class="kpi-badge">◎</div>
-            <div class="kpi-label">Investissement initial</div>
-            <div class="kpi-value" id="inv-total-cost">0 €</div>
+            <div class="kpi-label">Capital investi</div>
+            <div class="kpi-value" id="port-cost">0 €</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-badge">#</div>
+            <div class="kpi-label">Positions</div>
+            <div class="kpi-value" id="port-count">0</div>
+            <div class="kpi-sub" id="port-accounts-sub">—</div>
           </div>
         </div>
         <div class="charts-grid">
           <div class="chart-card">
-            <h3>Répartition par type</h3>
-            <div class="chart-container"><canvas id="chart-inv-type"></canvas></div>
+            <h3>Allocation par type</h3>
+            <div class="chart-container"><canvas id="chart-port-type"></canvas></div>
           </div>
           <div class="chart-card">
-            <h3>Performance par position (top 10)</h3>
-            <div class="chart-container"><canvas id="chart-inv-performance"></canvas></div>
+            <h3>Allocation par compte</h3>
+            <div class="chart-container"><canvas id="chart-port-account"></canvas></div>
           </div>
         </div>
+        <div class="port-bottom-grid">
+          <div class="card" style="margin-bottom:0">
+            <h3>Top 5 positions</h3>
+            <div id="port-top-positions"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <h3>Meilleures perfs.</h3>
+            <div id="port-top-performers"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <h3>À améliorer</h3>
+            <div id="port-bottom-performers"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- POSITIONS list -->
+      <section class="section hidden" id="section-positions">
+        <div class="section-header">
+          <h1>Positions</h1>
+          <button class="btn-primary" id="add-position-btn">+ Ajouter</button>
+        </div>
+        <div id="pos-account-pills" class="account-pills"></div>
         <div class="card">
           <div class="table-toolbar">
-            <input type="text" id="inv-search" placeholder="Rechercher..." class="search-input">
-            <select id="inv-filter-type" class="select-input">
+            <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input">
+            <select id="pos-filter-type" class="select-input">
               <option value="">Tous les types</option>
               <option value="action">Actions</option>
               <option value="etf">ETF</option>
@@ -186,23 +213,21 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Nom / Ticker</th>
+                  <th>Nom</th>
                   <th>Type</th>
                   <th>Compte</th>
-                  <th>Quantité</th>
-                  <th>Prix d'achat</th>
-                  <th>Prix actuel</th>
-                  <th>Valeur</th>
-                  <th>+/- Value</th>
-                  <th>%</th>
+                  <th class="text-right">Valeur</th>
+                  <th class="text-right">Investi</th>
+                  <th class="text-right">+/− Value</th>
+                  <th>Performance</th>
                   <th></th>
                 </tr>
               </thead>
-              <tbody id="investments-tbody"></tbody>
+              <tbody id="positions-tbody"></tbody>
             </table>
           </div>
-          <div id="investments-empty" class="empty-state hidden">
-            <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          <div id="positions-empty" class="empty-state hidden">
+            <p>Aucune position. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
           </div>
         </div>
       </section>

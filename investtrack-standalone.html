@@ -1032,6 +1032,110 @@ tr:hover .summary-row-hint { opacity: 1; }
 .status-over { background: rgba(239,68,68,0.12); color: #dc2626; }
 .budget-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35rem; }
 
+/* ---- Investment Portfolio ---- */
+.port-bottom-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.port-position-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.port-position-row:last-child { border-bottom: none; }
+.port-position-rank {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.port-position-info { flex: 1; min-width: 0; }
+.port-position-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.port-position-meta { margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap; }
+.port-position-right { text-align: right; flex-shrink: 0; }
+.port-position-value { font-weight: 700; font-size: 13px; }
+.port-position-gain { font-size: 11px; }
+
+.port-performer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.port-performer-row:last-child { border-bottom: none; }
+.port-performer-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.port-performer-right { text-align: right; flex-shrink: 0; }
+.port-performer-pct { font-size: 14px; font-weight: 700; }
+.port-performer-val { font-size: 11px; color: var(--text-muted); }
+
+/* ---- Positions table ---- */
+.account-pills { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.account-pill {
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.account-pill:hover { border-color: var(--primary); color: var(--primary); }
+.account-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.pos-perf-cell { display: flex; align-items: center; gap: 7px; }
+.pos-perf-bar-wrap {
+  width: 52px; height: 5px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pos-perf-bar { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.pos-ticker {
+  display: inline-block;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 5px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.3px;
+}
+.pos-row td { vertical-align: middle; }
+
+/* ---- Budget card delete ---- */
+.budget-theme-card { position: relative; }
+.budget-card-delete {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(239,68,68,0.1);
+  color: var(--danger);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  z-index: 2;
+  padding: 0;
+}
+.budget-theme-card:hover .budget-card-delete { opacity: 1; }
+.budget-card-delete:hover { background: var(--danger); color: #fff; }
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
@@ -1040,6 +1144,7 @@ tr:hover .summary-row-hint { opacity: 1; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
   .dashboard-bottom-grid { grid-template-columns: 1fr; }
+  .port-bottom-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 860px) {
   .flux-donut-wrap { flex-direction: column; align-items: flex-start; }
@@ -1084,14 +1189,11 @@ tr:hover .summary-row-hint { opacity: 1; }
       <nav class="sidebar-nav">
         <!-- Investments mode nav -->
         <div id="nav-investments-group" style="display:none">
-          <a href="#" class="nav-item" data-section="pea">
-            <span class="nav-icon">🏦</span><span>PEA</span>
+          <a href="#" class="nav-item" data-section="portfolio">
+            <span class="nav-icon">◈</span><span>Portefeuille</span>
           </a>
-          <a href="#" class="nav-item" data-section="assurance_vie">
-            <span class="nav-icon">🛡️</span><span>Assurance vie</span>
-          </a>
-          <a href="#" class="nav-item" data-section="autre_compte">
-            <span class="nav-icon">📦</span><span>Autre</span>
+          <a href="#" class="nav-item" data-section="positions">
+            <span class="nav-icon">≡</span><span>Positions</span>
           </a>
         </div>
 
@@ -1193,44 +1295,74 @@ tr:hover .summary-row-hint { opacity: 1; }
         </div>
       </section>
 
-      <!-- INVESTMENTS (PEA / Assurance vie / Autre) — shared section, filtered by account -->
-      <section class="section hidden" id="section-investments">
+      <!-- PORTFOLIO overview -->
+      <section class="section hidden" id="section-portfolio">
         <div class="section-header">
-          <h1 id="investments-section-title">Investissements</h1>
+          <h1>Portefeuille</h1>
           <button class="btn-primary" id="add-investment-btn">+ Ajouter</button>
         </div>
-        <div class="kpi-grid-3">
+        <div class="kpi-grid">
           <div class="kpi-card primary">
             <div class="kpi-badge">◈</div>
             <div class="kpi-label">Valeur totale</div>
-            <div class="kpi-value" id="inv-total-value">0 €</div>
+            <div class="kpi-value" id="port-total-value">0 €</div>
+            <div class="kpi-sub" id="port-total-sub">—</div>
           </div>
-          <div class="kpi-card" id="inv-gain-card">
+          <div class="kpi-card" id="port-gain-card">
             <div class="kpi-badge">±</div>
-            <div class="kpi-label">Plus/Moins-value</div>
-            <div class="kpi-value" id="inv-total-gain">+0 €</div>
-            <div class="kpi-sub" id="inv-total-gain-pct">+0,00%</div>
+            <div class="kpi-label">Performance</div>
+            <div class="kpi-value" id="port-gain">+0 €</div>
+            <div class="kpi-sub" id="port-gain-pct">+0,00%</div>
           </div>
           <div class="kpi-card info">
             <div class="kpi-badge">◎</div>
-            <div class="kpi-label">Investissement initial</div>
-            <div class="kpi-value" id="inv-total-cost">0 €</div>
+            <div class="kpi-label">Capital investi</div>
+            <div class="kpi-value" id="port-cost">0 €</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-badge">#</div>
+            <div class="kpi-label">Positions</div>
+            <div class="kpi-value" id="port-count">0</div>
+            <div class="kpi-sub" id="port-accounts-sub">—</div>
           </div>
         </div>
         <div class="charts-grid">
           <div class="chart-card">
-            <h3>Répartition par type</h3>
-            <div class="chart-container"><canvas id="chart-inv-type"></canvas></div>
+            <h3>Allocation par type</h3>
+            <div class="chart-container"><canvas id="chart-port-type"></canvas></div>
           </div>
           <div class="chart-card">
-            <h3>Performance par position (top 10)</h3>
-            <div class="chart-container"><canvas id="chart-inv-performance"></canvas></div>
+            <h3>Allocation par compte</h3>
+            <div class="chart-container"><canvas id="chart-port-account"></canvas></div>
           </div>
         </div>
+        <div class="port-bottom-grid">
+          <div class="card" style="margin-bottom:0">
+            <h3>Top 5 positions</h3>
+            <div id="port-top-positions"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <h3>Meilleures perfs.</h3>
+            <div id="port-top-performers"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <h3>À améliorer</h3>
+            <div id="port-bottom-performers"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- POSITIONS list -->
+      <section class="section hidden" id="section-positions">
+        <div class="section-header">
+          <h1>Positions</h1>
+          <button class="btn-primary" id="add-position-btn">+ Ajouter</button>
+        </div>
+        <div id="pos-account-pills" class="account-pills"></div>
         <div class="card">
           <div class="table-toolbar">
-            <input type="text" id="inv-search" placeholder="Rechercher..." class="search-input">
-            <select id="inv-filter-type" class="select-input">
+            <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input">
+            <select id="pos-filter-type" class="select-input">
               <option value="">Tous les types</option>
               <option value="action">Actions</option>
               <option value="etf">ETF</option>
@@ -1244,23 +1376,21 @@ tr:hover .summary-row-hint { opacity: 1; }
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Nom / Ticker</th>
+                  <th>Nom</th>
                   <th>Type</th>
                   <th>Compte</th>
-                  <th>Quantité</th>
-                  <th>Prix d'achat</th>
-                  <th>Prix actuel</th>
-                  <th>Valeur</th>
-                  <th>+/- Value</th>
-                  <th>%</th>
+                  <th class="text-right">Valeur</th>
+                  <th class="text-right">Investi</th>
+                  <th class="text-right">+/− Value</th>
+                  <th>Performance</th>
                   <th></th>
                 </tr>
               </thead>
-              <tbody id="investments-tbody"></tbody>
+              <tbody id="positions-tbody"></tbody>
             </table>
           </div>
-          <div id="investments-empty" class="empty-state hidden">
-            <p>Aucun investissement pour ce compte. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          <div id="positions-empty" class="empty-state hidden">
+            <p>Aucune position. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
           </div>
         </div>
       </section>
@@ -1985,18 +2115,37 @@ const Charts = {
     });
   },
 
-  investmentsByType(investments) {
+  investmentsByType(investments, canvasId) {
     const byType = {};
     investments.forEach(inv => {
       const type = inv.type || 'autre';
       byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
     });
     const keys = Object.keys(byType);
-    if (!keys.length) { this.destroy('chart-inv-type'); return; }
+    if (!keys.length) { this.destroy(canvasId || 'chart-inv-type'); return; }
 
-    this.create('chart-inv-type', {
+    this.create(canvasId || 'chart-inv-type', {
       type: 'doughnut',
       data: { labels: keys.map(t => Utils.INVESTMENT_TYPES[t] || t), datasets: [{ data: Object.values(byType), backgroundColor: keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  investmentsByAccount(investments) {
+    const byAccount = {};
+    investments.forEach(inv => {
+      const account = inv.account || 'autre';
+      byAccount[account] = (byAccount[account] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const keys = Object.keys(byAccount);
+    if (!keys.length) { this.destroy('chart-port-account'); return; }
+    const ACCOUNT_COLORS = { pea: '#6366f1', assurance_vie: '#10b981', autre: '#f59e0b' };
+    this.create('chart-port-account', {
+      type: 'doughnut',
+      data: {
+        labels: keys.map(k => Utils.INVESTMENT_ACCOUNTS[k] || k),
+        datasets: [{ data: keys.map(k => byAccount[k]), backgroundColor: keys.map(k => ACCOUNT_COLORS[k] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }],
+      },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
@@ -2603,82 +2752,176 @@ const PeriodFilter = {
 </script>
 <script>
 const Investments = {
-  currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
+  _currentAccount: null,
 
-  render(account) {
-    if (account !== undefined) this.currentAccount = account;
-    const allInvestments = Storage.getInvestments();
-    const investments = this._filterByAccount(allInvestments);
-    this._renderSummary(investments);
-    this._renderTable(investments);
-    Charts.investmentsByType(investments);
-    Charts.investmentsPerformance(investments);
+  _renderAccountPills() {
+    const container = document.getElementById('pos-account-pills');
+    if (!container) return;
+    const accounts = [
+      { key: null, label: 'Tous' },
+      { key: 'pea', label: 'PEA' },
+      { key: 'assurance_vie', label: 'Assurance Vie' },
+      { key: 'autre', label: 'Autre' },
+    ];
+    container.innerHTML = accounts.map(a =>
+      `<button class="account-pill${this._currentAccount === a.key ? ' active' : ''}"
+        onclick="Investments.setAccount(${a.key === null ? 'null' : `'${a.key}'`})">${a.label}</button>`
+    ).join('');
   },
 
-  _filterByAccount(investments) {
-    if (!this.currentAccount) return investments;
-    if (this.currentAccount === 'autre') {
-      return investments.filter(i => !i.account || i.account === 'autre');
-    }
-    return investments.filter(i => i.account === this.currentAccount);
+  renderPortfolio() {
+    const investments = Storage.getInvestments();
+    this._renderPortfolioKPIs(investments);
+    Charts.investmentsByType(investments, 'chart-port-type');
+    Charts.investmentsByAccount(investments);
+    this._renderTopPositions(investments);
+    this._renderPerformers(investments);
   },
 
-  _renderSummary(investments) {
+  _renderPortfolioKPIs(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
-    const totalCost = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
-    const gain = totalValue - totalCost;
+    const totalCost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const gain    = totalValue - totalCost;
     const gainPct = totalCost > 0 ? (gain / totalCost * 100) : 0;
 
-    document.getElementById('inv-total-value').textContent = Utils.formatCurrency(totalValue);
-    document.getElementById('inv-total-cost').textContent = Utils.formatCurrency(totalCost);
+    document.getElementById('port-total-value').textContent = Utils.formatCurrency(totalValue);
+    document.getElementById('port-total-sub').textContent =
+      `${investments.length} position${investments.length !== 1 ? 's' : ''}`;
 
-    const gainEl = document.getElementById('inv-total-gain');
+    const gainEl = document.getElementById('port-gain');
     gainEl.textContent = Utils.formatCurrency(gain);
     gainEl.className = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
-    document.getElementById('inv-total-gain-pct').textContent = Utils.formatPercent(gainPct);
-    document.getElementById('inv-gain-card').className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
+    document.getElementById('port-gain-pct').textContent = Utils.formatPercent(gainPct);
+    document.getElementById('port-gain-card').className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
+
+    document.getElementById('port-cost').textContent = Utils.formatCurrency(totalCost);
+    document.getElementById('port-count').textContent = investments.length;
+
+    const accountKeys = [...new Set(investments.map(i => i.account || 'autre'))];
+    document.getElementById('port-accounts-sub').textContent =
+      accountKeys.map(k => Utils.INVESTMENT_ACCOUNTS[k] || k).join(' · ') || '—';
   },
 
-  _renderTable(investments) {
-    const tbody = document.getElementById('investments-tbody');
-    const empty = document.getElementById('investments-empty');
-    const search = (document.getElementById('inv-search')?.value || '').toLowerCase();
-    const typeFilter = document.getElementById('inv-filter-type')?.value || '';
+  _renderTopPositions(investments) {
+    const container = document.getElementById('port-top-positions');
+    if (!container) return;
+    if (!investments.length) { container.innerHTML = '<p class="text-muted small">Aucune position</p>'; return; }
 
-    let list = investments;
-    if (search) list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
+    const sorted = [...investments]
+      .map(i => ({ ...i, value: i.quantity * i.currentPrice, gain: i.quantity * (i.currentPrice - i.buyPrice) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    container.innerHTML = sorted.map((inv, idx) => {
+      const gainCls = inv.gain >= 0 ? 'positive' : 'negative';
+      const accountLabel = Utils.INVESTMENT_ACCOUNTS[inv.account || 'autre'] || 'Autre';
+      return `<div class="port-position-row">
+        <div class="port-position-rank">${idx + 1}</div>
+        <div class="port-position-info">
+          <div class="port-position-name">${inv.name}${inv.ticker ? `<span class="pos-ticker">${inv.ticker}</span>` : ''}</div>
+          <div class="port-position-meta">
+            <span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span>
+            <span class="badge badge-account">${accountLabel}</span>
+          </div>
+        </div>
+        <div class="port-position-right">
+          <div class="port-position-value">${Utils.formatCurrency(inv.value)}</div>
+          <div class="port-position-gain ${gainCls}">${inv.gain >= 0 ? '+' : ''}${Utils.formatCurrency(inv.gain)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  _renderPerformers(investments) {
+    const withPerf = investments
+      .filter(i => i.buyPrice > 0)
+      .map(i => ({
+        name: i.name,
+        gainPct: (i.currentPrice - i.buyPrice) / i.buyPrice * 100,
+        gain: i.quantity * (i.currentPrice - i.buyPrice),
+      }))
+      .sort((a, b) => b.gainPct - a.gainPct);
+
+    const renderList = (list, id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!list.length) { el.innerHTML = '<p class="text-muted small">Aucune donnée</p>'; return; }
+      el.innerHTML = list.map(inv => {
+        const cls = inv.gainPct >= 0 ? 'positive' : 'negative';
+        const arrow = inv.gainPct >= 0 ? '▲' : '▼';
+        return `<div class="port-performer-row">
+          <div class="port-performer-name" title="${inv.name}">${inv.name}</div>
+          <div class="port-performer-right">
+            <div class="port-performer-pct ${cls}">${arrow} ${Math.abs(inv.gainPct).toFixed(1)}%</div>
+            <div class="port-performer-val ${cls}">${inv.gain >= 0 ? '+' : ''}${Utils.formatCurrency(inv.gain)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    };
+
+    renderList(withPerf.slice(0, 3), 'port-top-performers');
+    renderList([...withPerf].reverse().slice(0, 3), 'port-bottom-performers');
+  },
+
+  renderPositions() {
+    this._renderAccountPills();
+    const allInvestments = Storage.getInvestments();
+    const search     = (document.getElementById('pos-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('pos-filter-type')?.value || '';
+
+    let list = this._currentAccount
+      ? allInvestments.filter(i => (i.account || 'autre') === this._currentAccount)
+      : allInvestments;
+
+    if (search)     list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
     if (typeFilter) list = list.filter(i => i.type === typeFilter);
+    list.sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
 
-    if (!list.length) {
-      tbody.innerHTML = '';
-      empty.classList.remove('hidden');
-      return;
-    }
-    empty.classList.add('hidden');
+    const tbody = document.getElementById('positions-tbody');
+    const empty  = document.getElementById('positions-empty');
+    if (!tbody) return;
+
+    if (!list.length) { tbody.innerHTML = ''; empty?.classList.remove('hidden'); return; }
+    empty?.classList.add('hidden');
 
     tbody.innerHTML = list.map(inv => {
-      const value = inv.quantity * inv.currentPrice;
-      const cost = inv.quantity * inv.buyPrice;
-      const gain = value - cost;
+      const value   = inv.quantity * inv.currentPrice;
+      const cost    = inv.quantity * inv.buyPrice;
+      const gain    = value - cost;
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
-      const cls = gain >= 0 ? 'positive' : 'negative';
-      const accountLabel = inv.account ? (Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account) : 'Autre';
-      return `<tr>
-        <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
+      const cls     = gain >= 0 ? 'positive' : 'negative';
+      const barColor = gain >= 0 ? '#10b981' : '#ef4444';
+      const barW    = Math.min(100, Math.abs(gainPct) / 100 * 100);
+      const accountLabel = Utils.INVESTMENT_ACCOUNTS[inv.account || 'autre'] || 'Autre';
+      return `<tr class="pos-row">
+        <td>
+          <strong>${inv.name}</strong>
+          ${inv.ticker ? `<span class="pos-ticker">${inv.ticker}</span>` : ''}
+        </td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
         <td><span class="badge badge-account">${accountLabel}</span></td>
-        <td>${inv.quantity}</td>
-        <td>${Utils.formatCurrency(inv.buyPrice)}</td>
-        <td>${Utils.formatCurrency(inv.currentPrice)}</td>
-        <td><strong>${Utils.formatCurrency(value)}</strong></td>
-        <td class="${cls}">${Utils.formatCurrency(gain)}</td>
-        <td class="${cls}">${Utils.formatPercent(gainPct)}</td>
+        <td class="text-right"><strong>${Utils.formatCurrency(value)}</strong></td>
+        <td class="text-right" style="color:var(--text-muted)">${Utils.formatCurrency(cost)}</td>
+        <td class="text-right ${cls}">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</td>
+        <td>
+          <div class="pos-perf-cell">
+            <div class="pos-perf-bar-wrap">
+              <div class="pos-perf-bar" style="width:${barW}%;background:${barColor}"></div>
+            </div>
+            <span class="${cls}" style="font-size:12px;font-weight:600">${Utils.formatPercent(gainPct)}</span>
+          </div>
+        </td>
         <td class="actions-cell">
           <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
           <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
         </td>
       </tr>`;
     }).join('');
+  },
+
+  setAccount(account) {
+    this._currentAccount = account;
+    this.renderPositions();
   },
 
   openAddForm() { Modal.open('Ajouter un investissement', this._form(null)); },
@@ -2734,14 +2977,16 @@ const Investments = {
     else list.push(data);
     Storage.saveInvestments(list);
     Modal.close();
-    this.render();
+    this.renderPortfolio();
+    this.renderPositions();
     Dashboard.render();
   },
 
   delete(id) {
     if (!confirm('Supprimer cet investissement ?')) return;
     Storage.saveInvestments(Storage.getInvestments().filter(i => i.id !== id));
-    this.render();
+    this.renderPortfolio();
+    this.renderPositions();
     Dashboard.render();
   },
 };
@@ -4299,6 +4544,7 @@ const Budget = {
 
       return `
         <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
+          <button class="budget-card-delete" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
           <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
           <div class="budget-card-body">
             <div class="budget-card-top">
@@ -4885,9 +5131,9 @@ const Dashboard = {
 
 const APP_MODES = {
   investments: {
-    sections: ['pea', 'assurance_vie', 'autre_compte'],
+    sections: ['portfolio', 'positions'],
     navGroupId: 'nav-investments-group',
-    default: 'pea',
+    default: 'portfolio',
   },
   expenses: {
     sections: ['flux', 'comparisons', 'budget'],
@@ -4924,9 +5170,8 @@ function switchMode(mode) {
 function navigateTo(sectionId) {
   // Map section identifiers to actual HTML section IDs
   const sectionMap = {
-    pea: 'investments',
-    assurance_vie: 'investments',
-    autre_compte: 'investments',
+    portfolio: 'portfolio',
+    positions: 'positions',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -4955,17 +5200,11 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    case 'pea':
-      document.getElementById('investments-section-title').textContent = 'PEA';
-      Investments.render('pea');
+    case 'portfolio':
+      Investments.renderPortfolio();
       break;
-    case 'assurance_vie':
-      document.getElementById('investments-section-title').textContent = 'Assurance vie';
-      Investments.render('assurance_vie');
-      break;
-    case 'autre_compte':
-      document.getElementById('investments-section-title').textContent = 'Autre';
-      Investments.render('autre');
+    case 'positions':
+      Investments.renderPositions();
       break;
     case 'flux':
       Flux.render();
@@ -5036,7 +5275,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
 
   // Action buttons
-  document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
+  document.getElementById('add-investment-btn')?.addEventListener('click', () => Investments.openAddForm());
+  document.getElementById('add-position-btn')?.addEventListener('click', () => Investments.openAddForm());
   document.getElementById('add-expense-btn')?.addEventListener('click', () => Expenses.openAddForm());
   document.getElementById('add-revenue-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-expense-flux-btn')?.addEventListener('click', () => Expenses.openAddForm());
@@ -5046,8 +5286,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
-  document.getElementById('inv-search').addEventListener('input', () => Investments.render());
-  document.getElementById('inv-filter-type').addEventListener('change', () => Investments.render());
+  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderPositions());
+  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderPositions());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
   document.getElementById('rev-search').addEventListener('input', () => Revenues.render());

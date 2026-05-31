@@ -133,6 +133,7 @@ const Budget = {
 
       return `
         <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
+          <button class="budget-card-delete" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
           <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
           <div class="budget-card-body">
             <div class="budget-card-top">

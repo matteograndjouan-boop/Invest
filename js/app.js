@@ -193,9 +193,9 @@ const Dashboard = {
 
 const APP_MODES = {
   investments: {
-    sections: ['pea', 'assurance_vie', 'autre_compte'],
+    sections: ['portfolio', 'positions'],
     navGroupId: 'nav-investments-group',
-    default: 'pea',
+    default: 'portfolio',
   },
   expenses: {
     sections: ['flux', 'comparisons', 'budget'],
@@ -232,9 +232,8 @@ function switchMode(mode) {
 function navigateTo(sectionId) {
   // Map section identifiers to actual HTML section IDs
   const sectionMap = {
-    pea: 'investments',
-    assurance_vie: 'investments',
-    autre_compte: 'investments',
+    portfolio: 'portfolio',
+    positions: 'positions',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -263,17 +262,11 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    case 'pea':
-      document.getElementById('investments-section-title').textContent = 'PEA';
-      Investments.render('pea');
+    case 'portfolio':
+      Investments.renderPortfolio();
       break;
-    case 'assurance_vie':
-      document.getElementById('investments-section-title').textContent = 'Assurance vie';
-      Investments.render('assurance_vie');
-      break;
-    case 'autre_compte':
-      document.getElementById('investments-section-title').textContent = 'Autre';
-      Investments.render('autre');
+    case 'positions':
+      Investments.renderPositions();
       break;
     case 'flux':
       Flux.render();
@@ -344,7 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
 
   // Action buttons
-  document.getElementById('add-investment-btn').addEventListener('click', () => Investments.openAddForm());
+  document.getElementById('add-investment-btn')?.addEventListener('click', () => Investments.openAddForm());
+  document.getElementById('add-position-btn')?.addEventListener('click', () => Investments.openAddForm());
   document.getElementById('add-expense-btn')?.addEventListener('click', () => Expenses.openAddForm());
   document.getElementById('add-revenue-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-expense-flux-btn')?.addEventListener('click', () => Expenses.openAddForm());
@@ -354,8 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
-  document.getElementById('inv-search').addEventListener('input', () => Investments.render());
-  document.getElementById('inv-filter-type').addEventListener('change', () => Investments.render());
+  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderPositions());
+  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderPositions());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
   document.getElementById('rev-search').addEventListener('input', () => Revenues.render());

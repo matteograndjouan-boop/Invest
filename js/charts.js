@@ -69,18 +69,37 @@ const Charts = {
     });
   },
 
-  investmentsByType(investments) {
+  investmentsByType(investments, canvasId) {
     const byType = {};
     investments.forEach(inv => {
       const type = inv.type || 'autre';
       byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
     });
     const keys = Object.keys(byType);
-    if (!keys.length) { this.destroy('chart-inv-type'); return; }
+    if (!keys.length) { this.destroy(canvasId || 'chart-inv-type'); return; }
 
-    this.create('chart-inv-type', {
+    this.create(canvasId || 'chart-inv-type', {
       type: 'doughnut',
       data: { labels: keys.map(t => Utils.INVESTMENT_TYPES[t] || t), datasets: [{ data: Object.values(byType), backgroundColor: keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }] },
+      options: this._doughnutOptions(Utils.formatCurrency),
+    });
+  },
+
+  investmentsByAccount(investments) {
+    const byAccount = {};
+    investments.forEach(inv => {
+      const account = inv.account || 'autre';
+      byAccount[account] = (byAccount[account] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const keys = Object.keys(byAccount);
+    if (!keys.length) { this.destroy('chart-port-account'); return; }
+    const ACCOUNT_COLORS = { pea: '#6366f1', assurance_vie: '#10b981', autre: '#f59e0b' };
+    this.create('chart-port-account', {
+      type: 'doughnut',
+      data: {
+        labels: keys.map(k => Utils.INVESTMENT_ACCOUNTS[k] || k),
+        datasets: [{ data: keys.map(k => byAccount[k]), backgroundColor: keys.map(k => ACCOUNT_COLORS[k] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }],
+      },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
