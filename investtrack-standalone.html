@@ -230,6 +230,61 @@ body {
 .recent-item:last-child { border-bottom: none; }
 .text-right { text-align: right; }
 
+/* ---- Dashboard redesign ---- */
+.dash-flux-card { margin-bottom: 1rem; }
+.chart-tall { height: 240px !important; }
+
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.dash-budget-bar-wrap {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.dash-budget-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.dash-cat-row { margin-bottom: 12px; }
+.dash-cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+.dash-cat-name { font-weight: 500; }
+.dash-cat-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: visible;
+  position: relative;
+}
+.dash-cat-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.dash-cat-pct {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
 /* ---- Tables ---- */
 .table-toolbar {
   display: flex;
@@ -928,6 +983,7 @@ tr:hover .summary-row-hint { opacity: 1; }
   .flux-charts-row { grid-template-columns: 1fr; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
+  .dashboard-bottom-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
   .flux-donut-wrap { flex-direction: column; align-items: flex-start; }
@@ -1036,46 +1092,43 @@ tr:hover .summary-row-hint { opacity: 1; }
           <h1>Tableau de bord</h1>
           <span class="date-badge" id="current-date"></span>
         </div>
+
         <div class="kpi-grid">
+          <div class="kpi-card" id="dash-solde-card">
+            <div class="kpi-label">Solde du mois</div>
+            <div class="kpi-value" id="dash-solde">0 €</div>
+            <div class="kpi-sub" id="dash-solde-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Taux d'épargne</div>
+            <div class="kpi-value" id="dash-epargne">— %</div>
+            <div class="kpi-sub" id="dash-epargne-sub">—</div>
+          </div>
+          <div class="kpi-card" id="dash-budget-card">
+            <div class="kpi-label">Budget consommé</div>
+            <div class="kpi-value" id="dash-budget-pct">—</div>
+            <div class="dash-budget-bar-wrap"><div class="dash-budget-bar" id="dash-budget-bar"></div></div>
+          </div>
           <div class="kpi-card primary">
             <div class="kpi-label">Valeur nette</div>
             <div class="kpi-value" id="kpi-net-worth">0 €</div>
             <div class="kpi-sub" id="kpi-net-worth-sub">Actifs − Passifs</div>
           </div>
-          <div class="kpi-card success">
-            <div class="kpi-label">Portefeuille</div>
-            <div class="kpi-value" id="kpi-portfolio">0 €</div>
-            <div class="kpi-sub">Valeur actuelle</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-label">Dépenses du mois</div>
-            <div class="kpi-value" id="kpi-expenses">0 €</div>
-            <div class="kpi-sub" id="kpi-expenses-sub">—</div>
-          </div>
-          <div class="kpi-card info">
-            <div class="kpi-label">Performance totale</div>
-            <div class="kpi-value" id="kpi-performance">+0 €</div>
-            <div class="kpi-sub" id="kpi-performance-sub">+0,00%</div>
-          </div>
         </div>
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>Répartition du portefeuille</h3>
-            <div class="chart-container"><canvas id="chart-portfolio-allocation"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <h3>Dépenses vs Budget (ce mois)</h3>
-            <div class="chart-container"><canvas id="chart-expenses-budget"></canvas></div>
-          </div>
+
+        <div class="chart-card dash-flux-card">
+          <h3>Flux des 6 derniers mois</h3>
+          <div class="chart-container chart-tall"><canvas id="chart-dashboard-flux"></canvas></div>
         </div>
-        <div class="recent-grid">
+
+        <div class="dashboard-bottom-grid">
           <div class="card">
-            <h3>Derniers investissements</h3>
-            <div id="recent-investments"></div>
+            <h3>Top dépenses — <span id="dash-month-label"></span></h3>
+            <div id="dash-top-categories"></div>
           </div>
           <div class="card">
-            <h3>Dernières dépenses</h3>
-            <div id="recent-expenses"></div>
+            <h3>Dernières opérations</h3>
+            <div id="dash-recent-ops"></div>
           </div>
         </div>
       </section>
@@ -4561,80 +4614,178 @@ const Modal = {
 
 const Dashboard = {
   render() {
-    const investments = Storage.getInvestments();
-    const expenses = Storage.getExpenses();
-    const budgets = Storage.getBudgets();
+    const expenses  = Storage.getExpenses();
+    const revenues  = Storage.getRevenues();
+    const budgets   = Storage.getBudgets();
     const patrimony = Storage.getPatrimony();
+    const investments = Storage.getInvestments();
 
     document.getElementById('current-date').textContent = new Intl.DateTimeFormat('fr-FR', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     }).format(new Date());
 
+    const month = Utils.getCurrentMonth();
+    const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const [my, mm] = month.split('-').map(Number);
+    document.getElementById('dash-month-label').textContent =
+      MONTHS_FR[mm - 1] + ' ' + my;
+
+    // --- Current month cash flow ---
+    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    const monthRev = revenues.filter(r => r.date.substring(0, 7) === month);
+    const totalDep = monthExp.reduce((s, e) => s + e.amount, 0);
+    const totalRev = monthRev.reduce((s, r) => s + r.amount, 0);
+    const solde    = totalRev - totalDep;
+    const epargne  = totalRev > 0 ? (solde / totalRev * 100) : null;
+
+    // Previous month for trend
+    const prevDate = new Date(my, mm - 2, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const prevExp = expenses.filter(e => Utils.getExpenseMonth(e) === prevMonth).reduce((s, e) => s + e.amount, 0);
+    const prevRev = revenues.filter(r => r.date.substring(0, 7) === prevMonth).reduce((s, r) => s + r.amount, 0);
+    const prevSolde = prevRev - prevExp;
+
+    const soldeEl = document.getElementById('dash-solde');
+    soldeEl.textContent = Utils.formatCurrency(solde);
+    soldeEl.className = 'kpi-value ' + (solde >= 0 ? 'positive' : 'negative');
+    document.getElementById('dash-solde-card').className = 'kpi-card ' + (solde >= 0 ? 'success' : 'danger');
+
+    const soldeSub = document.getElementById('dash-solde-sub');
+    if (prevRev > 0 || prevExp > 0) {
+      const diff = solde - prevSolde;
+      const pct  = prevSolde !== 0 ? Math.abs(diff / Math.abs(prevSolde) * 100).toFixed(1) : null;
+      const arrow = diff >= 0 ? '↑' : '↓';
+      const cls   = diff >= 0 ? 'trend-good' : 'trend-bad';
+      soldeSub.innerHTML = `Rev. ${Utils.formatCurrency(totalRev)} · Dép. ${Utils.formatCurrency(totalDep)}<br>` +
+        (pct ? `<span class="${cls}">${arrow} ${pct}% vs mois préc.</span>` : '');
+    } else {
+      soldeSub.textContent = `Rev. ${Utils.formatCurrency(totalRev)} · Dép. ${Utils.formatCurrency(totalDep)}`;
+    }
+
+    const epargneEl = document.getElementById('dash-epargne');
+    epargneEl.textContent = epargne !== null ? epargne.toFixed(1) + ' %' : '— %';
+    epargneEl.className = 'kpi-value ' + (epargne === null ? '' : epargne >= 0 ? 'positive' : 'negative');
+    document.getElementById('dash-epargne-sub').textContent =
+      totalRev > 0 ? `${Utils.formatCurrency(Math.max(0, solde))} mis de côté` : 'Aucun revenu ce mois';
+
+    // --- Budget bar ---
+    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
+    const budgetPct = totalBudget > 0 ? Math.min(Math.round(totalDep / totalBudget * 100), 999) : null;
+    const budgetPctEl = document.getElementById('dash-budget-pct');
+    const budgetBar   = document.getElementById('dash-budget-bar');
+    const budgetCard  = document.getElementById('dash-budget-card');
+    if (budgetPct !== null) {
+      budgetPctEl.textContent = `${budgetPct}%`;
+      budgetPctEl.className = 'kpi-value ' + (budgetPct >= 100 ? 'negative' : budgetPct >= 80 ? 'warning' : 'positive');
+      const barPct = Math.min(budgetPct, 100);
+      budgetBar.style.width = barPct + '%';
+      budgetBar.style.background = budgetPct >= 100 ? 'var(--danger)' : budgetPct >= 80 ? 'var(--warning)' : 'var(--success)';
+      budgetCard.className = 'kpi-card ' + (budgetPct >= 100 ? 'danger' : budgetPct >= 80 ? 'warning' : '');
+    } else {
+      budgetPctEl.textContent = '—';
+      budgetPctEl.className = 'kpi-value';
+      budgetBar.style.width = '0';
+      budgetCard.className = 'kpi-card';
+    }
+
+    // --- Net worth ---
     const portfolioValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
-    const portfolioCost = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
-    const gain = portfolioValue - portfolioCost;
-    const gainPct = portfolioCost > 0 ? (gain / portfolioCost * 100) : 0;
-
-    document.getElementById('kpi-portfolio').textContent = Utils.formatCurrency(portfolioValue);
-    const perfEl = document.getElementById('kpi-performance');
-    perfEl.textContent = Utils.formatCurrency(gain);
-    perfEl.className = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
-    document.getElementById('kpi-performance-sub').textContent = Utils.formatPercent(gainPct);
-
-    const manualAssets = patrimony.filter(i => i.type === 'actif').reduce((s, i) => s + i.value, 0);
-    const liabilities = patrimony.filter(i => i.type === 'passif').reduce((s, i) => s + i.value, 0);
-    const netWorth = portfolioValue + manualAssets - liabilities;
+    const manualAssets   = patrimony.filter(i => i.type === 'actif').reduce((s, i) => s + i.value, 0);
+    const liabilities    = patrimony.filter(i => i.type === 'passif').reduce((s, i) => s + i.value, 0);
+    const netWorth       = portfolioValue + manualAssets - liabilities;
     document.getElementById('kpi-net-worth').textContent = Utils.formatCurrency(netWorth);
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
-    const month = Utils.getCurrentMonth();
-    const monthTotal = expenses.filter(e => Utils.getExpenseMonth(e) === month).reduce((s, e) => s + e.amount, 0);
-    const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
-    const remaining = totalBudget - monthTotal;
-
-    document.getElementById('kpi-expenses').textContent = Utils.formatCurrency(monthTotal);
-    const expSubEl = document.getElementById('kpi-expenses-sub');
-    expSubEl.textContent = totalBudget > 0 ? `Budget restant: ${Utils.formatCurrency(remaining)}` : 'Aucun budget défini';
-    expSubEl.className = 'kpi-sub ' + (totalBudget > 0 ? (remaining >= 0 ? 'positive' : 'negative') : '');
-
-    Charts.portfolioAllocation(investments);
-    Charts.expensesBudget(expenses, budgets);
-    this._renderRecentInvestments(investments);
-    this._renderRecentExpenses(expenses);
+    this._renderFluxChart(expenses, revenues);
+    this._renderTopCategories(monthExp, totalDep, budgets);
+    this._renderRecentOps(expenses, revenues);
   },
 
-  _renderRecentInvestments(investments) {
-    const container = document.getElementById('recent-investments');
-    const recent = [...investments].sort((a, b) => (b.buyDate || '').localeCompare(a.buyDate || '')).slice(0, 5);
-    if (!recent.length) { container.innerHTML = '<p class="text-muted">Aucun investissement</p>'; return; }
-    container.innerHTML = recent.map(inv => {
-      const value = inv.quantity * inv.currentPrice;
-      const gain = value - inv.quantity * inv.buyPrice;
-      return `<div class="recent-item">
-        <div>
-          <strong>${inv.name}</strong>${inv.ticker ? ` <small class="text-muted">· ${inv.ticker}</small>` : ''}<br>
-          <small class="text-muted">${Utils.INVESTMENT_TYPES[inv.type]}</small>
+  _renderFluxChart(expenses, revenues) {
+    const months = Utils.getLast12Months().slice(-6);
+    const labels  = months.map(m => {
+      const [y, mo] = m.split('-').map(Number);
+      const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+      return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
+    });
+    const getLastDay = m => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
+    const revData  = months.map(m => revenues.filter(r => r.date.substring(0,7) === m).reduce((s,r) => s + r.amount, 0));
+    const depData  = months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s,e) => s + e.amount, 0));
+    const soldeData = revData.map((r, i) => r - depData[i]);
+
+    Charts.destroy('chart-dashboard-flux');
+    const canvas = document.getElementById('chart-dashboard-flux');
+    if (!canvas) return;
+    const chart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenus',   data: revData,   backgroundColor: 'rgba(16,185,129,0.75)',  borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Dépenses',  data: depData,   backgroundColor: 'rgba(239,68,68,0.75)',   borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Solde net', data: soldeData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)',
+            borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#8b5cf6', fill: false, tension: 0.3, type: 'line', yAxisID: 'y' },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: { beginAtZero: false, ticks: { callback: v => Utils.formatCurrency(v) } } },
+      },
+    });
+    Charts._instances['chart-dashboard-flux'] = chart;
+  },
+
+  _renderTopCategories(monthExp, totalDep, budgets) {
+    const container = document.getElementById('dash-top-categories');
+    if (!monthExp.length) { container.innerHTML = '<p class="text-muted">Aucune dépense ce mois</p>'; return; }
+
+    const groups = {};
+    monthExp.forEach(e => {
+      if (!groups[e.category]) groups[e.category] = 0;
+      groups[e.category] += e.amount;
+    });
+    const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    container.innerHTML = sorted.map(([cat, amount]) => {
+      const pct = totalDep > 0 ? (amount / totalDep * 100).toFixed(0) : 0;
+      const budget = budgets[cat] || 0;
+      const budgetInfo = budget > 0
+        ? `<span class="${amount > budget ? 'negative' : 'positive'}">${Utils.formatCurrency(amount)} / ${Utils.formatCurrency(budget)}</span>`
+        : `<span>${Utils.formatCurrency(amount)}</span>`;
+      const barW = Math.min(100, pct);
+      return `<div class="dash-cat-row">
+        <div class="dash-cat-header">
+          <span class="dash-cat-name">${cat}</span>
+          ${budgetInfo}
         </div>
-        <div class="text-right">
-          <strong>${Utils.formatCurrency(value)}</strong><br>
-          <small class="${gain >= 0 ? 'positive' : 'negative'}">${Utils.formatCurrency(gain)}</small>
+        <div class="dash-cat-bar-wrap">
+          <div class="dash-cat-bar" style="width:${barW}%"></div>
+          <span class="dash-cat-pct">${pct}%</span>
         </div>
       </div>`;
     }).join('');
   },
 
-  _renderRecentExpenses(expenses) {
-    const container = document.getElementById('recent-expenses');
-    const recent = [...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-    if (!recent.length) { container.innerHTML = '<p class="text-muted">Aucune dépense</p>'; return; }
-    container.innerHTML = recent.map(exp => `
+  _renderRecentOps(expenses, revenues) {
+    const container = document.getElementById('dash-recent-ops');
+    const ops = [
+      ...expenses.map(e => ({ date: e.date, label: e.description, sub: e.category, amount: -e.amount })),
+      ...revenues.map(r => ({ date: r.date, label: r.description, sub: r.category, amount: r.amount })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+
+    if (!ops.length) { container.innerHTML = '<p class="text-muted">Aucune opération</p>'; return; }
+    container.innerHTML = ops.map(op => `
       <div class="recent-item">
         <div>
-          <strong>${exp.description}</strong><br>
-          <small class="text-muted">${exp.category} · ${Utils.formatDate(exp.date)}</small>
+          <strong>${op.label}</strong><br>
+          <small class="text-muted">${op.sub} · ${Utils.formatDate(op.date)}</small>
         </div>
-        <strong class="negative">${Utils.formatCurrency(exp.amount)}</strong>
+        <strong class="${op.amount >= 0 ? 'positive' : 'negative'}">${op.amount >= 0 ? '+' : ''}${Utils.formatCurrency(Math.abs(op.amount))}</strong>
       </div>`).join('');
   },
 };

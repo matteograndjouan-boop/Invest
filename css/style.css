@@ -223,6 +223,61 @@ body {
 .recent-item:last-child { border-bottom: none; }
 .text-right { text-align: right; }
 
+/* ---- Dashboard redesign ---- */
+.dash-flux-card { margin-bottom: 1rem; }
+.chart-tall { height: 240px !important; }
+
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.dash-budget-bar-wrap {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.dash-budget-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.dash-cat-row { margin-bottom: 12px; }
+.dash-cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+.dash-cat-name { font-weight: 500; }
+.dash-cat-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: visible;
+  position: relative;
+}
+.dash-cat-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.dash-cat-pct {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
 /* ---- Tables ---- */
 .table-toolbar {
   display: flex;
@@ -921,6 +976,7 @@ tr:hover .summary-row-hint { opacity: 1; }
   .flux-charts-row { grid-template-columns: 1fr; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
+  .dashboard-bottom-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
   .flux-donut-wrap { flex-direction: column; align-items: flex-start; }

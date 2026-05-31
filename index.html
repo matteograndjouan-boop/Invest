@@ -90,46 +90,43 @@
           <h1>Tableau de bord</h1>
           <span class="date-badge" id="current-date"></span>
         </div>
+
         <div class="kpi-grid">
+          <div class="kpi-card" id="dash-solde-card">
+            <div class="kpi-label">Solde du mois</div>
+            <div class="kpi-value" id="dash-solde">0 €</div>
+            <div class="kpi-sub" id="dash-solde-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Taux d'épargne</div>
+            <div class="kpi-value" id="dash-epargne">— %</div>
+            <div class="kpi-sub" id="dash-epargne-sub">—</div>
+          </div>
+          <div class="kpi-card" id="dash-budget-card">
+            <div class="kpi-label">Budget consommé</div>
+            <div class="kpi-value" id="dash-budget-pct">—</div>
+            <div class="dash-budget-bar-wrap"><div class="dash-budget-bar" id="dash-budget-bar"></div></div>
+          </div>
           <div class="kpi-card primary">
             <div class="kpi-label">Valeur nette</div>
             <div class="kpi-value" id="kpi-net-worth">0 €</div>
             <div class="kpi-sub" id="kpi-net-worth-sub">Actifs − Passifs</div>
           </div>
-          <div class="kpi-card success">
-            <div class="kpi-label">Portefeuille</div>
-            <div class="kpi-value" id="kpi-portfolio">0 €</div>
-            <div class="kpi-sub">Valeur actuelle</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-label">Dépenses du mois</div>
-            <div class="kpi-value" id="kpi-expenses">0 €</div>
-            <div class="kpi-sub" id="kpi-expenses-sub">—</div>
-          </div>
-          <div class="kpi-card info">
-            <div class="kpi-label">Performance totale</div>
-            <div class="kpi-value" id="kpi-performance">+0 €</div>
-            <div class="kpi-sub" id="kpi-performance-sub">+0,00%</div>
-          </div>
         </div>
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>Répartition du portefeuille</h3>
-            <div class="chart-container"><canvas id="chart-portfolio-allocation"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <h3>Dépenses vs Budget (ce mois)</h3>
-            <div class="chart-container"><canvas id="chart-expenses-budget"></canvas></div>
-          </div>
+
+        <div class="chart-card dash-flux-card">
+          <h3>Flux des 6 derniers mois</h3>
+          <div class="chart-container chart-tall"><canvas id="chart-dashboard-flux"></canvas></div>
         </div>
-        <div class="recent-grid">
+
+        <div class="dashboard-bottom-grid">
           <div class="card">
-            <h3>Derniers investissements</h3>
-            <div id="recent-investments"></div>
+            <h3>Top dépenses — <span id="dash-month-label"></span></h3>
+            <div id="dash-top-categories"></div>
           </div>
           <div class="card">
-            <h3>Dernières dépenses</h3>
-            <div id="recent-expenses"></div>
+            <h3>Dernières opérations</h3>
+            <div id="dash-recent-ops"></div>
           </div>
         </div>
       </section>
