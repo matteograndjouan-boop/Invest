@@ -1129,6 +1129,23 @@ tr:hover .summary-row-hint { opacity: 1; }
 .budget-theme-card:hover .budget-card-delete { opacity: 1; }
 .budget-card-delete:hover { background: var(--danger); color: #fff; }
 
+/* ---- Portfolio position rows (new design) ---- */
+.port-pos-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.port-pos-info { flex: 1; min-width: 0; }
+.port-pos-info strong { font-size: 14px; }
+.port-pos-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
+.port-pos-bar { height: 4px; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
+.port-pos-right { text-align: right; font-size: 13px; font-weight: 600; }
+
+/* ---- Performer rows (new design) ---- */
+.performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.performer-row:last-child { border-bottom: none; }
+.performer-name { font-size: 13px; font-weight: 600; }
+.performer-perf { font-size: 13px; font-weight: 700; }
+
+/* ---- Account dot inline indicator ---- */
+.account-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
