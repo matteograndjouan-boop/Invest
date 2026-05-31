@@ -88,18 +88,16 @@ const Charts = {
   investmentsByAccount(investments) {
     const byAccount = {};
     investments.forEach(inv => {
-      const account = inv.account || 'autre';
-      byAccount[account] = (byAccount[account] || 0) + inv.quantity * inv.currentPrice;
+      const acc = inv.account || 'autre';
+      byAccount[acc] = (byAccount[acc] || 0) + inv.quantity * inv.currentPrice;
     });
     const keys = Object.keys(byAccount);
     if (!keys.length) { this.destroy('chart-port-account'); return; }
-    const ACCOUNT_COLORS = { pea: '#6366f1', assurance_vie: '#10b981', autre: '#f59e0b' };
+    const labels = keys.map(a => Utils.INVESTMENT_ACCOUNTS[a] || a);
+    const colors = keys.map(a => Utils.ACCOUNT_COLORS[a] || '#6b7280');
     this.create('chart-port-account', {
       type: 'doughnut',
-      data: {
-        labels: keys.map(k => Utils.INVESTMENT_ACCOUNTS[k] || k),
-        datasets: [{ data: keys.map(k => byAccount[k]), backgroundColor: keys.map(k => ACCOUNT_COLORS[k] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }],
-      },
+      data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },

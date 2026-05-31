@@ -1,162 +1,150 @@
 const Investments = {
-  _currentAccount: null,
-
-  _renderAccountPills() {
-    const container = document.getElementById('pos-account-pills');
-    if (!container) return;
-    const accounts = [
-      { key: null, label: 'Tous' },
-      { key: 'pea', label: 'PEA' },
-      { key: 'assurance_vie', label: 'Assurance Vie' },
-      { key: 'autre', label: 'Autre' },
-    ];
-    container.innerHTML = accounts.map(a =>
-      `<button class="account-pill${this._currentAccount === a.key ? ' active' : ''}"
-        onclick="Investments.setAccount(${a.key === null ? 'null' : `'${a.key}'`})">${a.label}</button>`
-    ).join('');
-  },
+  _currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
 
   renderPortfolio() {
     const investments = Storage.getInvestments();
-    this._renderPortfolioKPIs(investments);
-    Charts.investmentsByType(investments, 'chart-port-type');
+    this._renderPortfolioKpis(investments);
+    Charts.portfolioAllocation(investments);
     Charts.investmentsByAccount(investments);
     this._renderTopPositions(investments);
     this._renderPerformers(investments);
   },
 
-  _renderPortfolioKPIs(investments) {
+  _renderPortfolioKpis(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     const totalCost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
-    const gain    = totalValue - totalCost;
+    const gain = totalValue - totalCost;
     const gainPct = totalCost > 0 ? (gain / totalCost * 100) : 0;
+    const count = investments.length;
 
-    document.getElementById('port-total-value').textContent = Utils.formatCurrency(totalValue);
-    document.getElementById('port-total-sub').textContent =
-      `${investments.length} position${investments.length !== 1 ? 's' : ''}`;
-
-    const gainEl = document.getElementById('port-gain');
-    gainEl.textContent = Utils.formatCurrency(gain);
-    gainEl.className = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
-    document.getElementById('port-gain-pct').textContent = Utils.formatPercent(gainPct);
-    document.getElementById('port-gain-card').className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
-
-    document.getElementById('port-cost').textContent = Utils.formatCurrency(totalCost);
-    document.getElementById('port-count').textContent = investments.length;
-
-    const accountKeys = [...new Set(investments.map(i => i.account || 'autre'))];
-    document.getElementById('port-accounts-sub').textContent =
-      accountKeys.map(k => Utils.INVESTMENT_ACCOUNTS[k] || k).join(' · ') || '—';
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('port-total-value', Utils.formatCurrency(totalValue));
+    set('port-total-cost',  Utils.formatCurrency(totalCost));
+    set('port-count',       count + ' position' + (count !== 1 ? 's' : ''));
+    const gainEl = document.getElementById('port-total-gain');
+    if (gainEl) {
+      gainEl.textContent = (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain);
+      gainEl.className   = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
+    }
+    const gainPctEl = document.getElementById('port-total-gain-pct');
+    if (gainPctEl) gainPctEl.textContent = Utils.formatPercent(gainPct);
+    const gainCard = document.getElementById('port-gain-card');
+    if (gainCard) gainCard.className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
   },
 
   _renderTopPositions(investments) {
     const container = document.getElementById('port-top-positions');
     if (!container) return;
-    if (!investments.length) { container.innerHTML = '<p class="text-muted small">Aucune position</p>'; return; }
-
-    const sorted = [...investments]
-      .map(i => ({ ...i, value: i.quantity * i.currentPrice, gain: i.quantity * (i.currentPrice - i.buyPrice) }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-
-    container.innerHTML = sorted.map((inv, idx) => {
-      const gainCls = inv.gain >= 0 ? 'positive' : 'negative';
-      const accountLabel = Utils.INVESTMENT_ACCOUNTS[inv.account || 'autre'] || 'Autre';
+    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice)).slice(0, 5);
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    if (!sorted.length) { container.innerHTML = '<p class="text-muted">Aucune position</p>'; return; }
+    container.innerHTML = sorted.map(inv => {
+      const value = inv.quantity * inv.currentPrice;
+      const pct   = totalValue > 0 ? (value / totalValue * 100) : 0;
+      const gain  = value - inv.quantity * inv.buyPrice;
+      const gainCls = gain >= 0 ? 'positive' : 'negative';
+      const acColor = Utils.ACCOUNT_COLORS[inv.account] || '#6b7280';
       return `<div class="port-position-row">
-        <div class="port-position-rank">${idx + 1}</div>
-        <div class="port-position-info">
-          <div class="port-position-name">${inv.name}${inv.ticker ? `<span class="pos-ticker">${inv.ticker}</span>` : ''}</div>
-          <div class="port-position-meta">
-            <span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span>
-            <span class="badge badge-account">${accountLabel}</span>
-          </div>
+        <div class="port-pos-dot" style="background:${acColor}"></div>
+        <div class="port-pos-info">
+          <strong>${inv.name}</strong>${inv.ticker ? ` <small class="text-muted">${inv.ticker}</small>` : ''}
+          <div class="port-pos-bar-wrap"><div class="port-pos-bar" style="width:${Math.min(pct,100)}%"></div></div>
         </div>
-        <div class="port-position-right">
-          <div class="port-position-value">${Utils.formatCurrency(inv.value)}</div>
-          <div class="port-position-gain ${gainCls}">${inv.gain >= 0 ? '+' : ''}${Utils.formatCurrency(inv.gain)}</div>
+        <div class="port-pos-right">
+          <div>${Utils.formatCurrency(value)}</div>
+          <div class="${gainCls}" style="font-size:12px">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</div>
         </div>
       </div>`;
     }).join('');
   },
 
   _renderPerformers(investments) {
-    const withPerf = investments
-      .filter(i => i.buyPrice > 0)
-      .map(i => ({
-        name: i.name,
-        gainPct: (i.currentPrice - i.buyPrice) / i.buyPrice * 100,
-        gain: i.quantity * (i.currentPrice - i.buyPrice),
-      }))
-      .sort((a, b) => b.gainPct - a.gainPct);
+    const withPerf = investments.map(inv => ({
+      ...inv,
+      perf: inv.buyPrice > 0 ? (inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100 : 0,
+    })).sort((a, b) => b.perf - a.perf);
 
-    const renderList = (list, id) => {
-      const el = document.getElementById(id);
+    const best  = withPerf.slice(0, 3);
+    const worst = withPerf.slice(-3).reverse();
+
+    const render = (list, containerId, colorFn) => {
+      const el = document.getElementById(containerId);
       if (!el) return;
-      if (!list.length) { el.innerHTML = '<p class="text-muted small">Aucune donnée</p>'; return; }
-      el.innerHTML = list.map(inv => {
-        const cls = inv.gainPct >= 0 ? 'positive' : 'negative';
-        const arrow = inv.gainPct >= 0 ? '▲' : '▼';
-        return `<div class="port-performer-row">
-          <div class="port-performer-name" title="${inv.name}">${inv.name}</div>
-          <div class="port-performer-right">
-            <div class="port-performer-pct ${cls}">${arrow} ${Math.abs(inv.gainPct).toFixed(1)}%</div>
-            <div class="port-performer-val ${cls}">${inv.gain >= 0 ? '+' : ''}${Utils.formatCurrency(inv.gain)}</div>
-          </div>
-        </div>`;
-      }).join('');
+      if (!list.length) { el.innerHTML = '<p class="text-muted" style="padding:8px 0">-</p>'; return; }
+      el.innerHTML = list.map(inv => `
+        <div class="performer-row">
+          <div class="performer-name">${inv.ticker || inv.name}</div>
+          <div class="performer-perf ${colorFn(inv.perf)}">${inv.perf >= 0 ? '+' : ''}${Utils.formatPercent(inv.perf)}</div>
+        </div>`).join('');
     };
-
-    renderList(withPerf.slice(0, 3), 'port-top-performers');
-    renderList([...withPerf].reverse().slice(0, 3), 'port-bottom-performers');
+    render(best,  'port-best',  p => p >= 0 ? 'positive' : 'negative');
+    render(worst, 'port-worst', p => p >= 0 ? 'positive' : 'negative');
   },
 
   renderPositions() {
-    this._renderAccountPills();
-    const allInvestments = Storage.getInvestments();
-    const search     = (document.getElementById('pos-search')?.value || '').toLowerCase();
+    const investments = Storage.getInvestments();
+    this._renderAccountPills(investments);
+    this._renderPositionsTable(investments);
+  },
+
+  _renderAccountPills(investments) {
+    const container = document.getElementById('positions-account-pills');
+    if (!container) return;
+    const accounts = [...new Set(investments.map(i => i.account || 'autre'))];
+    const allBtn = `<button class="account-pill ${!this._currentAccount ? 'active' : ''}" onclick="Investments.setAccount(null)">Tous</button>`;
+    const pills  = accounts.map(acc => {
+      const label = Utils.INVESTMENT_ACCOUNTS[acc] || acc;
+      const color = Utils.ACCOUNT_COLORS[acc] || '#6b7280';
+      const active = this._currentAccount === acc ? 'active' : '';
+      return `<button class="account-pill ${active}" style="${active ? `background:${color};border-color:${color}` : `border-color:${color};color:${color}`}" onclick="Investments.setAccount('${acc}')">${label}</button>`;
+    });
+    container.innerHTML = allBtn + pills.join('');
+  },
+
+  _renderPositionsTable(investments) {
+    const filtered = this._currentAccount
+      ? investments.filter(i => (i.account || 'autre') === this._currentAccount)
+      : investments;
+
+    const tbody  = document.getElementById('positions-tbody');
+    const empty  = document.getElementById('positions-empty');
+    const search = (document.getElementById('pos-search')?.value || '').toLowerCase();
     const typeFilter = document.getElementById('pos-filter-type')?.value || '';
 
-    let list = this._currentAccount
-      ? allInvestments.filter(i => (i.account || 'autre') === this._currentAccount)
-      : allInvestments;
-
+    let list = filtered;
     if (search)     list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
     if (typeFilter) list = list.filter(i => i.type === typeFilter);
-    list.sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
 
-    const tbody = document.getElementById('positions-tbody');
-    const empty  = document.getElementById('positions-empty');
-    if (!tbody) return;
+    if (!list.length) { if (tbody) tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
+    if (empty) empty.classList.add('hidden');
 
-    if (!list.length) { tbody.innerHTML = ''; empty?.classList.remove('hidden'); return; }
-    empty?.classList.add('hidden');
+    const totalValue = filtered.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
 
     tbody.innerHTML = list.map(inv => {
       const value   = inv.quantity * inv.currentPrice;
       const cost    = inv.quantity * inv.buyPrice;
       const gain    = value - cost;
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
+      const pct     = totalValue > 0 ? (value / totalValue * 100) : 0;
       const cls     = gain >= 0 ? 'positive' : 'negative';
-      const barColor = gain >= 0 ? '#10b981' : '#ef4444';
-      const barW    = Math.min(100, Math.abs(gainPct) / 100 * 100);
-      const accountLabel = Utils.INVESTMENT_ACCOUNTS[inv.account || 'autre'] || 'Autre';
-      return `<tr class="pos-row">
-        <td>
-          <strong>${inv.name}</strong>
-          ${inv.ticker ? `<span class="pos-ticker">${inv.ticker}</span>` : ''}
-        </td>
+      const acColor = Utils.ACCOUNT_COLORS[inv.account || 'autre'] || '#6b7280';
+      const barW    = Math.min(Math.abs(gainPct) / 30 * 100, 100);
+      const barCol  = gain >= 0 ? '#10b981' : '#ef4444';
+      const accLabel = Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account || 'Autre';
+      return `<tr>
+        <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
-        <td><span class="badge badge-account">${accountLabel}</span></td>
-        <td class="text-right"><strong>${Utils.formatCurrency(value)}</strong></td>
-        <td class="text-right" style="color:var(--text-muted)">${Utils.formatCurrency(cost)}</td>
-        <td class="text-right ${cls}">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</td>
-        <td>
+        <td><span class="account-dot" style="background:${acColor}"></span>${accLabel}</td>
+        <td>${inv.quantity}</td>
+        <td>${Utils.formatCurrency(inv.buyPrice)}</td>
+        <td>${Utils.formatCurrency(inv.currentPrice)}</td>
+        <td><strong>${Utils.formatCurrency(value)}</strong><br><small class="text-muted">${pct.toFixed(1)}%</small></td>
+        <td class="${cls}">
           <div class="pos-perf-cell">
-            <div class="pos-perf-bar-wrap">
-              <div class="pos-perf-bar" style="width:${barW}%;background:${barColor}"></div>
-            </div>
-            <span class="${cls}" style="font-size:12px;font-weight:600">${Utils.formatPercent(gainPct)}</span>
+            <div class="pos-perf-bar-wrap"><div class="pos-perf-bar" style="width:${barW}%;background:${barCol}"></div></div>
+            <span>${Utils.formatPercent(gainPct)}</span>
           </div>
+          <small class="${cls}">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</small>
         </td>
         <td class="actions-cell">
           <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>

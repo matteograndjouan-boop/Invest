@@ -97,7 +97,17 @@ const Utils = {
   INVESTMENT_ACCOUNTS: {
     pea: 'PEA',
     assurance_vie: 'Assurance vie',
+    cto: 'CTO',
+    pee: 'PEE',
     autre: 'Autre',
+  },
+
+  ACCOUNT_COLORS: {
+    pea:            '#6366f1',
+    assurance_vie:  '#8b5cf6',
+    cto:            '#3b82f6',
+    pee:            '#06b6d4',
+    autre:          '#10b981',
   },
 
   EXPENSE_CATEGORIES: [
