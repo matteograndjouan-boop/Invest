@@ -866,9 +866,31 @@ body {
 .kpi-trend .trend-bad  { color: var(--danger);  font-weight: 500; }
 .kpi-trend .trend-neutral { color: var(--text-muted); }
 
+/* ---- Flux KPI badge icons ---- */
+.flux-kpi-card { position: relative; overflow: hidden; }
+.flux-kpi-card.kpi-card.success { background: linear-gradient(135deg, rgba(16,185,129,0.05) 0%, var(--surface) 55%); }
+.flux-kpi-card.kpi-card.danger  { background: linear-gradient(135deg, rgba(239,68,68,0.05) 0%, var(--surface) 55%); }
+.flux-kpi-card.kpi-card.primary { background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, var(--surface) 55%); }
+.flux-kpi-badge {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+.kpi-card.success .flux-kpi-badge { background: rgba(16,185,129,0.14); color: var(--success); }
+.kpi-card.danger  .flux-kpi-badge { background: rgba(239,68,68,0.14);  color: var(--danger); }
+.kpi-card.primary .flux-kpi-badge { background: rgba(99,102,241,0.14);  color: var(--primary); }
+.kpi-card:not(.success):not(.danger):not(.primary):not(.warning):not(.info) .flux-kpi-badge {
+  background: rgba(100,116,139,0.1); color: var(--text-muted);
+}
+
 /* ---- Flux Category Pills ---- */
-.flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+.flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; align-items: center; }
 .flux-pill {
+  display: inline-flex;
+  align-items: center;
   padding: 0.28rem 0.85rem;
   border-radius: 999px;
   border: 1.5px solid var(--border);
@@ -881,7 +903,14 @@ body {
   white-space: nowrap;
 }
 .flux-pill:hover { border-color: var(--primary); color: var(--primary); }
-.flux-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.flux-pill.active { color: #fff; }
+.flux-pill-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
 .flux-multi-btn {
   padding: 0.28rem 0.85rem;
   border-radius: 999px;
@@ -923,9 +952,17 @@ body {
 
 /* ---- Flux Summary Table ---- */
 .summary-bar-wrap { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
-.summary-bar { height: 6px; border-radius: 999px; background: var(--primary); opacity: 0.55; flex-shrink: 0; min-width: 2px; }
+.summary-bar { height: 7px; border-radius: 999px; background: var(--primary); opacity: 0.7; flex-shrink: 0; min-width: 2px; transition: width 0.3s ease; }
 .summary-row-hint { font-size: 0.7rem; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
 tr:hover .summary-row-hint { opacity: 1; }
+.summary-cat-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
@@ -1212,22 +1249,26 @@ tr:hover .summary-row-hint { opacity: 1; }
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card success">
+          <div class="kpi-card success flux-kpi-card">
+            <div class="flux-kpi-badge">↗</div>
             <div class="kpi-label">Revenus</div>
             <div class="kpi-value positive" id="flux-kpi-revenus">0 €</div>
             <div class="kpi-trend" id="flux-trend-revenus"></div>
           </div>
-          <div class="kpi-card danger">
+          <div class="kpi-card danger flux-kpi-card">
+            <div class="flux-kpi-badge">↙</div>
             <div class="kpi-label">Dépenses</div>
             <div class="kpi-value" id="flux-kpi-depenses">0 €</div>
             <div class="kpi-trend" id="flux-trend-depenses"></div>
           </div>
-          <div class="kpi-card" id="flux-kpi-solde-card">
+          <div class="kpi-card flux-kpi-card" id="flux-kpi-solde-card">
+            <div class="flux-kpi-badge">⊜</div>
             <div class="kpi-label">Solde net</div>
             <div class="kpi-value" id="flux-kpi-solde">0 €</div>
             <div class="kpi-trend" id="flux-trend-solde"></div>
           </div>
-          <div class="kpi-card primary">
+          <div class="kpi-card primary flux-kpi-card">
+            <div class="flux-kpi-badge">%</div>
             <div class="kpi-label">Taux d'épargne</div>
             <div class="kpi-value" id="flux-kpi-epargne">— %</div>
             <div class="kpi-trend" id="flux-trend-epargne"></div>
@@ -2984,6 +3025,12 @@ const Flux = {
     this._renderCatPills();
   },
 
+  _getCatColor(catName) {
+    const cats = Storage.getCategories().map(c => c.name);
+    const idx = cats.indexOf(catName);
+    return this._BASE_COLORS[(idx >= 0 ? idx : 0) % this._BASE_COLORS.length];
+  },
+
   _renderCatPills() {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
@@ -2992,10 +3039,18 @@ const Flux = {
     const multi = this._multiMode;
 
     const multiBtn = `<button class="flux-multi-btn${multi ? ' active' : ''}" onclick="Flux._toggleMultiMode()" title="Activer la sélection multiple">⊕ Multi</button>`;
-    const allBtn = `<button class="flux-pill${!active.size ? ' active' : ''}" onclick="Flux._clearFilters()">Toutes</button>`;
-    const catBtns = cats.map(c =>
-      `<button class="flux-pill${active.has(c) ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')">${c}</button>`
-    ).join('');
+    const allActive = !active.size;
+    const allBtn = `<button class="flux-pill${allActive ? ' active' : ''}" onclick="Flux._clearFilters()">
+      <span class="flux-pill-dot" style="background:${allActive ? '#fff' : 'var(--text-muted)'}"></span>Toutes
+    </button>`;
+    const catBtns = cats.map((c, i) => {
+      const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+      const isActive = active.has(c);
+      const style = isActive ? `style="background:${color};border-color:${color}"` : '';
+      return `<button class="flux-pill${isActive ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')" ${style}>
+        <span class="flux-pill-dot" style="background:${isActive ? '#fff' : color}"></span>${c}
+      </button>`;
+    }).join('');
     container.innerHTML = multiBtn + allBtn + catBtns;
   },
 
@@ -3288,15 +3343,13 @@ const Flux = {
       const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
       const clickAttr = !showSub ? `onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
+      const color = !showSub ? this._getCatColor(label) : null;
+      const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
+      const bar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div><span>${pct}%</span></div>`;
       return `<tr ${clickAttr}>
-        <td>${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
+        <td>${dot}${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
         <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-        <td class="text-right">
-          <div class="summary-bar-wrap">
-            <div class="summary-bar" style="width:${barW}%"></div>
-            <span>${pct}%</span>
-          </div>
-        </td>
+        <td class="text-right">${bar}</td>
         <td class="text-right" style="color:var(--text-muted)">${g.count}</td>
       </tr>`;
     }).join('');

@@ -10,6 +10,12 @@ const Flux = {
     this._renderCatPills();
   },
 
+  _getCatColor(catName) {
+    const cats = Storage.getCategories().map(c => c.name);
+    const idx = cats.indexOf(catName);
+    return this._BASE_COLORS[(idx >= 0 ? idx : 0) % this._BASE_COLORS.length];
+  },
+
   _renderCatPills() {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
@@ -18,10 +24,18 @@ const Flux = {
     const multi = this._multiMode;
 
     const multiBtn = `<button class="flux-multi-btn${multi ? ' active' : ''}" onclick="Flux._toggleMultiMode()" title="Activer la sélection multiple">⊕ Multi</button>`;
-    const allBtn = `<button class="flux-pill${!active.size ? ' active' : ''}" onclick="Flux._clearFilters()">Toutes</button>`;
-    const catBtns = cats.map(c =>
-      `<button class="flux-pill${active.has(c) ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')">${c}</button>`
-    ).join('');
+    const allActive = !active.size;
+    const allBtn = `<button class="flux-pill${allActive ? ' active' : ''}" onclick="Flux._clearFilters()">
+      <span class="flux-pill-dot" style="background:${allActive ? '#fff' : 'var(--text-muted)'}"></span>Toutes
+    </button>`;
+    const catBtns = cats.map((c, i) => {
+      const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+      const isActive = active.has(c);
+      const style = isActive ? `style="background:${color};border-color:${color}"` : '';
+      return `<button class="flux-pill${isActive ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')" ${style}>
+        <span class="flux-pill-dot" style="background:${isActive ? '#fff' : color}"></span>${c}
+      </button>`;
+    }).join('');
     container.innerHTML = multiBtn + allBtn + catBtns;
   },
 
@@ -314,15 +328,13 @@ const Flux = {
       const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
       const clickAttr = !showSub ? `onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
+      const color = !showSub ? this._getCatColor(label) : null;
+      const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
+      const bar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div><span>${pct}%</span></div>`;
       return `<tr ${clickAttr}>
-        <td>${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
+        <td>${dot}${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
         <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-        <td class="text-right">
-          <div class="summary-bar-wrap">
-            <div class="summary-bar" style="width:${barW}%"></div>
-            <span>${pct}%</span>
-          </div>
-        </td>
+        <td class="text-right">${bar}</td>
         <td class="text-right" style="color:var(--text-muted)">${g.count}</td>
       </tr>`;
     }).join('');
