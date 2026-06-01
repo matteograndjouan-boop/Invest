@@ -388,44 +388,67 @@ const Flux = {
 
     const rows = [];
     sorted.forEach(([label, g]) => {
-      const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
-      const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
-      const color = !showSub ? this._getCatColor(label) : null;
-      const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
-      const bar = `<div class="summary-bar-cell"><span class="summary-pct-text">${pct}%</span><div class="summary-bar-track"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div></div></div>`;
+      const pct    = total > 0 ? (g.amount / total * 100) : 0;
+      const pctStr = pct.toFixed(1);
+      const barW   = Math.min(100, pct).toFixed(1);
+      const color  = !showSub ? this._getCatColor(label) : '#6366f1';
+      const hex22  = color + '22';
 
       if (!showSub) {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
         const isExpanded = this._expandedCats.has(label);
         const expandBtn = hasSubs
-          ? `<button class="summary-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
-          : `<span class="summary-expand-placeholder"></span>`;
-        rows.push(`<tr class="summary-cat-row" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
-          <td>${expandBtn}${dot}<span class="summary-cat-name">${label}</span></td>
-          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-          <td>${bar}</td>
-          <td class="text-right summary-count">${g.count}</td>
+          ? `<button class="srow-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
+          : `<span class="srow-expand-ph"></span>`;
+
+        rows.push(`<tr class="srow" style="--rc:${color}" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
+          <td class="srow-td-label">
+            <div class="srow-label-inner">${expandBtn}<span class="srow-dot" style="background:${color}"></span><span class="srow-name">${label}</span></div>
+          </td>
+          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
+          <td class="srow-td-bar">
+            <div class="srow-bar-outer">
+              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+              <span class="srow-pct">${pctStr}%</span>
+            </div>
+          </td>
+          <td class="srow-td-count">${g.count}</td>
         </tr>`);
+
         if (isExpanded && hasSubs) {
           subEntries.forEach(([sub, sg]) => {
-            const subPct = g.amount > 0 ? (sg.amount / g.amount * 100).toFixed(1) : '0.0';
-            const subBarW = g.amount > 0 ? Math.min(100, sg.amount / g.amount * 100).toFixed(1) : 0;
-            const subBar = `<div class="summary-bar-cell"><span class="summary-pct-text">${subPct}%</span><div class="summary-bar-track"><div class="summary-bar" style="width:${subBarW}%;background:${color}88"></div></div></div>`;
-            rows.push(`<tr class="summary-sub-row">
-              <td class="summary-sub-label"><span class="summary-sub-indent">└</span>${sub}</td>
-              <td class="text-right negative" style="opacity:0.8">${Utils.formatCurrency(sg.amount)}</td>
-              <td>${subBar}</td>
-              <td class="text-right summary-count" style="opacity:0.7">${sg.count}</td>
+            const sPct  = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
+            const sPctS = sPct.toFixed(1);
+            const sBarW = Math.min(100, sPct).toFixed(1);
+            rows.push(`<tr class="srow srow-sub" style="--rc:${color}">
+              <td class="srow-td-label">
+                <div class="srow-sub-inner"><span class="srow-sub-tree">└</span><span class="srow-sub-name">${sub}</span></div>
+              </td>
+              <td class="srow-td-amount srow-sub-amount">${Utils.formatCurrency(sg.amount)}</td>
+              <td class="srow-td-bar">
+                <div class="srow-bar-outer">
+                  <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${sBarW}%;background:${color}88"></div></div>
+                  <span class="srow-pct">${sPctS}%</span>
+                </div>
+              </td>
+              <td class="srow-td-count srow-sub-count">${sg.count}</td>
             </tr>`);
           });
         }
       } else {
-        rows.push(`<tr>
-          <td><span class="summary-expand-placeholder"></span>${dot}${label}</td>
-          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-          <td>${bar}</td>
-          <td class="text-right summary-count">${g.count}</td>
+        rows.push(`<tr class="srow" style="--rc:${color}">
+          <td class="srow-td-label">
+            <div class="srow-label-inner"><span class="srow-expand-ph"></span><span class="srow-name">${label}</span></div>
+          </td>
+          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
+          <td class="srow-td-bar">
+            <div class="srow-bar-outer">
+              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+              <span class="srow-pct">${pctStr}%</span>
+            </div>
+          </td>
+          <td class="srow-td-count">${g.count}</td>
         </tr>`);
       }
     });

@@ -289,9 +289,20 @@
             <h3 id="flux-summary-title">Répartition par catégorie</h3>
           </div>
           <div class="table-wrapper">
-            <table class="data-table">
+            <table class="data-table summary-table">
+              <colgroup>
+                <col style="width:28%">
+                <col style="width:16%">
+                <col>
+                <col style="width:8%">
+              </colgroup>
               <thead id="flux-summary-thead">
-                <tr><th id="flux-summary-th-label">Catégorie</th><th class="text-right">Dépenses</th><th>Répartition</th><th class="text-right">Nb</th></tr>
+                <tr>
+                  <th id="flux-summary-th-label">Catégorie</th>
+                  <th class="text-right" style="padding-right:20px">Dépenses</th>
+                  <th>Répartition</th>
+                  <th class="text-right">Nb</th>
+                </tr>
               </thead>
               <tbody id="flux-summary-tbody"></tbody>
             </table>

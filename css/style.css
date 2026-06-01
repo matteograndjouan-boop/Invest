@@ -963,39 +963,51 @@ body {
 .donut-legend-val { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* ---- Flux Summary Table ---- */
-.summary-bar-cell { display: flex; align-items: center; gap: 8px; }
-.summary-pct-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 34px; text-align: right; flex-shrink: 0; }
-.summary-bar-track { width: 70px; height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
-.summary-bar { height: 7px; border-radius: 999px; background: var(--primary); min-width: 2px; transition: width 0.3s ease; }
-.summary-cat-dot {
-  display: inline-block;
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  margin-right: 8px;
-  vertical-align: middle;
-  flex-shrink: 0;
-}
-.summary-cat-name { vertical-align: middle; }
-.summary-count { color: var(--text-muted); font-size: 12px; }
+#flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
+#flux-summary-tbody .srow:last-child td { border-bottom: none; }
+#flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
+#flux-summary-tbody .srow:hover td { background: rgba(0,0,0,0.025); }
+#flux-summary-tbody .srow:hover { border-left-color: var(--rc, var(--primary)); }
 
-/* Summary table — expand/collapse */
-.summary-cat-row { cursor: pointer; }
-.summary-cat-row:hover td { background: var(--surface-alt); }
-.summary-expand-btn {
+/* Label column */
+.srow-td-label { width: 28%; }
+.srow-label-inner { display: flex; align-items: center; gap: 9px; }
+.srow-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.srow-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.srow-expand-ph { width: 22px; flex-shrink: 0; }
+.srow-expand-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 4px; border: none;
+  width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
   background: transparent; color: var(--text-muted);
-  font-size: 9px; cursor: pointer; margin-right: 6px;
-  transition: transform 0.18s, background 0.15s;
-  vertical-align: middle; flex-shrink: 0;
+  font-size: 8px; cursor: pointer; flex-shrink: 0;
+  transition: transform 0.18s, background 0.15s, border-color 0.15s;
 }
-.summary-expand-btn:hover { background: var(--border); color: var(--text); }
-.summary-expand-btn.open { transform: rotate(90deg); color: var(--primary); }
-.summary-expand-placeholder { display: inline-block; width: 24px; }
-.summary-sub-row td { background: var(--surface-alt); font-size: 13px; }
-.summary-sub-row:last-child td { border-bottom: 2px solid var(--border); }
-.summary-sub-label { padding-left: 10px !important; color: var(--text-muted); }
-.summary-sub-indent { margin-right: 6px; color: var(--border); font-size: 12px; }
+.srow-expand-btn:hover { background: var(--border); }
+.srow-expand-btn.open { transform: rotate(90deg); border-color: var(--rc, var(--primary)); color: var(--rc, var(--primary)); }
+
+/* Amount column */
+.srow-td-amount { text-align: right; font-size: 15px; font-weight: 700; color: #dc2626; white-space: nowrap; width: 16%; padding-right: 20px !important; }
+
+/* Bar column */
+.srow-td-bar { width: 48%; }
+.srow-bar-outer { display: flex; align-items: center; gap: 10px; }
+.srow-bar-track { flex: 1; height: 12px; border-radius: 6px; overflow: hidden; }
+.srow-bar-fill { height: 12px; border-radius: 6px; min-width: 3px; transition: width 0.4s ease; }
+.srow-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 44px; text-align: right; white-space: nowrap; flex-shrink: 0; }
+
+/* Count column */
+.srow-td-count { text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; width: 8%; }
+
+/* Sub-rows */
+#flux-summary-tbody .srow-sub { cursor: default; }
+#flux-summary-tbody .srow-sub td { padding: 9px 14px; background: var(--surface-alt); }
+#flux-summary-tbody .srow-sub:hover td { background: var(--surface-alt); }
+#flux-summary-tbody .srow-sub:last-child td { border-bottom: 2px solid var(--border); }
+.srow-sub-inner { display: flex; align-items: center; gap: 7px; padding-left: 31px; }
+.srow-sub-tree { color: var(--border); font-size: 14px; flex-shrink: 0; line-height: 1; }
+.srow-sub-name { font-size: 13px; color: var(--text-muted); }
+.srow-sub-amount { font-size: 13px !important; opacity: 0.75; }
+.srow-sub-count { opacity: 0.65; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
