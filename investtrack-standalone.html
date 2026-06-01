@@ -972,8 +972,6 @@ body {
 /* ---- Flux Summary Table ---- */
 .summary-bar-wrap { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
 .summary-bar { height: 7px; border-radius: 999px; background: var(--primary); opacity: 0.7; flex-shrink: 0; min-width: 2px; transition: width 0.3s ease; }
-.summary-row-hint { font-size: 0.7rem; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
-tr:hover .summary-row-hint { opacity: 1; }
 .summary-cat-dot {
   display: inline-block;
   width: 9px; height: 9px;
@@ -982,6 +980,27 @@ tr:hover .summary-row-hint { opacity: 1; }
   vertical-align: middle;
   flex-shrink: 0;
 }
+.summary-cat-name { vertical-align: middle; }
+.summary-count { color: var(--text-muted); font-size: 12px; }
+
+/* Summary table — expand/collapse */
+.summary-cat-row { cursor: pointer; }
+.summary-cat-row:hover td { background: var(--surface-alt); }
+.summary-expand-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 4px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-size: 9px; cursor: pointer; margin-right: 6px;
+  transition: transform 0.18s, background 0.15s;
+  vertical-align: middle; flex-shrink: 0;
+}
+.summary-expand-btn:hover { background: var(--border); color: var(--text); }
+.summary-expand-btn.open { transform: rotate(90deg); color: var(--primary); }
+.summary-expand-placeholder { display: inline-block; width: 24px; }
+.summary-sub-row td { background: var(--surface-alt); font-size: 13px; }
+.summary-sub-row:last-child td { border-bottom: 2px solid var(--border); }
+.summary-sub-label { padding-left: 10px !important; color: var(--text-muted); }
+.summary-sub-indent { margin-right: 6px; color: var(--border); font-size: 12px; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
@@ -2362,36 +2381,52 @@ const Charts = {
       datasets.push({
         label: 'Revenus',
         data: revData,
+        backgroundColor: 'rgba(16,185,129,0.75)',
         borderColor: '#10b981',
-        backgroundColor: 'rgba(16,185,129,0.08)',
-        borderWidth: 2,
-        pointRadius: 3,
-        fill: true,
-        tension: 0.35,
+        borderWidth: 1,
+        borderRadius: 4,
+        type: 'bar',
       });
     }
     datasets.push({
       label: activeCategory || 'Dépenses',
       data: depData,
+      backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
       borderColor: activeCategory ? '#6366f1' : '#ef4444',
-      backgroundColor: activeCategory ? 'rgba(99,102,241,0.08)' : 'rgba(239,68,68,0.08)',
-      borderWidth: 2,
-      pointRadius: 3,
-      fill: true,
-      tension: 0.35,
+      borderWidth: 1,
+      borderRadius: 4,
+      type: 'bar',
     });
+    if (revData) {
+      const solde = revData.map((r, i) => r - depData[i]);
+      datasets.push({
+        label: 'Solde net',
+        data: solde,
+        type: 'line',
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139,92,246,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: solde.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+        fill: false,
+        tension: 0.3,
+      });
+    }
 
     this.create('chart-flux-monthly', {
-      type: 'line',
+      type: 'bar',
       data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          tooltip: {
+            mode: 'index',
+            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` },
+          },
         },
         scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } },
+          y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.05)' } },
           x: { grid: { display: false } },
         },
       },
@@ -3311,6 +3346,7 @@ const Revenues = {
 const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
+  _expandedCats: new Set(),
   _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
@@ -3600,6 +3636,13 @@ const Flux = {
     Charts.fluxMonthly(labels, depData, catFilters.size ? null : revData, catLabel || null);
   },
 
+  toggleCatExpand(cat) {
+    if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
+    else this._expandedCats.add(cat);
+    const { start, end } = PeriodFilter.getDateRange();
+    this._renderSummaryTable(Storage.getExpenses(), start, end, this._activeFilters);
+  },
+
   _renderSummaryTable(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
@@ -3626,28 +3669,65 @@ const Flux = {
     const groups = {};
     expenses.forEach(e => {
       const key = showSub ? (e.subcategory || '—') : e.category;
-      if (!groups[key]) groups[key] = { amount: 0, count: 0 };
+      if (!groups[key]) groups[key] = { amount: 0, count: 0, subs: {} };
       groups[key].amount += e.amount;
       groups[key].count++;
+      if (!showSub) {
+        const sub = e.subcategory || '—';
+        if (!groups[key].subs[sub]) groups[key].subs[sub] = { amount: 0, count: 0 };
+        groups[key].subs[sub].amount += e.amount;
+        groups[key].subs[sub].count++;
+      }
     });
 
     const total = Object.values(groups).reduce((s, g) => s + g.amount, 0);
     const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
 
-    tbody.innerHTML = sorted.map(([label, g]) => {
+    const rows = [];
+    sorted.forEach(([label, g]) => {
       const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
-      const clickAttr = !showSub ? `onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
       const color = !showSub ? this._getCatColor(label) : null;
       const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
       const bar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div><span>${pct}%</span></div>`;
-      return `<tr ${clickAttr}>
-        <td>${dot}${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
-        <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-        <td class="text-right">${bar}</td>
-        <td class="text-right" style="color:var(--text-muted)">${g.count}</td>
-      </tr>`;
-    }).join('');
+
+      if (!showSub) {
+        const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
+        const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
+        const isExpanded = this._expandedCats.has(label);
+        const expandBtn = hasSubs
+          ? `<button class="summary-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
+          : `<span class="summary-expand-placeholder"></span>`;
+        rows.push(`<tr class="summary-cat-row" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
+          <td>${expandBtn}${dot}<span class="summary-cat-name">${label}</span></td>
+          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
+          <td class="text-right">${bar}</td>
+          <td class="text-right summary-count">${g.count}</td>
+        </tr>`);
+        if (isExpanded && hasSubs) {
+          subEntries.forEach(([sub, sg]) => {
+            const subPct = g.amount > 0 ? (sg.amount / g.amount * 100).toFixed(1) : '0.0';
+            const subBarW = g.amount > 0 ? Math.min(100, sg.amount / g.amount * 100).toFixed(1) : 0;
+            const subBar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${subBarW}%;background:${color}88"></div><span>${subPct}%</span></div>`;
+            rows.push(`<tr class="summary-sub-row">
+              <td class="summary-sub-label"><span class="summary-sub-indent">└</span>${sub}</td>
+              <td class="text-right negative" style="opacity:0.8">${Utils.formatCurrency(sg.amount)}</td>
+              <td class="text-right">${subBar}</td>
+              <td class="text-right summary-count" style="opacity:0.7">${sg.count}</td>
+            </tr>`);
+          });
+        }
+      } else {
+        rows.push(`<tr>
+          <td><span class="summary-expand-placeholder"></span>${dot}${label}</td>
+          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
+          <td class="text-right">${bar}</td>
+          <td class="text-right summary-count">${g.count}</td>
+        </tr>`);
+      }
+    });
+
+    tbody.innerHTML = rows.join('');
   },
 };
 

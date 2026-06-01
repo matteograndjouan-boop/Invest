@@ -290,36 +290,52 @@ const Charts = {
       datasets.push({
         label: 'Revenus',
         data: revData,
+        backgroundColor: 'rgba(16,185,129,0.75)',
         borderColor: '#10b981',
-        backgroundColor: 'rgba(16,185,129,0.08)',
-        borderWidth: 2,
-        pointRadius: 3,
-        fill: true,
-        tension: 0.35,
+        borderWidth: 1,
+        borderRadius: 4,
+        type: 'bar',
       });
     }
     datasets.push({
       label: activeCategory || 'Dépenses',
       data: depData,
+      backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
       borderColor: activeCategory ? '#6366f1' : '#ef4444',
-      backgroundColor: activeCategory ? 'rgba(99,102,241,0.08)' : 'rgba(239,68,68,0.08)',
-      borderWidth: 2,
-      pointRadius: 3,
-      fill: true,
-      tension: 0.35,
+      borderWidth: 1,
+      borderRadius: 4,
+      type: 'bar',
     });
+    if (revData) {
+      const solde = revData.map((r, i) => r - depData[i]);
+      datasets.push({
+        label: 'Solde net',
+        data: solde,
+        type: 'line',
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139,92,246,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: solde.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+        fill: false,
+        tension: 0.3,
+      });
+    }
 
     this.create('chart-flux-monthly', {
-      type: 'line',
+      type: 'bar',
       data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          tooltip: {
+            mode: 'index',
+            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` },
+          },
         },
         scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } },
+          y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.05)' } },
           x: { grid: { display: false } },
         },
       },

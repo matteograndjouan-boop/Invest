@@ -965,8 +965,6 @@ body {
 /* ---- Flux Summary Table ---- */
 .summary-bar-wrap { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
 .summary-bar { height: 7px; border-radius: 999px; background: var(--primary); opacity: 0.7; flex-shrink: 0; min-width: 2px; transition: width 0.3s ease; }
-.summary-row-hint { font-size: 0.7rem; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
-tr:hover .summary-row-hint { opacity: 1; }
 .summary-cat-dot {
   display: inline-block;
   width: 9px; height: 9px;
@@ -975,6 +973,27 @@ tr:hover .summary-row-hint { opacity: 1; }
   vertical-align: middle;
   flex-shrink: 0;
 }
+.summary-cat-name { vertical-align: middle; }
+.summary-count { color: var(--text-muted); font-size: 12px; }
+
+/* Summary table — expand/collapse */
+.summary-cat-row { cursor: pointer; }
+.summary-cat-row:hover td { background: var(--surface-alt); }
+.summary-expand-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 4px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-size: 9px; cursor: pointer; margin-right: 6px;
+  transition: transform 0.18s, background 0.15s;
+  vertical-align: middle; flex-shrink: 0;
+}
+.summary-expand-btn:hover { background: var(--border); color: var(--text); }
+.summary-expand-btn.open { transform: rotate(90deg); color: var(--primary); }
+.summary-expand-placeholder { display: inline-block; width: 24px; }
+.summary-sub-row td { background: var(--surface-alt); font-size: 13px; }
+.summary-sub-row:last-child td { border-bottom: 2px solid var(--border); }
+.summary-sub-label { padding-left: 10px !important; color: var(--text-muted); }
+.summary-sub-indent { margin-right: 6px; color: var(--border); font-size: 12px; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }

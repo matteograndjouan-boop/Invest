@@ -1,6 +1,7 @@
 const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
+  _expandedCats: new Set(),
   _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
@@ -290,6 +291,13 @@ const Flux = {
     Charts.fluxMonthly(labels, depData, catFilters.size ? null : revData, catLabel || null);
   },
 
+  toggleCatExpand(cat) {
+    if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
+    else this._expandedCats.add(cat);
+    const { start, end } = PeriodFilter.getDateRange();
+    this._renderSummaryTable(Storage.getExpenses(), start, end, this._activeFilters);
+  },
+
   _renderSummaryTable(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
@@ -316,27 +324,64 @@ const Flux = {
     const groups = {};
     expenses.forEach(e => {
       const key = showSub ? (e.subcategory || '—') : e.category;
-      if (!groups[key]) groups[key] = { amount: 0, count: 0 };
+      if (!groups[key]) groups[key] = { amount: 0, count: 0, subs: {} };
       groups[key].amount += e.amount;
       groups[key].count++;
+      if (!showSub) {
+        const sub = e.subcategory || '—';
+        if (!groups[key].subs[sub]) groups[key].subs[sub] = { amount: 0, count: 0 };
+        groups[key].subs[sub].amount += e.amount;
+        groups[key].subs[sub].count++;
+      }
     });
 
     const total = Object.values(groups).reduce((s, g) => s + g.amount, 0);
     const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
 
-    tbody.innerHTML = sorted.map(([label, g]) => {
+    const rows = [];
+    sorted.forEach(([label, g]) => {
       const pct = total > 0 ? (g.amount / total * 100).toFixed(1) : '0.0';
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
-      const clickAttr = !showSub ? `onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
       const color = !showSub ? this._getCatColor(label) : null;
       const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
       const bar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div><span>${pct}%</span></div>`;
-      return `<tr ${clickAttr}>
-        <td>${dot}${label}${!showSub ? ' <span class="summary-row-hint">→</span>' : ''}</td>
-        <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-        <td class="text-right">${bar}</td>
-        <td class="text-right" style="color:var(--text-muted)">${g.count}</td>
-      </tr>`;
-    }).join('');
+
+      if (!showSub) {
+        const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
+        const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
+        const isExpanded = this._expandedCats.has(label);
+        const expandBtn = hasSubs
+          ? `<button class="summary-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
+          : `<span class="summary-expand-placeholder"></span>`;
+        rows.push(`<tr class="summary-cat-row" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
+          <td>${expandBtn}${dot}<span class="summary-cat-name">${label}</span></td>
+          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
+          <td class="text-right">${bar}</td>
+          <td class="text-right summary-count">${g.count}</td>
+        </tr>`);
+        if (isExpanded && hasSubs) {
+          subEntries.forEach(([sub, sg]) => {
+            const subPct = g.amount > 0 ? (sg.amount / g.amount * 100).toFixed(1) : '0.0';
+            const subBarW = g.amount > 0 ? Math.min(100, sg.amount / g.amount * 100).toFixed(1) : 0;
+            const subBar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${subBarW}%;background:${color}88"></div><span>${subPct}%</span></div>`;
+            rows.push(`<tr class="summary-sub-row">
+              <td class="summary-sub-label"><span class="summary-sub-indent">└</span>${sub}</td>
+              <td class="text-right negative" style="opacity:0.8">${Utils.formatCurrency(sg.amount)}</td>
+              <td class="text-right">${subBar}</td>
+              <td class="text-right summary-count" style="opacity:0.7">${sg.count}</td>
+            </tr>`);
+          });
+        }
+      } else {
+        rows.push(`<tr>
+          <td><span class="summary-expand-placeholder"></span>${dot}${label}</td>
+          <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
+          <td class="text-right">${bar}</td>
+          <td class="text-right summary-count">${g.count}</td>
+        </tr>`);
+      }
+    });
+
+    tbody.innerHTML = rows.join('');
   },
 };
