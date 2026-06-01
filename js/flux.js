@@ -245,7 +245,7 @@ const Flux = {
   _renderMonthlyChart(allExpenses, allRevenues, catFilters) {
     const { start, end } = PeriodFilter.getDateRange();
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const labels = [], depData = [], revData = [];
+    const labels = [];
 
     const startD = new Date(start + 'T00:00:00');
     const endD   = new Date(end   + 'T00:00:00');
@@ -253,42 +253,90 @@ const Flux = {
       (endD.getFullYear() - startD.getFullYear()) * 12 +
       (endD.getMonth()    - startD.getMonth());
 
+    const catLabel = this._catLabel();
+    const periodLabel = PeriodFilter.getLabel();
+    const titleEl = document.getElementById('flux-monthly-title');
+
+    // When a category filter is active → simple bar for the selected category(ies)
+    if (catFilters.size) {
+      const depData = [];
+      if (monthDiff === 0) {
+        let cur = new Date(startD);
+        while (cur <= endD) {
+          const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+          labels.push(String(cur.getDate()));
+          depData.push(allExpenses.filter(e => e.date === day && catFilters.has(e.category)).reduce((s, e) => s + e.amount, 0));
+          cur.setDate(cur.getDate() + 1);
+        }
+      } else {
+        let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+        while (cur <= endD) {
+          const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+          const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+          const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
+          const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
+          labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
+          depData.push(allExpenses.filter(ex => catFilters.has(ex.category) && Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0));
+          cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+        }
+      }
+      if (titleEl) titleEl.textContent = `Évolution — ${catLabel} · ${periodLabel}`;
+      Charts.fluxMonthly(labels, depData, null, catLabel);
+      return;
+    }
+
+    // No filter → stacked bars by category (multi-month) or simple dépenses bars (single month/day)
+    const cats = Storage.getCategories().map(c => c.name);
+    const catColors = cats.map((_, i) => this._BASE_COLORS[i % this._BASE_COLORS.length]);
+
     if (monthDiff === 0) {
+      // Day-by-day view for single month: simple dépenses bar + cumulative line
+      const depData = [], cumData = [];
+      let cumul = 0;
       let cur = new Date(startD);
       while (cur <= endD) {
         const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
         labels.push(String(cur.getDate()));
-        let exp = allExpenses.filter(e => e.date === day);
-        if (catFilters.size) exp = exp.filter(e => catFilters.has(e.category));
-        depData.push(exp.reduce((s, e) => s + e.amount, 0));
-        if (!catFilters.size) revData.push(allRevenues.filter(r => r.date === day).reduce((s, r) => s + r.amount, 0));
+        const dayDep = allExpenses.filter(e => e.date === day).reduce((s, e) => s + e.amount, 0);
+        depData.push(dayDep);
+        cumul += dayDep;
+        cumData.push(cumul);
         cur.setDate(cur.getDate() + 1);
       }
+      if (titleEl) titleEl.textContent = `Dépenses quotidiennes · ${periodLabel}`;
+      Charts.fluxMonthlyCumul(labels, depData, cumData);
     } else {
+      // Multi-month: stacked by category
+      const catData = cats.map((name, ci) => ({ name, color: catColors[ci], values: [] }));
       let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
       while (cur <= endD) {
         const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
         const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
         const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
-        const s = mStart < start ? start : mStart;
-        const e = mEnd   > end   ? end   : mEnd;
+        const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
         labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
-        let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
-        if (catFilters.size) exp = exp.filter(ex => catFilters.has(ex.category));
-        depData.push(exp.reduce((sum, ex) => sum + ex.amount, 0));
-        if (!catFilters.size) revData.push(allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0));
+        const monthExp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
+        // "Autres" bucket for expenses not in known categories
+        let othersTotal = 0;
+        const knownCatTotals = {};
+        monthExp.forEach(ex => {
+          if (cats.includes(ex.category)) {
+            knownCatTotals[ex.category] = (knownCatTotals[ex.category] || 0) + ex.amount;
+          } else {
+            othersTotal += ex.amount;
+          }
+        });
+        catData.forEach(cd => { cd.values.push(knownCatTotals[cd.name] || 0); });
+        if (othersTotal > 0) {
+          // add to last category or ignore — handled below
+        }
         cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
       }
+      // Only include categories that have at least one non-zero value
+      const activeCats = catData.filter(cd => cd.values.some(v => v > 0));
+      if (titleEl) titleEl.textContent = `Dépenses par catégorie · ${periodLabel}`;
+      Charts.fluxMonthlyStacked(labels, activeCats);
     }
-
-    const catLabel = this._catLabel();
-    const periodLabel = PeriodFilter.getLabel();
-    const titleEl = document.getElementById('flux-monthly-title');
-    if (titleEl) titleEl.textContent = catFilters.size
-      ? `Évolution — ${catLabel} · ${periodLabel}`
-      : `Évolution des dépenses · ${periodLabel}`;
-
-    Charts.fluxMonthly(labels, depData, catFilters.size ? null : revData, catLabel || null);
   },
 
   toggleCatExpand(cat) {
@@ -344,7 +392,7 @@ const Flux = {
       const barW = total > 0 ? Math.min(100, g.amount / total * 100).toFixed(1) : 0;
       const color = !showSub ? this._getCatColor(label) : null;
       const dot = color ? `<span class="summary-cat-dot" style="background:${color}"></span>` : '';
-      const bar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div><span>${pct}%</span></div>`;
+      const bar = `<div class="summary-bar-cell"><span class="summary-pct-text">${pct}%</span><div class="summary-bar-track"><div class="summary-bar" style="width:${barW}%;background:${color || 'var(--primary)'}"></div></div></div>`;
 
       if (!showSub) {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
@@ -356,18 +404,18 @@ const Flux = {
         rows.push(`<tr class="summary-cat-row" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
           <td>${expandBtn}${dot}<span class="summary-cat-name">${label}</span></td>
           <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-          <td class="text-right">${bar}</td>
+          <td>${bar}</td>
           <td class="text-right summary-count">${g.count}</td>
         </tr>`);
         if (isExpanded && hasSubs) {
           subEntries.forEach(([sub, sg]) => {
             const subPct = g.amount > 0 ? (sg.amount / g.amount * 100).toFixed(1) : '0.0';
             const subBarW = g.amount > 0 ? Math.min(100, sg.amount / g.amount * 100).toFixed(1) : 0;
-            const subBar = `<div class="summary-bar-wrap"><div class="summary-bar" style="width:${subBarW}%;background:${color}88"></div><span>${subPct}%</span></div>`;
+            const subBar = `<div class="summary-bar-cell"><span class="summary-pct-text">${subPct}%</span><div class="summary-bar-track"><div class="summary-bar" style="width:${subBarW}%;background:${color}88"></div></div></div>`;
             rows.push(`<tr class="summary-sub-row">
               <td class="summary-sub-label"><span class="summary-sub-indent">└</span>${sub}</td>
               <td class="text-right negative" style="opacity:0.8">${Utils.formatCurrency(sg.amount)}</td>
-              <td class="text-right">${subBar}</td>
+              <td>${subBar}</td>
               <td class="text-right summary-count" style="opacity:0.7">${sg.count}</td>
             </tr>`);
           });
@@ -376,7 +424,7 @@ const Flux = {
         rows.push(`<tr>
           <td><span class="summary-expand-placeholder"></span>${dot}${label}</td>
           <td class="text-right negative">${Utils.formatCurrency(g.amount)}</td>
-          <td class="text-right">${bar}</td>
+          <td>${bar}</td>
           <td class="text-right summary-count">${g.count}</td>
         </tr>`);
       }

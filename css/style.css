@@ -963,8 +963,10 @@ body {
 .donut-legend-val { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* ---- Flux Summary Table ---- */
-.summary-bar-wrap { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
-.summary-bar { height: 7px; border-radius: 999px; background: var(--primary); opacity: 0.7; flex-shrink: 0; min-width: 2px; transition: width 0.3s ease; }
+.summary-bar-cell { display: flex; align-items: center; gap: 8px; }
+.summary-pct-text { font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 34px; text-align: right; flex-shrink: 0; }
+.summary-bar-track { width: 70px; height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+.summary-bar { height: 7px; border-radius: 999px; background: var(--primary); min-width: 2px; transition: width 0.3s ease; }
 .summary-cat-dot {
   display: inline-block;
   width: 9px; height: 9px;

@@ -284,43 +284,90 @@ const Charts = {
     });
   },
 
+  // Simple bar for filtered category view
   fluxMonthly(labels, depData, revData, activeCategory) {
-    const datasets = [];
-    if (revData) {
-      datasets.push({
-        label: 'Revenus',
-        data: revData,
-        backgroundColor: 'rgba(16,185,129,0.75)',
-        borderColor: '#10b981',
-        borderWidth: 1,
-        borderRadius: 4,
-        type: 'bar',
-      });
-    }
-    datasets.push({
-      label: activeCategory || 'Dépenses',
-      data: depData,
-      backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
-      borderColor: activeCategory ? '#6366f1' : '#ef4444',
-      borderWidth: 1,
-      borderRadius: 4,
+    this.create('chart-flux-monthly', {
       type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: activeCategory || 'Dépenses',
+          data: depData,
+          backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
+          borderColor: activeCategory ? '#6366f1' : '#ef4444',
+          borderWidth: 1,
+          borderRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { grid: { display: false } },
+        },
+      },
     });
-    if (revData) {
-      const solde = revData.map((r, i) => r - depData[i]);
-      datasets.push({
-        label: 'Solde net',
-        data: solde,
-        type: 'line',
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139,92,246,0.08)',
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: solde.map(v => v >= 0 ? '#10b981' : '#ef4444'),
-        fill: false,
-        tension: 0.3,
-      });
-    }
+  },
+
+  // Day-by-day bars + cumulative line for single-month view (no filter)
+  fluxMonthlyCumul(labels, depData, cumData) {
+    this.create('chart-flux-monthly', {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Dépenses du jour',
+            data: depData,
+            backgroundColor: 'rgba(239,68,68,0.55)',
+            borderColor: '#ef4444',
+            borderWidth: 1,
+            borderRadius: 3,
+            type: 'bar',
+          },
+          {
+            label: 'Cumul',
+            data: cumData,
+            type: 'line',
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.06)',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  },
+
+  // Multi-month stacked bars by category (no filter active)
+  fluxMonthlyStacked(labels, catData) {
+    if (!catData.length) { this.destroy('chart-flux-monthly'); return; }
+    const datasets = catData.map(cat => ({
+      label: cat.name,
+      data: cat.values,
+      backgroundColor: cat.color + 'cc',
+      borderColor: cat.color,
+      borderWidth: 1,
+      stack: 'expenses',
+    }));
 
     this.create('chart-flux-monthly', {
       type: 'bar',
@@ -328,15 +375,21 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!revData, position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
           tooltip: {
             mode: 'index',
-            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` },
+            callbacks: {
+              label: (ctx) => ctx.raw > 0 ? ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` : null,
+              footer: (items) => {
+                const total = items.reduce((s, i) => s + i.raw, 0);
+                return total > 0 ? `Total : ${Utils.formatCurrency(total)}` : '';
+              },
+            },
           },
         },
         scales: {
-          y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.05)' } },
-          x: { grid: { display: false } },
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
         },
       },
     });
