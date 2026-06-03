@@ -199,7 +199,7 @@ const Flux = {
     const titleEl = document.getElementById('flux-bar-title');
     if (titleEl) titleEl.textContent = catFilters.size ? `Dépenses — ${catLabel}` : 'Revenus vs Dépenses';
 
-    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth, catLabel || null);
+    Charts.fluxBar(labels, revByMonth, depByMonth, catFilters.size ? null : soldeByMonth, catLabel || null);
   },
 
   _renderDonut(expenses, catFilters) {

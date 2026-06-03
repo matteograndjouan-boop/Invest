@@ -240,7 +240,7 @@ const Charts = {
           legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
           tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: { beginAtZero: false, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        scales: { y: { beginAtZero: !!activeCategory, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
       },
     });
   },
