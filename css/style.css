@@ -940,27 +940,33 @@ body {
 
 /* ---- Flux Charts Row ---- */
 .flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start; }
-.flux-donut-wrap { display: flex; gap: 0.75rem; align-items: center; }
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 180px; }
+.flux-donut-wrap { display: flex; gap: 1rem; align-items: center; }
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 200px; }
 
 /* ---- Donut Custom Legend ---- */
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; overflow: hidden; }
-.donut-legend-item {
-  display: grid;
-  grid-template-columns: 10px 1fr auto auto;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.35rem;
-  border-radius: 6px;
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
+
+.dl-item {
+  padding: 7px 8px 6px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.14s, border-color 0.14s, opacity 0.14s;
 }
-.donut-legend-item:hover { background: var(--bg); }
-.donut-legend-item.active { background: var(--bg); }
-.donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.donut-legend-name { font-size: 0.78rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.donut-legend-pct { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
-.donut-legend-val { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+.dl-item:hover { background: var(--surface-alt); border-left-color: var(--ic); }
+.dl-item.active { background: var(--surface-alt); border-left-color: var(--ic); }
+.dl-item.dimmed { opacity: 0.38; }
+.dl-item.dimmed:hover { opacity: 1; }
+
+.dl-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.dl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dl-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-pct { font-size: 14px; font-weight: 800; color: var(--ic); white-space: nowrap; flex-shrink: 0; }
+
+.dl-bottom { display: flex; align-items: center; gap: 8px; padding-left: 16px; }
+.dl-bar-bg { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.dl-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
+.dl-val { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
 /* ---- Flux Summary Table ---- */
 #flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }

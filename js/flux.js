@@ -228,15 +228,23 @@ const Flux = {
     if (legend) {
       if (!entries.length) { legend.innerHTML = ''; return; }
       legend.innerHTML = entries.map(([label, value], i) => {
-        const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
+        const pct = total > 0 ? (value / total * 100) : 0;
+        const pctStr = pct.toFixed(1);
+        const barW = Math.min(100, pct).toFixed(1);
         const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
         const isActive = catFilters.size > 0 && catFilters.has(label);
+        const isFiltered = catFilters.size > 0 && !catFilters.has(label);
         const safeName = label.replace(/'/g, "\\'");
-        return `<div class="donut-legend-item${isActive ? ' active' : ''}" onclick="Flux.toggleFilter('${safeName}')">
-          <span class="donut-legend-dot" style="background:${color}"></span>
-          <span class="donut-legend-name">${label}</span>
-          <span class="donut-legend-pct">${pct}%</span>
-          <span class="donut-legend-val">${Utils.formatCurrency(value)}</span>
+        return `<div class="dl-item${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--ic:${color}" onclick="Flux.toggleFilter('${safeName}')">
+          <div class="dl-top">
+            <span class="dl-dot" style="background:${color}"></span>
+            <span class="dl-name">${label}</span>
+            <span class="dl-pct">${pctStr}%</span>
+          </div>
+          <div class="dl-bottom">
+            <div class="dl-bar-bg"><div class="dl-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+            <span class="dl-val">${Utils.formatCurrency(value)}</span>
+          </div>
         </div>`;
       }).join('');
     }
