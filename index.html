@@ -498,50 +498,29 @@
       <section class="section hidden" id="section-budget">
         <div class="section-header">
           <h1 id="budget-section-title">Budgets</h1>
-          <button class="btn-primary" id="add-budget-btn">+ Nouveau budget</button>
+          <div id="budget-header-actions" style="display:flex;gap:8px">
+            <button class="btn-secondary btn-sm hidden" id="budget-back-btn" onclick="Budget.showList()">← Retour</button>
+            <button class="btn-primary" id="add-budget-btn" onclick="Budget.openAddForm()">+ Nouveau budget</button>
+          </div>
         </div>
+
         <!-- List view -->
         <div id="budget-list-view">
-          <div id="budget-themes-grid" class="budget-themes-grid"></div>
+          <div id="budget-overview-bar" class="budget-overview-bar"></div>
+          <div id="budget-cards-grid" class="budget-cards-grid"></div>
           <div id="budget-empty" class="empty-state hidden">
-            <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
-          </div>
-          <div id="budget-summary-wrap" class="card mt-md hidden">
-            <h3 id="budget-summary-title" style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
-            <div class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr><th>Budget</th><th class="text-right">Prévu</th><th class="text-right">Réel</th><th class="text-right">Écart €</th><th class="text-right">Écart %</th><th>Statut</th></tr>
-                </thead>
-                <tbody id="budget-summary-tbody"></tbody>
-              </table>
-            </div>
+            <p>Aucun budget. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
         </div>
+
         <!-- Detail view -->
         <div id="budget-detail-view" class="hidden">
-          <div class="budget-detail-header">
-            <button class="btn-secondary btn-sm" onclick="Budget.showList()">← Retour</button>
-            <div id="budget-detail-message" class="budget-smart-message"></div>
-          </div>
-          <div class="kpi-grid-3" style="margin-top:1rem">
-            <div class="kpi-card primary"><div class="kpi-badge">◎</div><div class="kpi-label">Budget prévu</div><div class="kpi-value" id="budget-detail-planned">0 €</div></div>
-            <div class="kpi-card warning"><div class="kpi-badge">↙</div><div class="kpi-label">Dépensé</div><div class="kpi-value" id="budget-detail-spent">0 €</div></div>
-            <div class="kpi-card" id="budget-detail-remaining-card"><div class="kpi-badge">~</div><div class="kpi-label">Restant</div><div class="kpi-value" id="budget-detail-remaining">0 €</div></div>
-          </div>
-          <div class="card mt-md">
-            <div class="card-header-row">
-              <h3 id="budget-detail-subtitle">Dépenses par sous-catégorie</h3>
-              <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
-            </div>
-            <table class="data-table">
-              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th class="text-right">Réel</th><th class="text-right">Opérations</th></tr></thead>
-              <tbody id="budget-detail-tbody"></tbody>
-            </table>
-          </div>
+          <div id="budget-detail-hero" class="budget-detail-hero"></div>
+          <div id="budget-detail-message" class="budget-smart-message hidden" style="margin:1rem 0"></div>
+          <div id="budget-breakdown-wrap" class="card mt-md"></div>
           <div class="chart-card mt-md">
-            <h3>Historique (6 derniers mois)</h3>
-            <div class="chart-container" style="height:200px"><canvas id="chart-budget-history"></canvas></div>
+            <h3>Historique des dépenses (6 mois)</h3>
+            <div class="chart-container" style="height:220px"><canvas id="chart-budget-history"></canvas></div>
           </div>
         </div>
       </section>

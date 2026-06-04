@@ -429,23 +429,40 @@ const Charts = {
     });
   },
 
-  budgetHistory(labels, data, color) {
+  budgetHistory(labels, data, color, planned) {
+    const datasets = [{
+      label: 'Dépenses réelles',
+      data,
+      borderColor: color || '#6366f1',
+      backgroundColor: (color || '#6366f1') + '22',
+      fill: true, tension: 0.4, pointRadius: 5,
+      pointBackgroundColor: data.map(v => planned > 0 && v > planned ? '#ef4444' : color || '#6366f1'),
+    }];
+    if (planned > 0) {
+      datasets.push({
+        label: 'Budget prévu',
+        data: labels.map(() => planned),
+        borderColor: '#e5e7eb',
+        borderDash: [6, 4],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      });
+    }
     this.create('chart-budget-history', {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Dépenses réelles',
-          data,
-          borderColor: color || '#6366f1',
-          backgroundColor: (color || '#6366f1') + '22',
-          fill: true, tension: 0.4, pointRadius: 4,
-        }],
-      },
+      data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: {
+          legend: { display: !!planned, position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { grid: { display: false } },
+        },
       },
     });
   },

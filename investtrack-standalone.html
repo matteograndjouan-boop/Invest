@@ -1090,49 +1090,134 @@ body {
 .type-expense { background: rgba(239,68,68,0.12); color: #dc2626; }
 .type-revenue { background: rgba(16,185,129,0.12); color: #059669; }
 
-/* ---- Budget Subtitle & Period ---- */
-.budget-subtitle { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem; }
-.budget-card-period-label { font-size: 0.72rem; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.budget-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-.budget-card-warning { font-size: 0.775rem; color: var(--warning); font-weight: 600; }
+/* ───────────────────────────────────────────────────────────────────────────
+   BUDGET — redesign
+   ─────────────────────────────────────────────────────────────────────────── */
 
-/* ---- Category Checkboxes in Budget Form ---- */
-.cat-checkbox-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
-.cat-checkbox-opt { display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); font-size: 0.8125rem; cursor: pointer; transition: all 0.15s; }
-.cat-checkbox-opt:hover { border-color: var(--primary); color: var(--primary); }
-.cat-checkbox-opt input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
-
-/* ---- Budget Cards Improved ---- */
-.budget-card-amount { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
-.budget-card-planned { font-size: 0.775rem; color: var(--text-muted); }
-.budget-progress-wrap { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; }
-.budget-card-status { font-size: 0.775rem; color: var(--text-muted); }
-.budget-theme-card.over-budget { border: 1px solid var(--warning); box-shadow: inset 3px 0 0 var(--warning); }
-.budget-add-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  background: transparent;
-  min-height: 130px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+/* Overview bar */
+.budget-overview-bar {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 20px; margin-bottom: 1.25rem; box-shadow: var(--shadow);
 }
-.budget-add-card:hover { border-color: var(--primary); background: var(--primary-light); }
-.budget-add-icon { font-size: 1.75rem; color: var(--text-muted); line-height: 1; }
-.budget-add-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-.budget-add-card:hover .budget-add-icon,
-.budget-add-card:hover .budget-add-label { color: var(--primary); }
+.bov-items { display: flex; align-items: center; gap: 0; margin-bottom: 14px; }
+.bov-item { flex: 1; text-align: center; }
+.bov-val { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.bov-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 2px; }
+.bov-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+.bov-progress-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; position: relative; }
+.bov-progress-fill { height: 10px; border-radius: 5px; transition: width 0.4s; }
+.bov-progress-label { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: right; }
 
-/* ---- Budget Summary Table ---- */
-.status-badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
-.status-ok { background: rgba(16,185,129,0.12); color: #059669; }
-.status-warn { background: rgba(245,158,11,0.15); color: #d97706; }
-.status-over { background: rgba(239,68,68,0.12); color: #dc2626; }
-.budget-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35rem; }
+/* Cards grid */
+.budget-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 1rem; }
+
+/* Budget card */
+.bcard {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px; cursor: pointer; position: relative;
+  transition: box-shadow 0.15s, transform 0.12s;
+  display: flex; flex-direction: column; gap: 10px;
+  border-top: 4px solid var(--border);
+}
+.bcard:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+.bcard-over-budget { border-top-color: #ef4444 !important; }
+
+/* Ring */
+.bcard-ring {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.bcard-ring-inner {
+  border-radius: 50%; background: var(--surface);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text);
+}
+
+.bcard-top { display: flex; align-items: center; gap: 12px; }
+.bcard-meta { flex: 1; min-width: 0; }
+.bcard-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bcard-period { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.bcard-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.bcard:hover .bcard-actions { opacity: 1; }
+.bcard-btn {
+  width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
+}
+.bcard-btn:hover { background: var(--surface-alt); }
+.bcard-btn-del { color: #ef4444; font-size: 16px; font-weight: 700; }
+.bcard-btn-del:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+
+.bcard-amounts { display: flex; align-items: baseline; gap: 6px; }
+.bcard-spent { font-size: 26px; font-weight: 900; line-height: 1; }
+.bcard-planned-text { font-size: 13px; color: var(--text-muted); }
+
+.bcard-bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bcard-bar-fill { height: 8px; border-radius: 4px; transition: width 0.4s; }
+
+.bcard-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.bcard-remain { font-size: 12px; font-weight: 600; color: #10b981; }
+.bcard-remain-low { color: #f59e0b; }
+.bcard-over { font-size: 12px; font-weight: 700; color: #ef4444; }
+.bcard-trend { font-size: 11px; font-weight: 600; }
+.bcard-trend.positive { color: #10b981; }
+.bcard-trend.negative { color: #ef4444; }
+
+/* Ghost add card */
+.bcard-ghost {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border: 2px dashed var(--border); border-radius: 14px;
+  min-height: 150px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  color: var(--text-muted);
+}
+.bcard-ghost:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.bcard-ghost-icon { font-size: 28px; line-height: 1; }
+.bcard-ghost-label { font-size: 13px; font-weight: 600; }
+
+/* ─── Detail hero ─── */
+.budget-detail-hero {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  border-top: 4px solid var(--primary); padding: 20px; box-shadow: var(--shadow);
+  display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: start;
+}
+.bdetail-ring-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bdetail-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.bdetail-kpis { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
+.bdetail-kpi { flex: 1; min-width: 80px; padding: 0 16px; text-align: center; }
+.bdetail-kpi-val { font-size: 22px; font-weight: 900; line-height: 1.1; }
+.bdetail-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.bdetail-kpi-sep { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
+.bdetail-edit-planned { background: none; border: none; cursor: pointer; font-size: 12px; padding: 0; opacity: 0.5; transition: opacity 0.15s; }
+.bdetail-edit-planned:hover { opacity: 1; }
+.bdetail-progress-col { min-width: 180px; display: flex; flex-direction: column; gap: 4px; }
+.bdetail-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+.bdetail-bar-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.bdetail-bar-fill { height: 10px; border-radius: 5px; transition: width 0.4s; }
+
+/* Smart message */
+.budget-smart-message { padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; border-left: 3px solid; }
+.budget-msg-ok   { background: rgba(16,185,129,0.07); border-color: #10b981; color: var(--text); }
+.budget-msg-warn { background: rgba(239,68,68,0.07);  border-color: #ef4444;  color: var(--text); }
+
+/* Breakdown rows */
+.bbreak-row {
+  display: grid; grid-template-columns: 1fr 1fr 52px 100px 52px;
+  align-items: center; gap: 10px; padding: 10px 16px;
+  border-bottom: 1px solid var(--border); transition: background 0.12s;
+}
+.bbreak-row:last-child { border-bottom: none; }
+.bbreak-row:hover { background: var(--surface-alt); }
+.bbreak-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bbreak-bar-wrap { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bbreak-bar { height: 8px; border-radius: 4px; min-width: 3px; transition: width 0.35s; }
+.bbreak-pct { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; }
+.bbreak-amt { font-size: 13px; font-weight: 700; text-align: right; }
+.bbreak-count { font-size: 11px; color: var(--text-muted); text-align: right; }
+
+@media (max-width: 900px) {
+  .budget-detail-hero { grid-template-columns: 1fr; }
+  .bdetail-kpis { gap: 8px; }
+  .bbreak-row { grid-template-columns: 1fr 60px 80px 40px; }
+  .bbreak-bar-wrap { display: none; }
+}
 
 /* ---- Investment Portfolio ---- */
 .port-bottom-grid {
@@ -1780,50 +1865,29 @@ body {
       <section class="section hidden" id="section-budget">
         <div class="section-header">
           <h1 id="budget-section-title">Budgets</h1>
-          <button class="btn-primary" id="add-budget-btn">+ Nouveau budget</button>
+          <div id="budget-header-actions" style="display:flex;gap:8px">
+            <button class="btn-secondary btn-sm hidden" id="budget-back-btn" onclick="Budget.showList()">← Retour</button>
+            <button class="btn-primary" id="add-budget-btn" onclick="Budget.openAddForm()">+ Nouveau budget</button>
+          </div>
         </div>
+
         <!-- List view -->
         <div id="budget-list-view">
-          <div id="budget-themes-grid" class="budget-themes-grid"></div>
+          <div id="budget-overview-bar" class="budget-overview-bar"></div>
+          <div id="budget-cards-grid" class="budget-cards-grid"></div>
           <div id="budget-empty" class="empty-state hidden">
-            <p>Aucun budget défini. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
-          </div>
-          <div id="budget-summary-wrap" class="card mt-md hidden">
-            <h3 id="budget-summary-title" style="margin-bottom:0.75rem;font-size:0.9375rem">Récapitulatif</h3>
-            <div class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr><th>Budget</th><th class="text-right">Prévu</th><th class="text-right">Réel</th><th class="text-right">Écart €</th><th class="text-right">Écart %</th><th>Statut</th></tr>
-                </thead>
-                <tbody id="budget-summary-tbody"></tbody>
-              </table>
-            </div>
+            <p>Aucun budget. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>
         </div>
+
         <!-- Detail view -->
         <div id="budget-detail-view" class="hidden">
-          <div class="budget-detail-header">
-            <button class="btn-secondary btn-sm" onclick="Budget.showList()">← Retour</button>
-            <div id="budget-detail-message" class="budget-smart-message"></div>
-          </div>
-          <div class="kpi-grid-3" style="margin-top:1rem">
-            <div class="kpi-card primary"><div class="kpi-badge">◎</div><div class="kpi-label">Budget prévu</div><div class="kpi-value" id="budget-detail-planned">0 €</div></div>
-            <div class="kpi-card warning"><div class="kpi-badge">↙</div><div class="kpi-label">Dépensé</div><div class="kpi-value" id="budget-detail-spent">0 €</div></div>
-            <div class="kpi-card" id="budget-detail-remaining-card"><div class="kpi-badge">~</div><div class="kpi-label">Restant</div><div class="kpi-value" id="budget-detail-remaining">0 €</div></div>
-          </div>
-          <div class="card mt-md">
-            <div class="card-header-row">
-              <h3 id="budget-detail-subtitle">Dépenses par sous-catégorie</h3>
-              <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
-            </div>
-            <table class="data-table">
-              <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th class="text-right">Réel</th><th class="text-right">Opérations</th></tr></thead>
-              <tbody id="budget-detail-tbody"></tbody>
-            </table>
-          </div>
+          <div id="budget-detail-hero" class="budget-detail-hero"></div>
+          <div id="budget-detail-message" class="budget-smart-message hidden" style="margin:1rem 0"></div>
+          <div id="budget-breakdown-wrap" class="card mt-md"></div>
           <div class="chart-card mt-md">
-            <h3>Historique (6 derniers mois)</h3>
-            <div class="chart-container" style="height:200px"><canvas id="chart-budget-history"></canvas></div>
+            <h3>Historique des dépenses (6 mois)</h3>
+            <div class="chart-container" style="height:220px"><canvas id="chart-budget-history"></canvas></div>
           </div>
         </div>
       </section>
@@ -2616,23 +2680,40 @@ const Charts = {
     });
   },
 
-  budgetHistory(labels, data, color) {
+  budgetHistory(labels, data, color, planned) {
+    const datasets = [{
+      label: 'Dépenses réelles',
+      data,
+      borderColor: color || '#6366f1',
+      backgroundColor: (color || '#6366f1') + '22',
+      fill: true, tension: 0.4, pointRadius: 5,
+      pointBackgroundColor: data.map(v => planned > 0 && v > planned ? '#ef4444' : color || '#6366f1'),
+    }];
+    if (planned > 0) {
+      datasets.push({
+        label: 'Budget prévu',
+        data: labels.map(() => planned),
+        borderColor: '#e5e7eb',
+        borderDash: [6, 4],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      });
+    }
     this.create('chart-budget-history', {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Dépenses réelles',
-          data,
-          borderColor: color || '#6366f1',
-          backgroundColor: (color || '#6366f1') + '22',
-          fill: true, tension: 0.4, pointRadius: 4,
-        }],
-      },
+      data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: {
+          legend: { display: !!planned, position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { grid: { display: false } },
+        },
       },
     });
   },
@@ -4815,29 +4896,23 @@ const Budget = {
   },
 
   render() {
-    if (this._currentThemeId) {
-      this._renderDetail(this._currentThemeId);
-    } else {
-      this._renderList();
-    }
+    if (this._currentThemeId) this._renderDetail(this._currentThemeId);
+    else this._renderList();
   },
 
-  // Migrate old {items} format → new {categories, planned} format
   _migrate(theme) {
     if (!theme.categories) {
       if (theme.items && theme.items.length) {
         theme.categories = [...new Set(theme.items.map(i => i.category).filter(Boolean))];
         if (theme.planned == null) theme.planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
-      } else {
-        theme.categories = [];
-      }
+      } else { theme.categories = []; }
     }
     if (theme.planned == null) theme.planned = 0;
     return theme;
   },
 
   _computeSpent(theme, expenses) {
-    const cats = (theme.categories || []);
+    const cats = theme.categories || [];
     if (!cats.length) return 0;
     return expenses.filter(e => cats.includes(e.category)).reduce((s, e) => s + e.amount, 0);
   },
@@ -4854,138 +4929,158 @@ const Budget = {
 
   _prevMonthLabel() {
     const s = PeriodFilter.get();
-    if (s.type !== 'month') return 'période préc.';
+    if (s.type !== 'month') return 'péri. préc.';
     const [y, m] = s.month.split('-').map(Number);
     const d = new Date(y, m - 2, 1);
-    const MFR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    return MFR[d.getMonth()];
+    return ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][d.getMonth()];
   },
+
+  _ring(pct, color, size = 64) {
+    const clamped = Math.min(100, Math.max(0, pct));
+    const inner = size - 16;
+    return `<div class="bcard-ring" style="width:${size}px;height:${size}px;background:conic-gradient(${color} ${clamped}%,var(--border) ${clamped}% 100%)">
+      <div class="bcard-ring-inner" style="width:${inner}px;height:${inner}px;font-size:${size <= 64 ? 10 : 13}px">${Math.round(clamped)}%</div>
+    </div>`;
+  },
+
+  // ─── LIST VIEW ───────────────────────────────────────────────────────────
 
   _renderList() {
     this._currentThemeId = null;
-    document.getElementById('budget-list-view').classList.remove('hidden');
-    document.getElementById('budget-detail-view').classList.add('hidden');
-    document.getElementById('add-budget-btn').textContent = '+ Nouveau budget';
+    const listView   = document.getElementById('budget-list-view');
+    const detailView = document.getElementById('budget-detail-view');
+    const addBtn     = document.getElementById('add-budget-btn');
+    const backBtn    = document.getElementById('budget-back-btn');
+    if (listView)   listView.classList.remove('hidden');
+    if (detailView) detailView.classList.add('hidden');
+    if (addBtn)  { addBtn.textContent = '+ Nouveau budget'; addBtn.classList.remove('hidden'); }
+    if (backBtn)   backBtn.classList.add('hidden');
+    document.getElementById('budget-section-title').textContent = 'Budgets';
 
-    const rawThemes = Storage.getBudgetThemes();
-    const themes = rawThemes.map(t => this._migrate({ ...t }));
+    const rawThemes  = Storage.getBudgetThemes();
+    const themes     = rawThemes.map(t => this._migrate({ ...t }));
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
-    const expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
+    const expenses   = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
+    const prev       = this._prevPeriod();
+    const prevExp    = prev ? allExpenses.filter(e => Utils.getExpenseDate(e) >= prev.start && Utils.getExpenseDate(e) <= prev.end) : [];
+    const prevLabel  = this._prevMonthLabel();
 
-    const prev = this._prevPeriod();
-    const prevExpenses = prev ? allExpenses.filter(e => Utils.getExpenseDate(e) >= prev.start && Utils.getExpenseDate(e) <= prev.end) : [];
-
-    const empty = document.getElementById('budget-empty');
-    const grid = document.getElementById('budget-themes-grid');
-    const summaryWrap = document.getElementById('budget-summary-wrap');
-    const summaryTbody = document.getElementById('budget-summary-tbody');
-    const summaryTitle = document.getElementById('budget-summary-title');
-
-    // Update header
-    const titleEl = document.getElementById('budget-section-title');
-    if (titleEl) titleEl.textContent = `Budgets — ${PeriodFilter.getLabel()}`;
-
-    // Subtitle
-    let subtitleEl = document.getElementById('budget-subtitle');
-    if (!subtitleEl) {
-      subtitleEl = document.createElement('div');
-      subtitleEl.id = 'budget-subtitle';
-      subtitleEl.className = 'budget-subtitle';
-      const header = document.querySelector('#section-budget .section-header');
-      if (header) header.insertAdjacentElement('afterend', subtitleEl);
-    }
+    const overviewBar = document.getElementById('budget-overview-bar');
+    const cardsGrid   = document.getElementById('budget-cards-grid');
+    const emptyEl     = document.getElementById('budget-empty');
 
     if (!themes.length) {
-      grid.innerHTML = '';
-      empty.classList.remove('hidden');
-      if (summaryWrap) summaryWrap.classList.add('hidden');
-      subtitleEl.textContent = '';
+      if (overviewBar) overviewBar.innerHTML = '';
+      if (cardsGrid)   cardsGrid.innerHTML   = '';
+      if (emptyEl)     emptyEl.classList.remove('hidden');
       return;
     }
-    empty.classList.add('hidden');
+    if (emptyEl) emptyEl.classList.add('hidden');
 
-    const overBudgetCount = themes.filter(t => {
-      const spent = this._computeSpent(t, expenses);
-      return (t.planned || 0) > 0 && spent > t.planned;
+    // Overview KPIs
+    const totalPlanned = themes.reduce((s, t) => s + (t.planned || 0), 0);
+    const totalSpent   = themes.reduce((s, t) => s + this._computeSpent(t, expenses), 0);
+    const totalRemain  = totalPlanned - totalSpent;
+    const overCount    = themes.filter(t => {
+      const sp = this._computeSpent(t, expenses);
+      return (t.planned || 0) > 0 && sp > t.planned;
     }).length;
-    subtitleEl.textContent = `${themes.length} budget${themes.length > 1 ? 's' : ''} actif${themes.length > 1 ? 's' : ''}${overBudgetCount > 0 ? ` · ${overBudgetCount} dépassement${overBudgetCount > 1 ? 's' : ''}` : ''}`;
+    const globalPct = totalPlanned > 0 ? Math.min(100, totalSpent / totalPlanned * 100) : 0;
+    const globalColor = globalPct >= 100 ? '#ef4444' : globalPct >= 80 ? '#f59e0b' : '#10b981';
 
-    const periodLabel = PeriodFilter.getLabel();
-    const prevLabel = this._prevMonthLabel();
+    if (overviewBar) {
+      overviewBar.innerHTML = `
+        <div class="bov-items">
+          <div class="bov-item">
+            <div class="bov-val">${Utils.formatCurrency(totalPlanned)}</div>
+            <div class="bov-label">Budget total</div>
+          </div>
+          <div class="bov-divider"></div>
+          <div class="bov-item">
+            <div class="bov-val" style="color:#ef4444">${Utils.formatCurrency(totalSpent)}</div>
+            <div class="bov-label">Dépensé</div>
+          </div>
+          <div class="bov-divider"></div>
+          <div class="bov-item">
+            <div class="bov-val ${totalRemain >= 0 ? 'positive' : 'negative'}">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
+            <div class="bov-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
+          </div>
+          <div class="bov-divider"></div>
+          <div class="bov-item">
+            <div class="bov-val ${overCount > 0 ? 'negative' : 'positive'}">${overCount}</div>
+            <div class="bov-label">Dépassement${overCount !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        <div class="bov-progress-track">
+          <div class="bov-progress-fill" style="width:${globalPct.toFixed(1)}%;background:${globalColor}"></div>
+          <span class="bov-progress-label">${globalPct.toFixed(0)}% du budget global utilisé</span>
+        </div>`;
+    }
 
-    grid.innerHTML = themes.map(theme => {
-      const spent = this._computeSpent(theme, expenses);
-      const planned = theme.planned || 0;
-      const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
-      const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
-      const remaining = planned - spent;
-      const overBudget = planned > 0 && spent > planned;
+    // Cards
+    if (cardsGrid) {
+      cardsGrid.innerHTML = themes.map(theme => {
+        const spent   = this._computeSpent(theme, expenses);
+        const planned = theme.planned || 0;
+        const pct     = planned > 0 ? (spent / planned * 100) : 0;
+        const color   = theme.color || '#6366f1';
+        const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
+        const remaining   = planned - spent;
+        const overBudget  = planned > 0 && spent > planned;
 
-      let trendHtml = '';
-      if (prev) {
-        const prevSpent = this._computeSpent(theme, prevExpenses);
-        if (prevSpent > 0) {
-          const diffPct = Math.round((spent - prevSpent) / prevSpent * 100);
-          if (diffPct > 0) trendHtml = `<span class="trend-arrow negative">↑ +${diffPct}% vs ${prevLabel}</span>`;
-          else if (diffPct < 0) trendHtml = `<span class="trend-arrow positive">↓ ${diffPct}% vs ${prevLabel}</span>`;
-          else trendHtml = `<span class="trend-arrow" style="color:var(--text-muted)">= vs ${prevLabel}</span>`;
+        let trendHtml = '';
+        if (prev) {
+          const prevSpent = this._computeSpent(theme, prevExp);
+          if (prevSpent > 0) {
+            const dp = Math.round((spent - prevSpent) / prevSpent * 100);
+            trendHtml = dp > 0
+              ? `<span class="bcard-trend negative">↑ +${dp}% vs ${prevLabel}</span>`
+              : dp < 0
+              ? `<span class="bcard-trend positive">↓ ${dp}% vs ${prevLabel}</span>`
+              : `<span class="bcard-trend">= vs ${prevLabel}</span>`;
+          }
         }
-      }
 
-      const statusLine = overBudget
-        ? `<span class="budget-card-warning">⚠ Dépassement +${Utils.formatCurrency(spent - planned)}</span>`
-        : `<span class="budget-card-status">${planned > 0 ? `${pct.toFixed(0)}% · ${Utils.formatCurrency(Math.abs(remaining))} ${remaining >= 0 ? 'restants' : 'dépassé'}` : 'Aucun montant prévu'}</span>`;
+        const remainText = overBudget
+          ? `<span class="bcard-over">⚠ +${Utils.formatCurrency(spent - planned)}</span>`
+          : planned > 0
+          ? `<span class="bcard-remain ${remaining < planned * 0.2 ? 'bcard-remain-low' : ''}">${Utils.formatCurrency(remaining)} restants</span>`
+          : `<span style="color:var(--text-muted);font-size:11px">Aucun montant prévu</span>`;
 
-      return `
-        <div class="budget-theme-card${overBudget ? ' over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
-          <button class="budget-card-delete" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
-          <div class="budget-card-accent" style="background:${theme.color || '#6366f1'}"></div>
-          <div class="budget-card-body">
-            <div class="budget-card-top">
-              <span class="budget-card-name">${theme.name}</span>
-              <span class="budget-card-period-label">${periodLabel}</span>
+        return `<div class="bcard${overBudget ? ' bcard-over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
+          <div class="bcard-top">
+            ${this._ring(pct, color)}
+            <div class="bcard-meta">
+              <div class="bcard-name">${theme.name}</div>
+              <div class="bcard-period">${PeriodFilter.getLabel()}</div>
             </div>
-            <div class="budget-card-amount" style="color:${theme.color || '#6366f1'}">${Utils.formatCurrency(spent)}</div>
-            <div class="budget-card-planned">/ ${Utils.formatCurrency(planned)} prévu</div>
-            <div class="budget-progress-wrap">
-              <div class="budget-progress-bar" style="width:${pct.toFixed(1)}%;background:${statusColor}"></div>
+            <div class="bcard-actions">
+              <button class="bcard-btn" onclick="event.stopPropagation();Budget.openEditForm('${theme.id}')" title="Modifier">✏️</button>
+              <button class="bcard-btn bcard-btn-del" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
             </div>
-            <div class="budget-card-footer">${statusLine}${trendHtml}</div>
+          </div>
+          <div class="bcard-amounts">
+            <span class="bcard-spent" style="color:${overBudget ? '#ef4444' : color}">${Utils.formatCurrency(spent)}</span>
+            <span class="bcard-planned-text">/ ${Utils.formatCurrency(planned)}</span>
+          </div>
+          <div class="bcard-bar-track">
+            <div class="bcard-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${statusColor}"></div>
+          </div>
+          <div class="bcard-footer">
+            ${remainText}
+            ${trendHtml}
           </div>
         </div>`;
-    }).join('') + `
-      <div class="budget-add-card" onclick="Budget.openAddForm()">
-        <div class="budget-add-icon">+</div>
-        <div class="budget-add-label">Nouveau budget</div>
-      </div>`;
-
-    // Summary table
-    if (summaryWrap && summaryTbody) {
-      summaryWrap.classList.remove('hidden');
-      if (summaryTitle) summaryTitle.textContent = `Récap ${periodLabel} — Réel vs Prévu`;
-      summaryTbody.innerHTML = themes.map(theme => {
-        const spent = this._computeSpent(theme, expenses);
-        const planned = theme.planned || 0;
-        const ecart = planned - spent;
-        const ecartPct = planned > 0 ? (ecart / planned * 100) : 0;
-        const pct = planned > 0 ? Math.min(100, spent / planned * 100) : 0;
-        const statusBadge = pct >= 100
-          ? '<span class="status-badge status-over">Dépassé</span>'
-          : pct >= 80
-          ? '<span class="status-badge status-warn">Attention</span>'
-          : '<span class="status-badge status-ok">OK</span>';
-        return `<tr onclick="Budget.showDetail('${theme.id}')" style="cursor:pointer">
-          <td><span class="budget-dot" style="background:${theme.color || '#6366f1'}"></span>${theme.name}</td>
-          <td class="text-right">${Utils.formatCurrency(planned)}</td>
-          <td class="text-right">${Utils.formatCurrency(spent)}</td>
-          <td class="text-right ${ecart >= 0 ? 'positive' : 'negative'}">${ecart >= 0 ? '+' : ''}${Utils.formatCurrency(ecart)}</td>
-          <td class="text-right ${ecartPct >= 0 ? 'positive' : 'negative'}">${ecartPct >= 0 ? '+' : ''}${ecartPct.toFixed(1)}%</td>
-          <td>${statusBadge}</td>
-        </tr>`;
-      }).join('');
+      }).join('') + `
+        <div class="bcard-ghost" onclick="Budget.openAddForm()">
+          <div class="bcard-ghost-icon">+</div>
+          <div class="bcard-ghost-label">Nouveau budget</div>
+        </div>`;
     }
   },
+
+  // ─── DETAIL VIEW ─────────────────────────────────────────────────────────
 
   showDetail(id) {
     this._currentThemeId = id;
@@ -5001,68 +5096,102 @@ const Budget = {
     const raw = Storage.getBudgetThemes().find(t => t.id === id);
     if (!raw) { this.showList(); return; }
     const theme = this._migrate({ ...raw });
+    const color = theme.color || '#6366f1';
 
     document.getElementById('budget-list-view').classList.add('hidden');
     document.getElementById('budget-detail-view').classList.remove('hidden');
     document.getElementById('budget-section-title').textContent = theme.name;
-    document.getElementById('add-budget-btn').textContent = '✏️ Modifier le prévu';
+    const addBtn  = document.getElementById('add-budget-btn');
+    const backBtn = document.getElementById('budget-back-btn');
+    if (addBtn)  { addBtn.textContent = '✏️ Modifier'; addBtn.classList.remove('hidden'); }
+    if (backBtn)   backBtn.classList.remove('hidden');
 
     const { start, end } = PeriodFilter.getDateRange();
-    const allExpenses = Storage.getExpenses();
+    const allExpenses    = Storage.getExpenses();
     const periodExpenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
+    const spent   = this._computeSpent(theme, periodExpenses);
+    const planned = theme.planned || 0;
+    const remain  = planned - spent;
+    const pct     = planned > 0 ? spent / planned * 100 : 0;
+    const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
 
-    const totalSpent = this._computeSpent(theme, periodExpenses);
-    const totalPlanned = theme.planned || 0;
-    const remaining = totalPlanned - totalSpent;
+    // Hero section
+    const heroEl = document.getElementById('budget-detail-hero');
+    if (heroEl) {
+      const daysInPeriod = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
+      const daysPassed   = Math.min(daysInPeriod, Math.ceil((new Date() - new Date(start)) / 86400000) + 1);
+      const daysLeft     = Math.max(0, daysInPeriod - daysPassed);
+      const timePct      = daysInPeriod > 0 ? (daysPassed / daysInPeriod * 100).toFixed(1) : 0;
+      const dailyRate    = daysPassed > 0 ? (spent / daysPassed) : 0;
+      const projected    = dailyRate * daysInPeriod;
 
-    document.getElementById('budget-detail-planned').textContent = Utils.formatCurrency(totalPlanned);
-    document.getElementById('budget-detail-spent').textContent = Utils.formatCurrency(totalSpent);
-    const remEl = document.getElementById('budget-detail-remaining');
-    remEl.textContent = Utils.formatCurrency(Math.abs(remaining));
-    remEl.className = 'kpi-value ' + (remaining >= 0 ? 'positive' : 'negative');
-    document.getElementById('budget-detail-remaining-card').className = 'kpi-card ' + (remaining >= 0 ? 'success' : 'danger');
-
-    const daysInPeriod = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
-    const daysPassed = Math.min(daysInPeriod, Math.ceil((new Date() - new Date(start)) / 86400000) + 1);
-    const daysLeft = Math.max(0, daysInPeriod - daysPassed);
-    let msg = `Tu as dépensé <strong>${Utils.formatCurrency(totalSpent)}</strong> sur <strong>${Utils.formatCurrency(totalPlanned)}</strong> prévu.`;
-    if (remaining >= 0) msg += ` Il te reste <strong>${Utils.formatCurrency(remaining)}</strong>` + (daysLeft > 0 ? ` pour ${daysLeft} jour(s).` : '.');
-    else msg += ` Dépassement de <strong class="negative">${Utils.formatCurrency(-remaining)}</strong>.`;
-    document.getElementById('budget-detail-message').innerHTML = msg;
-
-    // Breakdown table — from real expense data
-    const subtitleEl = document.getElementById('budget-detail-subtitle');
-    if (subtitleEl) subtitleEl.textContent = `Dépenses par sous-catégorie · ${PeriodFilter.getLabel()}`;
-
-    const cats = theme.categories || [];
-    const catExpenses = periodExpenses.filter(e => cats.includes(e.category));
-
-    const groups = {};
-    catExpenses.forEach(e => {
-      const key = `${e.category}|||${e.subcategory || ''}`;
-      if (!groups[key]) groups[key] = { category: e.category, subcategory: e.subcategory || '', amount: 0, count: 0 };
-      groups[key].amount += e.amount;
-      groups[key].count++;
-    });
-
-    const tbody = document.getElementById('budget-detail-tbody');
-    const rows = Object.values(groups).sort((a, b) => b.amount - a.amount);
-
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Aucune dépense dans ce budget sur ${PeriodFilter.getLabel()}.</td></tr>`;
-    } else {
-      tbody.innerHTML = rows.map(g => `<tr>
-        <td>${g.category}</td>
-        <td>${g.subcategory || '—'}</td>
-        <td class="text-right">${Utils.formatCurrency(g.amount)}</td>
-        <td class="text-right" style="color:var(--text-muted)">${g.count} op.</td>
-      </tr>`).join('');
+      heroEl.style.borderTopColor = color;
+      heroEl.innerHTML = `
+        <div class="bdetail-ring-col">
+          ${this._ring(pct, color, 90)}
+          <div class="bdetail-status-dot" style="background:${statusColor}"></div>
+        </div>
+        <div class="bdetail-kpis">
+          <div class="bdetail-kpi">
+            <div class="bdetail-kpi-val" style="color:${color}">${Utils.formatCurrency(spent)}</div>
+            <div class="bdetail-kpi-label">Dépensé</div>
+          </div>
+          <div class="bdetail-kpi-sep"></div>
+          <div class="bdetail-kpi">
+            <div class="bdetail-kpi-val">${Utils.formatCurrency(planned)}</div>
+            <div class="bdetail-kpi-label">Prévu <button class="bdetail-edit-planned" onclick="Budget.openEditForm('${id}')" title="Modifier le prévu">✏️</button></div>
+          </div>
+          <div class="bdetail-kpi-sep"></div>
+          <div class="bdetail-kpi">
+            <div class="bdetail-kpi-val ${remain >= 0 ? 'positive' : 'negative'}">${remain >= 0 ? '' : '-'}${Utils.formatCurrency(Math.abs(remain))}</div>
+            <div class="bdetail-kpi-label">${remain >= 0 ? 'Restant' : 'Dépassement'}</div>
+          </div>
+          <div class="bdetail-kpi-sep"></div>
+          <div class="bdetail-kpi">
+            <div class="bdetail-kpi-val">${Utils.formatCurrency(dailyRate)}<span style="font-size:11px;font-weight:500">/j</span></div>
+            <div class="bdetail-kpi-label">Rythme · <span style="color:${projected > planned && planned > 0 ? '#ef4444' : '#10b981'}">${Utils.formatCurrency(projected)} projeté</span></div>
+          </div>
+        </div>
+        <div class="bdetail-progress-col">
+          <div class="bdetail-bar-label"><span>Budget utilisé</span><span style="font-weight:700;color:${statusColor}">${Math.min(pct, 100).toFixed(0)}%</span></div>
+          <div class="bdetail-bar-track"><div class="bdetail-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${statusColor}"></div></div>
+          <div class="bdetail-bar-label"><span style="color:var(--text-muted);font-size:11px">Temps écoulé</span><span style="font-size:11px;color:var(--text-muted)">${timePct}% · ${daysLeft}j restants</span></div>
+          <div class="bdetail-bar-track" style="margin-top:3px"><div class="bdetail-bar-fill" style="width:${timePct}%;background:var(--primary);opacity:0.4"></div></div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn-secondary btn-sm" onclick="Budget.suggest()">💡 Suggérer (moy. 3 mois)</button>
+          </div>
+        </div>`;
     }
 
+    // Smart message
+    const msgEl = document.getElementById('budget-detail-message');
+    if (msgEl) {
+      const daysInPeriod = Math.ceil((new Date(end) - new Date(start)) / 86400000) + 1;
+      const daysLeft = Math.max(0, daysInPeriod - Math.min(daysInPeriod, Math.ceil((new Date() - new Date(start)) / 86400000) + 1));
+      if (remain < 0) {
+        msgEl.innerHTML = `⚠️ Dépassement de <strong class="negative">${Utils.formatCurrency(-remain)}</strong> sur ce budget.`;
+        msgEl.className = 'budget-smart-message budget-msg-warn';
+        msgEl.classList.remove('hidden');
+      } else if (pct >= 80) {
+        msgEl.innerHTML = `⚡ Il te reste <strong>${Utils.formatCurrency(remain)}</strong> pour ${daysLeft} jour(s). Attention au dépassement.`;
+        msgEl.className = 'budget-smart-message budget-msg-warn';
+        msgEl.classList.remove('hidden');
+      } else if (planned > 0) {
+        msgEl.innerHTML = `✅ <strong>${Utils.formatCurrency(remain)}</strong> disponibles sur ${daysLeft > 0 ? daysLeft + ' jour(s) restants' : 'la période'}.`;
+        msgEl.className = 'budget-smart-message budget-msg-ok';
+        msgEl.classList.remove('hidden');
+      } else {
+        msgEl.classList.add('hidden');
+      }
+    }
+
+    // Breakdown
+    this._renderBreakdown(id, theme, periodExpenses);
+
     // History chart
-    const now = new Date();
-    const histLabels = [], histData = [];
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const histLabels = [], histData = [];
+    const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -5071,81 +5200,112 @@ const Budget = {
       histLabels.push(MONTHS_FR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
       histData.push(this._computeSpent(theme, mExp));
     }
-    Charts.budgetHistory(histLabels, histData, theme.color || '#6366f1');
+    Charts.budgetHistory(histLabels, histData, color, planned);
   },
+
+  _renderBreakdown(id, theme, periodExpenses) {
+    const wrap = document.getElementById('budget-breakdown-wrap');
+    if (!wrap) return;
+    const cats       = theme.categories || [];
+    const catExpenses = periodExpenses.filter(e => cats.includes(e.category));
+    const color      = theme.color || '#6366f1';
+
+    const groups = {};
+    catExpenses.forEach(e => {
+      const key = e.subcategory || '—';
+      if (!groups[key]) groups[key] = { amount: 0, count: 0 };
+      groups[key].amount += e.amount;
+      groups[key].count++;
+    });
+    const total  = catExpenses.reduce((s, e) => s + e.amount, 0);
+    const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
+
+    if (!sorted.length) {
+      wrap.innerHTML = `<div style="padding:20px 16px;color:var(--text-muted);font-size:14px;text-align:center">Aucune dépense sur cette période.</div>`;
+      return;
+    }
+
+    const rows = sorted.map(([sub, g]) => {
+      const pct  = total > 0 ? (g.amount / total * 100) : 0;
+      const barW = Math.min(100, pct).toFixed(1);
+      return `<div class="bbreak-row">
+        <div class="bbreak-name">${sub}</div>
+        <div class="bbreak-bar-wrap">
+          <div class="bbreak-bar" style="width:${barW}%;background:${color}cc"></div>
+        </div>
+        <div class="bbreak-pct">${pct.toFixed(1)}%</div>
+        <div class="bbreak-amt">${Utils.formatCurrency(g.amount)}</div>
+        <div class="bbreak-count">${g.count} op.</div>
+      </div>`;
+    });
+
+    wrap.innerHTML = `
+      <div class="card-header-row" style="padding:14px 16px 8px">
+        <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">Détail des dépenses · ${PeriodFilter.getLabel()}</h3>
+      </div>
+      ${rows.join('')}`;
+  },
+
+  // ─── FORMS ───────────────────────────────────────────────────────────────
 
   openAddForm() {
     if (this._currentThemeId) {
       const raw = Storage.getBudgetThemes().find(t => t.id === this._currentThemeId);
-      if (raw) Modal.open('Modifier le budget prévu', this._editPlannedForm(this._migrate({ ...raw })));
+      if (raw) Modal.open('Modifier le budget', this._editThemeForm(this._migrate({ ...raw })));
     } else {
-      Modal.open('Nouveau budget', this._themeForm());
+      Modal.open('Nouveau budget', this._createForm());
     }
   },
 
-  _themeForm() {
-    const colorOptions = this._THEME_COLORS.map((c, i) =>
-      `<label class="color-opt"><input type="radio" name="color" value="${c}" ${i === 0 ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
+  openEditForm(id) {
+    const raw = Storage.getBudgetThemes().find(t => t.id === id);
+    if (raw) Modal.open('Modifier le budget', this._editThemeForm(this._migrate({ ...raw })));
+  },
+
+  _colorPicker(selected) {
+    return this._THEME_COLORS.map(c =>
+      `<label class="color-opt"><input type="radio" name="color" value="${c}" ${selected === c ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
     ).join('');
-    // Only offer categories that don't already have a budget
+  },
+
+  _createForm() {
     const existing = new Set(Storage.getBudgetThemes().map(t => {
       const m = this._migrate({ ...t });
       return (m.categories || [])[0];
     }).filter(Boolean));
     const cats = Storage.getCategories().filter(c => !existing.has(c.name));
-    if (!cats.length) {
-      return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
-        Toutes tes catégories ont déjà un budget.<br>Crée d'abord de nouvelles catégories dans Données > Catégories.
-        <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div>
-      </div>`;
-    }
-    const catOptions = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    return `
-      <form onsubmit="Budget.saveTheme(event)">
-        <div class="form-grid">
-          <div class="form-group form-full">
-            <label>Catégorie *</label>
-            <select name="category" required>${catOptions}</select>
-          </div>
-          <div class="form-group form-full">
-            <label>Montant prévu (€) *</label>
-            <input name="planned" type="number" step="1" min="0" required placeholder="ex: 400">
-          </div>
-          <div class="form-group form-full">
-            <label>Couleur</label>
-            <div class="color-picker-row">${colorOptions}</div>
-          </div>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn-primary">Créer</button>
-        </div>
-      </form>`;
+    if (!cats.length) return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
+      Toutes tes catégories ont déjà un budget.<br><small>Crée d'abord de nouvelles catégories dans Données › Catégories.</small>
+      <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div></div>`;
+    return `<form onsubmit="Budget.saveTheme(event)">
+      <div class="form-grid">
+        <div class="form-group form-full"><label>Catégorie *</label>
+          <select name="category" required>${cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+        <div class="form-group form-full"><label>Montant prévu (€) *</label>
+          <input name="planned" type="number" step="1" min="0" required placeholder="ex: 400"></div>
+        <div class="form-group form-full"><label>Couleur</label>
+          <div class="color-picker-row">${this._colorPicker(this._THEME_COLORS[0])}</div></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+        <button type="submit" class="btn-primary">Créer</button>
+      </div></form>`;
   },
 
-  _editPlannedForm(theme) {
-    return `
-      <form onsubmit="Budget.savePlanned(event, '${theme.id}')">
-        <div class="form-group">
-          <label>Montant prévu (€)</label>
-          <input name="planned" type="number" step="1" min="0" value="${theme.planned || 0}" required>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button type="submit" class="btn-primary">Enregistrer</button>
-        </div>
-      </form>`;
-  },
-
-  savePlanned(event, themeId) {
-    event.preventDefault();
-    const themes = Storage.getBudgetThemes();
-    const theme = themes.find(t => t.id === themeId);
-    if (!theme) return;
-    theme.planned = parseFloat(new FormData(event.target).get('planned')) || 0;
-    Storage.saveBudgetThemes(themes);
-    Modal.close();
-    this._renderDetail(themeId);
+  _editThemeForm(theme) {
+    return `<form onsubmit="Budget.saveThemeEdit(event, '${theme.id}')">
+      <div class="form-grid">
+        <div class="form-group form-full"><label>Catégorie</label>
+          <input type="text" value="${theme.name}" disabled style="opacity:0.6"></div>
+        <div class="form-group form-full"><label>Montant prévu (€) *</label>
+          <input name="planned" type="number" step="1" min="0" value="${theme.planned || 0}" required></div>
+        <div class="form-group form-full"><label>Couleur</label>
+          <div class="color-picker-row">${this._colorPicker(theme.color || this._THEME_COLORS[0])}</div></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </div></form>`;
   },
 
   saveTheme(event) {
@@ -5153,22 +5313,33 @@ const Budget = {
     const fd = new FormData(event.target);
     const category = fd.get('category');
     const themes = Storage.getBudgetThemes();
-    themes.push({
-      id: 'theme_' + Date.now(),
-      name: category,
-      color: fd.get('color'),
-      planned: parseFloat(fd.get('planned')) || 0,
-      categories: [category],
-      items: [],
-    });
+    themes.push({ id: 'theme_' + Date.now(), name: category, color: fd.get('color'), planned: parseFloat(fd.get('planned')) || 0, categories: [category], items: [] });
     Storage.saveBudgetThemes(themes);
     Modal.close();
     this._renderList();
   },
 
+  saveThemeEdit(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const themes = Storage.getBudgetThemes();
+    const theme  = themes.find(t => t.id === id);
+    if (!theme) return;
+    theme.planned = parseFloat(fd.get('planned')) || 0;
+    theme.color   = fd.get('color') || theme.color;
+    Storage.saveBudgetThemes(themes);
+    Modal.close();
+    if (this._currentThemeId === id) this._renderDetail(id);
+    else this._renderList();
+  },
+
+  // Keep for backwards compatibility
+  savePlanned(event, id) { this.saveThemeEdit(event, id); },
+
   deleteTheme(id) {
     if (!confirm('Supprimer ce budget ?')) return;
     Storage.saveBudgetThemes(Storage.getBudgetThemes().filter(t => t.id !== id));
+    this._currentThemeId = null;
     this.showList();
   },
 
@@ -5185,8 +5356,7 @@ const Budget = {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-      const mExp = allExpenses.filter(e => Utils.getExpenseDate(e) >= `${m}-01` && Utils.getExpenseDate(e) <= `${m}-${String(last).padStart(2,'0')}`);
-      sum += this._computeSpent(theme, mExp);
+      sum += this._computeSpent(theme, allExpenses.filter(e => Utils.getExpenseDate(e) >= `${m}-01` && Utils.getExpenseDate(e) <= `${m}-${String(last).padStart(2,'0')}`));
     }
     const suggested = Math.ceil(sum / 3);
     const themes = Storage.getBudgetThemes();
