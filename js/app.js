@@ -257,6 +257,10 @@ function navigateTo(sectionId) {
     el.classList.toggle('hidden', el.id !== `section-${htmlSectionId}`);
   });
 
+  // Period filter is only relevant in flux and budget
+  const pfContainer = document.getElementById('period-filter-container');
+  if (pfContainer) pfContainer.classList.toggle('hidden', !['flux', 'budget'].includes(sectionId));
+
   // Render the appropriate section
   switch (sectionId) {
     case 'dashboard':
