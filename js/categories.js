@@ -210,16 +210,32 @@ const Categories = {
 
   // ---- CRUD ----
 
-  addCategory() {
-    const input = document.getElementById('new-category-input');
-    if (!input) return;
-    const name = input.value.trim();
+  openAddModal() {
+    Modal.open('Nouvelle catégorie', `
+      <form onsubmit="Categories._confirmAdd(event)">
+        <div class="form-group">
+          <label>Nom de la catégorie</label>
+          <input name="cat_name" class="form-input" required autofocus placeholder="ex: Transport, Loisirs, Santé…">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Créer la catégorie</button>
+        </div>
+      </form>`);
+  },
+
+  _confirmAdd(event) {
+    event.preventDefault();
+    const name = new FormData(event.target).get('cat_name').trim();
     if (!name) return;
     const cats = Storage.getCategories();
-    if (cats.find(c => c.name.toLowerCase() === name.toLowerCase())) { alert('Cette catégorie existe déjà.'); return; }
+    if (cats.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+      alert('Cette catégorie existe déjà.');
+      return;
+    }
     cats.push({ id: 'cat_' + Date.now(), name, subcategories: [] });
     Storage.saveCategories(cats);
-    input.value = '';
+    Modal.close();
     this.render();
     Expenses._populateCatFilter();
   },

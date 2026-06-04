@@ -581,11 +581,10 @@
       <section class="section hidden" id="section-categories">
         <div class="section-header">
           <h1>Catégories</h1>
-          <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser aux catégories par défaut</button>
-        </div>
-        <div class="new-category-bar">
-          <input type="text" id="new-category-input" placeholder="Nom de la nouvelle catégorie…" class="new-category-input" onkeydown="if(event.key==='Enter'){event.preventDefault();Categories.addCategory()}">
-          <button class="btn-primary" onclick="Categories.addCategory()">+ Ajouter une catégorie</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser</button>
+            <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
+          </div>
         </div>
         <div id="categories-container" class="categories-grid"></div>
       </section>
