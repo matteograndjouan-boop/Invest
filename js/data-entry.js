@@ -206,7 +206,7 @@ const DataEntry = {
     const empty = document.getElementById('donnees-empty');
     const thActions = document.getElementById('donnees-th-actions');
     if (!tbody) return;
-    if (thActions) thActions.style.display = this._selectionMode ? 'none' : '';
+    if (thActions) thActions.style.visibility = this._selectionMode ? 'hidden' : '';
 
     if (!rows.length) {
       tbody.innerHTML = '';

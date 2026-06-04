@@ -35,6 +35,10 @@ body {
   line-height: 1.5;
 }
 
+/* ---- Global: remove focus ring on mouse click, keep for keyboard navigation ---- */
+button:focus:not(:focus-visible) { outline: none; }
+input:focus:not(:focus-visible) { outline: none; }
+
 /* ---- Layout ---- */
 .app { display: flex; height: 100vh; overflow: hidden; }
 
@@ -657,23 +661,23 @@ body {
 }
 .period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; width: 100%; }
 .period-filter-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
-.period-type-btns { display: flex; gap: 4px; }
+.period-type-btns { display: flex; gap: 6px; }
 .period-type-btn {
   padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text-muted); font-size: 0.8125rem;
-  cursor: pointer; transition: all 0.15s; font-weight: 500;
+  cursor: pointer; transition: background .15s, border-color .15s, color .15s; font-weight: 600;
 }
 .period-type-btn:hover { border-color: var(--primary); color: var(--primary); }
-.period-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+.period-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .period-nav { display: flex; align-items: center; gap: 6px; }
-.period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, border-color .15s, color .15s; }
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .period-label-wrap { position: relative; }
 .period-label-btn {
-  min-width: 140px; padding: 6px 16px; border-radius: 8px;
+  min-width: 150px; padding: 6px 16px; border-radius: 8px;
   border: 2px solid var(--primary); background: var(--primary-light);
   color: var(--primary); font-size: 0.9375rem; font-weight: 700;
-  cursor: pointer; text-align: center; transition: all 0.15s;
+  cursor: pointer; text-align: center; transition: background .15s, color .15s, box-shadow .15s;
   box-shadow: 0 1px 4px rgba(99,102,241,0.15);
 }
 .period-label-btn:hover { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
@@ -686,7 +690,7 @@ body {
 .period-dropdown.hidden { display: none; }
 @keyframes dropIn { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 .pd-year-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 4px; }
-.pd-year-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.pd-year-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; transition: background .12s, border-color .12s, color .12s; }
 .pd-year-nav button:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .pd-year-nav span { font-weight: 700; font-size: 0.9375rem; color: var(--text); }
 .pd-months-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
@@ -695,11 +699,11 @@ body {
 .pd-years-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .pd-item-btn {
   padding: 6px 4px; border-radius: 6px; border: 1px solid transparent;
-  background: var(--bg); color: var(--text); font-size: 0.8rem; font-weight: 500;
-  cursor: pointer; text-align: center; transition: all 0.12s;
+  background: var(--bg); color: var(--text); font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; text-align: center; transition: background .12s, border-color .12s, color .12s;
 }
 .pd-item-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.pd-item-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+.pd-item-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .pd-range { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
 .pd-range label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
 .pd-range input[type="date"] { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.8125rem; width: 100%; }
@@ -709,7 +713,7 @@ body {
 .flux-filters { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .flux-filters select { min-width: 180px; }
 .flux-toggle-row { display: flex; gap: 0.5rem; margin: 1rem 0 0.75rem; }
-.flux-toggle-btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.875rem; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+.flux-toggle-btn { padding: 0.5rem 1.25rem; border-radius: 8px; border: 2px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.875rem; cursor: pointer; font-weight: 600; transition: background .15s, border-color .15s, color .15s; }
 .flux-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
 .flux-toggle-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .kpi-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
@@ -846,7 +850,7 @@ body {
 }
 /* Table */
 .donnees-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-.donnees-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.donnees-table { width: 100%; border-collapse: collapse; min-width: 820px; table-layout: fixed; }
 .donnees-table thead th {
   position: sticky; top: 0;
   background: var(--surface);
@@ -876,7 +880,7 @@ body {
   .donnees-table tbody tr.selectable:hover { background: #f1f5f9; }
 }
 .donnees-table tbody tr.selected { background: #e0e7ff !important; border-color: #a5b4fc !important; }
-.donnees-table td { padding: 10px 14px; font-size: 0.875rem; vertical-align: middle; }
+.donnees-table td { padding: 10px 14px; font-size: 0.875rem; vertical-align: middle; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #donnees-th-actions[style*="none"] { display: none; }
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: var(--primary); }
@@ -1035,7 +1039,7 @@ body {
 /* ---- Date Mode Toggle ---- */
 .date-mode-toggle { display: flex; align-items: center; gap: 0.3rem; margin-left: 0.75rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
 .date-mode-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
-.date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
@@ -1059,9 +1063,9 @@ body {
   background: var(--surface);
   color: var(--text-muted);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background .15s, border-color .15s, color .15s;
   white-space: nowrap;
 }
 .flux-pill:hover { border-color: var(--primary); color: var(--primary); }
@@ -1080,9 +1084,9 @@ body {
   background: transparent;
   color: var(--text-muted);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background .15s, border-color .15s, color .15s;
   white-space: nowrap;
 }
 .flux-multi-btn:hover { border-color: var(--primary); color: var(--primary); }
@@ -1195,11 +1199,11 @@ body {
 .bcard {
   background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   padding: 16px; cursor: pointer; position: relative;
-  transition: box-shadow 0.15s, transform 0.12s;
+  transition: box-shadow 0.18s;
   display: flex; flex-direction: column; gap: 10px;
   border-top: 4px solid var(--border);
 }
-.bcard:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+.bcard:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
 .bcard-over-budget { border-top-color: #ef4444 !important; }
 
 /* Ring */
@@ -1352,9 +1356,9 @@ body {
   background: var(--surface);
   color: var(--text-muted);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background .15s, border-color .15s, color .15s;
 }
 .account-pill:hover { border-color: var(--primary); color: var(--primary); }
 .account-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
