@@ -5905,7 +5905,7 @@ function navigateTo(sectionId) {
 
   // Period filter is only relevant in flux and budget
   const pfContainer = document.getElementById('period-filter-container');
-  if (pfContainer) pfContainer.classList.toggle('hidden', !['flux', 'budget'].includes(sectionId));
+  if (pfContainer) pfContainer.style.display = ['flux', 'budget'].includes(sectionId) ? '' : 'none';
 
   // Render the appropriate section
   switch (sectionId) {
