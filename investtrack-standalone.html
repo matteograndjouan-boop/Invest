@@ -774,15 +774,100 @@ body {
 }
 .filter-badge-clear:hover { opacity: 1; }
 
-/* ---- Données table ---- */
-.donnees-toolbar { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; align-items: center; }
-.donnees-search-input { flex: 1; min-width: 180px; max-width: 300px; }
-.donnees-toolbar select { min-width: 160px; }
-.donnees-count { margin-left: auto; font-size: 0.8125rem; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+/* ---- Données toolbar ---- */
+.donnees-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.dt-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+}
+.dt-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 15px;
+  pointer-events: none;
+  line-height: 1;
+}
+.donnees-search-input {
+  width: 100%;
+  padding: 7px 12px 7px 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.donnees-search-input::placeholder { color: var(--text-muted); }
+.donnees-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.dt-select {
+  padding: 7px 28px 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  min-width: 160px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color .15s, box-shadow .15s;
+}
+.dt-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.donnees-count {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
 /* Table */
 .donnees-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
 .donnees-table { width: 100%; border-collapse: collapse; min-width: 680px; }
-.donnees-table thead th { position: sticky; top: 0; background: var(--bg); z-index: 2; padding: 10px 12px; font-size: 0.8125rem; font-weight: 600; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.donnees-table thead th {
+  position: sticky; top: 0;
+  background: var(--surface);
+  z-index: 2;
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 .donnees-table thead th.text-right { text-align: right; }
 .donnees-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
 .donnees-table tbody tr:last-child { border-bottom: none; }
@@ -798,15 +883,17 @@ body {
   .donnees-table tbody tr.selectable:hover { background: #f1f5f9; }
 }
 .donnees-table tbody tr.selected { background: #e0e7ff !important; border-color: #a5b4fc !important; }
-.donnees-table td { padding: 9px 12px; font-size: 0.875rem; vertical-align: middle; }
+.donnees-table td { padding: 10px 14px; font-size: 0.875rem; vertical-align: middle; }
 #donnees-th-actions[style*="none"] { display: none; }
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: var(--primary); }
-.sort-icon { opacity: 0.5; font-size: 0.7rem; }
+.sort-icon { opacity: 0; font-size: 0.65rem; margin-left: 3px; transition: opacity .12s; }
+.sortable:hover .sort-icon { opacity: 0.7; }
+.sort-active .sort-icon { opacity: 1 !important; color: var(--primary); }
 .donnees-date { white-space: nowrap; color: var(--text-muted); font-size: 0.8125rem; }
 .donnees-desc { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.badge-expense-type { background: rgba(239,68,68,0.1); color: var(--danger); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
-.badge-revenue-type { background: rgba(16,185,129,0.1); color: var(--success); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 600; }
+.badge-expense-type { background: rgba(239,68,68,0.1); color: var(--danger); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.01em; }
+.badge-revenue-type { background: rgba(16,185,129,0.1); color: var(--success); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.01em; }
 .text-right { text-align: right; }
 
 /* ---- Categories ---- */
@@ -1902,13 +1989,16 @@ body {
           </div>
         </div>
         <div class="donnees-toolbar">
-          <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
-          <select id="donnees-filter-type">
+          <div class="dt-search-wrap">
+            <span class="dt-search-icon">⌕</span>
+            <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
+          </div>
+          <select id="donnees-filter-type" class="dt-select">
             <option value="">Dépenses + Revenus</option>
             <option value="expense">Dépenses seulement</option>
             <option value="revenue">Revenus seulement</option>
           </select>
-          <select id="donnees-filter-cat"><option value="">Toutes catégories</option></select>
+          <select id="donnees-filter-cat" class="dt-select"><option value="">Toutes catégories</option></select>
           <span id="donnees-count" class="donnees-count"></span>
         </div>
         <div class="donnees-table-wrap">
@@ -2268,13 +2358,72 @@ const Charts = {
     return chart;
   },
 
+  _fmt(v) {
+    const fmt = (n) => {
+      const s = n.toFixed(1);
+      return s.endsWith('.0') ? String(Math.round(n)) : s.replace('.', ',');
+    };
+    const abs = Math.abs(v);
+    if (abs >= 1e6) return fmt(v / 1e6) + ' M€';
+    if (abs >= 1e3) return fmt(v / 1e3) + ' k€';
+    return Math.round(v) + ' €';
+  },
+
+  _yAxis(extra = {}) {
+    return {
+      beginAtZero: true,
+      ticks: { callback: (v) => Charts._fmt(v), color: '#9ca3af', font: { size: 11 } },
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      border: { display: false },
+      ...extra,
+    };
+  },
+
+  _xAxis(extra = {}) {
+    return {
+      ticks: { color: '#9ca3af', font: { size: 11 } },
+      grid: { display: false },
+      border: { display: false },
+      ...extra,
+    };
+  },
+
+  _tip(extra = {}) {
+    return {
+      backgroundColor: 'rgba(17,24,39,0.92)',
+      titleColor: '#f9fafb',
+      bodyColor: '#d1d5db',
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderWidth: 1,
+      padding: 10,
+      cornerRadius: 8,
+      boxPadding: 4,
+      ...extra,
+    };
+  },
+
+  _leg(position = 'top', extra = {}) {
+    return {
+      position,
+      labels: {
+        boxWidth: 8, boxHeight: 8,
+        padding: 14,
+        font: { size: 12 },
+        usePointStyle: true,
+        pointStyle: 'circle',
+        color: '#6b7280',
+        ...extra,
+      },
+    };
+  },
+
   _doughnutOptions(formatFn) {
     return {
       responsive: true,
       maintainAspectRatio: true,
       plugins: {
-        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${formatFn(ctx.raw)}` } },
+        legend: this._leg('bottom'),
+        tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.label}: ${formatFn(ctx.raw)}` } },
       },
     };
   },
@@ -2314,8 +2463,8 @@ const Charts = {
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: this._leg('bottom'), tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2396,12 +2545,12 @@ const Charts = {
       type: 'bar',
       data: {
         labels: months.map(Utils.getMonthLabel),
-        datasets: [{ label: 'Dépenses', data: months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s, e) => s + e.amount, 0)), backgroundColor: '#6366f1', borderRadius: 4 }],
+        datasets: [{ label: 'Dépenses', data: months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s, e) => s + e.amount, 0)), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 5 }],
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2426,12 +2575,12 @@ const Charts = {
       type: 'bar',
       data: {
         labels: months.map(Utils.getMonthLabel),
-        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: '#10b981', borderRadius: 4 }],
+        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1, borderRadius: 5 }],
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2450,22 +2599,8 @@ const Charts = {
       data: {
         labels: allCategories,
         datasets: [
-          {
-            label: labelA,
-            data: dataA.map(v => -v),
-            backgroundColor: 'rgba(99,102,241,0.75)',
-            borderColor: '#6366f1',
-            borderWidth: 1,
-            borderRadius: 4,
-          },
-          {
-            label: labelB,
-            data: dataB,
-            backgroundColor: 'rgba(245,158,11,0.75)',
-            borderColor: '#f59e0b',
-            borderWidth: 1,
-            borderRadius: 4,
-          },
+          { label: labelA, data: dataA.map(v => -v), backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
+          { label: labelB, data: dataB, backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
         ],
       },
       options: {
@@ -2473,22 +2608,22 @@ const Charts = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 14, font: { size: 11 } } },
+          legend: this._leg('top'),
           tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}`,
-            },
+            ...this._tip(),
+            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}` },
           },
         },
         scales: {
           x: {
-            ticks: { callback: (v) => Utils.formatCurrency(Math.abs(v)) },
+            ticks: { callback: (v) => Charts._fmt(Math.abs(v)), color: '#9ca3af', font: { size: 11 } },
             grid: {
-              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.04)',
+              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
               lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
             },
+            border: { display: false },
           },
-          y: { grid: { display: false } },
+          y: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
         },
       },
     });
@@ -2496,10 +2631,10 @@ const Charts = {
 
   fluxBar(labels, revData, depData, soldeData, activeCategory) {
     const barDatasets = activeCategory
-      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4, type: 'bar' }]
+      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 5, type: 'bar' }]
       : [
-          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.72)', borderColor: '#10b981', borderWidth: 1, borderRadius: 5, type: 'bar' },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.72)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 5, type: 'bar' },
         ];
 
     const soldeDataset = soldeData ? {
@@ -2507,12 +2642,13 @@ const Charts = {
       data: soldeData,
       type: 'line',
       borderColor: '#8b5cf6',
-      backgroundColor: 'rgba(139,92,246,0.08)',
+      backgroundColor: 'rgba(139,92,246,0.07)',
       borderWidth: 2,
-      pointRadius: 4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
       pointBackgroundColor: '#8b5cf6',
       fill: false,
-      tension: 0.3,
+      tension: 0.35,
       yAxisID: 'y',
     } : null;
 
@@ -2522,10 +2658,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: this._leg('top'),
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: { beginAtZero: !!activeCategory, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        scales: { y: this._yAxis({ beginAtZero: !!activeCategory }), x: this._xAxis() },
       },
     });
   },
@@ -2578,22 +2714,19 @@ const Charts = {
         datasets: [{
           label: activeCategory || 'Dépenses',
           data: depData,
-          backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
+          backgroundColor: activeCategory ? 'rgba(99,102,241,0.72)' : 'rgba(239,68,68,0.72)',
           borderColor: activeCategory ? '#6366f1' : '#ef4444',
           borderWidth: 1,
-          borderRadius: 4,
+          borderRadius: 5,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2608,10 +2741,10 @@ const Charts = {
           {
             label: 'Dépenses du jour',
             data: depData,
-            backgroundColor: 'rgba(239,68,68,0.55)',
+            backgroundColor: 'rgba(239,68,68,0.5)',
             borderColor: '#ef4444',
             borderWidth: 1,
-            borderRadius: 3,
+            borderRadius: 4,
             type: 'bar',
           },
           {
@@ -2619,7 +2752,7 @@ const Charts = {
             data: cumData,
             type: 'line',
             borderColor: '#6366f1',
-            backgroundColor: 'rgba(99,102,241,0.06)',
+            backgroundColor: 'rgba(99,102,241,0.07)',
             borderWidth: 2,
             pointRadius: 0,
             pointHoverRadius: 4,
@@ -2631,13 +2764,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: this._leg('top'),
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2648,7 +2778,7 @@ const Charts = {
     const datasets = catData.map(cat => ({
       label: cat.name,
       data: cat.values,
-      backgroundColor: cat.color + 'cc',
+      backgroundColor: cat.color + 'c0',
       borderColor: cat.color,
       borderWidth: 1,
       stack: 'expenses',
@@ -2660,8 +2790,9 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
+          legend: this._leg('bottom', { font: { size: 11 }, padding: 10 }),
           tooltip: {
+            ...this._tip(),
             mode: 'index',
             callbacks: {
               label: (ctx) => ctx.raw > 0 ? ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` : null,
@@ -2673,8 +2804,8 @@ const Charts = {
           },
         },
         scales: {
-          x: { stacked: true, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { ...this._xAxis(), stacked: true },
+          y: { ...this._yAxis(), stacked: true },
         },
       },
     });
@@ -2707,13 +2838,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!planned, position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: planned ? this._leg('top') : { display: false },
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -2736,8 +2864,8 @@ const Charts = {
       data: { labels, datasets: [{ label: 'Valeur', data, backgroundColor: colors, borderRadius: 4 }] },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
-        scales: { y: { ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
+        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
       },
     });
   },

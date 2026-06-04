@@ -535,13 +535,16 @@
           </div>
         </div>
         <div class="donnees-toolbar">
-          <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
-          <select id="donnees-filter-type">
+          <div class="dt-search-wrap">
+            <span class="dt-search-icon">⌕</span>
+            <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
+          </div>
+          <select id="donnees-filter-type" class="dt-select">
             <option value="">Dépenses + Revenus</option>
             <option value="expense">Dépenses seulement</option>
             <option value="revenue">Revenus seulement</option>
           </select>
-          <select id="donnees-filter-cat"><option value="">Toutes catégories</option></select>
+          <select id="donnees-filter-cat" class="dt-select"><option value="">Toutes catégories</option></select>
           <span id="donnees-count" class="donnees-count"></span>
         </div>
         <div class="donnees-table-wrap">

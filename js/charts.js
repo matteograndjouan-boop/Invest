@@ -17,13 +17,72 @@ const Charts = {
     return chart;
   },
 
+  _fmt(v) {
+    const fmt = (n) => {
+      const s = n.toFixed(1);
+      return s.endsWith('.0') ? String(Math.round(n)) : s.replace('.', ',');
+    };
+    const abs = Math.abs(v);
+    if (abs >= 1e6) return fmt(v / 1e6) + ' M€';
+    if (abs >= 1e3) return fmt(v / 1e3) + ' k€';
+    return Math.round(v) + ' €';
+  },
+
+  _yAxis(extra = {}) {
+    return {
+      beginAtZero: true,
+      ticks: { callback: (v) => Charts._fmt(v), color: '#9ca3af', font: { size: 11 } },
+      grid: { color: 'rgba(0,0,0,0.05)' },
+      border: { display: false },
+      ...extra,
+    };
+  },
+
+  _xAxis(extra = {}) {
+    return {
+      ticks: { color: '#9ca3af', font: { size: 11 } },
+      grid: { display: false },
+      border: { display: false },
+      ...extra,
+    };
+  },
+
+  _tip(extra = {}) {
+    return {
+      backgroundColor: 'rgba(17,24,39,0.92)',
+      titleColor: '#f9fafb',
+      bodyColor: '#d1d5db',
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderWidth: 1,
+      padding: 10,
+      cornerRadius: 8,
+      boxPadding: 4,
+      ...extra,
+    };
+  },
+
+  _leg(position = 'top', extra = {}) {
+    return {
+      position,
+      labels: {
+        boxWidth: 8, boxHeight: 8,
+        padding: 14,
+        font: { size: 12 },
+        usePointStyle: true,
+        pointStyle: 'circle',
+        color: '#6b7280',
+        ...extra,
+      },
+    };
+  },
+
   _doughnutOptions(formatFn) {
     return {
       responsive: true,
       maintainAspectRatio: true,
       plugins: {
-        legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${formatFn(ctx.raw)}` } },
+        legend: this._leg('bottom'),
+        tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.label}: ${formatFn(ctx.raw)}` } },
       },
     };
   },
@@ -63,8 +122,8 @@ const Charts = {
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: this._leg('bottom'), tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -145,12 +204,12 @@ const Charts = {
       type: 'bar',
       data: {
         labels: months.map(Utils.getMonthLabel),
-        datasets: [{ label: 'Dépenses', data: months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s, e) => s + e.amount, 0)), backgroundColor: '#6366f1', borderRadius: 4 }],
+        datasets: [{ label: 'Dépenses', data: months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s, e) => s + e.amount, 0)), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 5 }],
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -175,12 +234,12 @@ const Charts = {
       type: 'bar',
       data: {
         labels: months.map(Utils.getMonthLabel),
-        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: '#10b981', borderRadius: 4 }],
+        datasets: [{ label: 'Revenus', data: months.map(m => revenues.filter(r => r.date.substring(0, 7) === m).reduce((s, r) => s + r.amount, 0)), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1, borderRadius: 5 }],
       },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } } },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -199,22 +258,8 @@ const Charts = {
       data: {
         labels: allCategories,
         datasets: [
-          {
-            label: labelA,
-            data: dataA.map(v => -v),
-            backgroundColor: 'rgba(99,102,241,0.75)',
-            borderColor: '#6366f1',
-            borderWidth: 1,
-            borderRadius: 4,
-          },
-          {
-            label: labelB,
-            data: dataB,
-            backgroundColor: 'rgba(245,158,11,0.75)',
-            borderColor: '#f59e0b',
-            borderWidth: 1,
-            borderRadius: 4,
-          },
+          { label: labelA, data: dataA.map(v => -v), backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
+          { label: labelB, data: dataB, backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
         ],
       },
       options: {
@@ -222,22 +267,22 @@ const Charts = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 14, font: { size: 11 } } },
+          legend: this._leg('top'),
           tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}`,
-            },
+            ...this._tip(),
+            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}` },
           },
         },
         scales: {
           x: {
-            ticks: { callback: (v) => Utils.formatCurrency(Math.abs(v)) },
+            ticks: { callback: (v) => Charts._fmt(Math.abs(v)), color: '#9ca3af', font: { size: 11 } },
             grid: {
-              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.04)',
+              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
               lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
             },
+            border: { display: false },
           },
-          y: { grid: { display: false } },
+          y: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
         },
       },
     });
@@ -245,10 +290,10 @@ const Charts = {
 
   fluxBar(labels, revData, depData, soldeData, activeCategory) {
     const barDatasets = activeCategory
-      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4, type: 'bar' }]
+      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 5, type: 'bar' }]
       : [
-          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.75)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
+          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.72)', borderColor: '#10b981', borderWidth: 1, borderRadius: 5, type: 'bar' },
+          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.72)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 5, type: 'bar' },
         ];
 
     const soldeDataset = soldeData ? {
@@ -256,12 +301,13 @@ const Charts = {
       data: soldeData,
       type: 'line',
       borderColor: '#8b5cf6',
-      backgroundColor: 'rgba(139,92,246,0.08)',
+      backgroundColor: 'rgba(139,92,246,0.07)',
       borderWidth: 2,
-      pointRadius: 4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
       pointBackgroundColor: '#8b5cf6',
       fill: false,
-      tension: 0.3,
+      tension: 0.35,
       yAxisID: 'y',
     } : null;
 
@@ -271,10 +317,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: this._leg('top'),
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: { beginAtZero: !!activeCategory, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        scales: { y: this._yAxis({ beginAtZero: !!activeCategory }), x: this._xAxis() },
       },
     });
   },
@@ -327,22 +373,19 @@ const Charts = {
         datasets: [{
           label: activeCategory || 'Dépenses',
           data: depData,
-          backgroundColor: activeCategory ? 'rgba(99,102,241,0.75)' : 'rgba(239,68,68,0.75)',
+          backgroundColor: activeCategory ? 'rgba(99,102,241,0.72)' : 'rgba(239,68,68,0.72)',
           borderColor: activeCategory ? '#6366f1' : '#ef4444',
           borderWidth: 1,
-          borderRadius: 4,
+          borderRadius: 5,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -357,10 +400,10 @@ const Charts = {
           {
             label: 'Dépenses du jour',
             data: depData,
-            backgroundColor: 'rgba(239,68,68,0.55)',
+            backgroundColor: 'rgba(239,68,68,0.5)',
             borderColor: '#ef4444',
             borderWidth: 1,
-            borderRadius: 3,
+            borderRadius: 4,
             type: 'bar',
           },
           {
@@ -368,7 +411,7 @@ const Charts = {
             data: cumData,
             type: 'line',
             borderColor: '#6366f1',
-            backgroundColor: 'rgba(99,102,241,0.06)',
+            backgroundColor: 'rgba(99,102,241,0.07)',
             borderWidth: 2,
             pointRadius: 0,
             pointHoverRadius: 4,
@@ -380,13 +423,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: this._leg('top'),
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -397,7 +437,7 @@ const Charts = {
     const datasets = catData.map(cat => ({
       label: cat.name,
       data: cat.values,
-      backgroundColor: cat.color + 'cc',
+      backgroundColor: cat.color + 'c0',
       borderColor: cat.color,
       borderWidth: 1,
       stack: 'expenses',
@@ -409,8 +449,9 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
+          legend: this._leg('bottom', { font: { size: 11 }, padding: 10 }),
           tooltip: {
+            ...this._tip(),
             mode: 'index',
             callbacks: {
               label: (ctx) => ctx.raw > 0 ? ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` : null,
@@ -422,8 +463,8 @@ const Charts = {
           },
         },
         scales: {
-          x: { stacked: true, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
+          x: { ...this._xAxis(), stacked: true },
+          y: { ...this._yAxis(), stacked: true },
         },
       },
     });
@@ -456,13 +497,10 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!planned, position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-          tooltip: { mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: planned ? this._leg('top') : { display: false },
+          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } },
-          x: { grid: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -485,8 +523,8 @@ const Charts = {
       data: { labels, datasets: [{ label: 'Valeur', data, backgroundColor: colors, borderRadius: 4 }] },
       options: {
         responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
-        scales: { y: { ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
+        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
       },
     });
   },
