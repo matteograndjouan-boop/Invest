@@ -554,37 +554,100 @@ body {
 /* ---- Text utilities ---- */
 .text-center { text-align: center; }
 
-/* ---- Comparison Period Selectors ---- */
-.comp-period-selectors {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+/* ---- Comparison redesign ---- */
+.comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+.comp-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 20px;
+  border-radius: 14px;
+  padding: 20px;
   box-shadow: var(--shadow);
 }
-.comp-period-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.comp-panel-a { border-top: 4px solid #6366f1; }
+.comp-panel-b { border-top: 4px solid #f59e0b; }
+
+.comp-panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.comp-badge {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; letter-spacing: 0;
 }
-.comp-period-group label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-  white-space: nowrap;
+.comp-badge-a { background: rgba(99,102,241,0.13); color: #6366f1; }
+.comp-badge-b { background: rgba(245,158,11,0.13); color: #f59e0b; }
+.comp-month-input {
+  border: none; background: transparent; font-size: 14px; font-weight: 700;
+  color: var(--text); cursor: pointer; padding: 0; outline: none; width: auto;
 }
-.comp-vs {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-muted);
-  padding: 0 4px;
+.comp-main-amount { font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+.comp-panel-a .comp-main-amount { color: #6366f1; }
+.comp-panel-b .comp-main-amount { color: #f59e0b; }
+.comp-main-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 12px; }
+.comp-panel-stats { margin-top: 4px; display: flex; flex-direction: column; gap: 5px; }
+.comp-stat-row { display: flex; justify-content: space-between; align-items: center; }
+.comp-stat-label { font-size: 11px; color: var(--text-muted); }
+.comp-stat-val { font-size: 12px; font-weight: 700; color: var(--text); }
+.comp-stat-top { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.comp-center-col { display: flex; align-items: center; justify-content: center; }
+.comp-delta-card {
+  width: 100%; text-align: center; padding: 16px 8px;
+  border-radius: 14px; border: 1px solid var(--border);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.comp-delta-card.good { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.04); }
+.comp-delta-card.bad  { border-color: rgba(239,68,68,0.35);  background: rgba(239,68,68,0.04); }
+.comp-delta-arrow { font-size: 22px; margin-bottom: 6px; }
+.comp-delta-val { font-size: 16px; font-weight: 900; line-height: 1.1; }
+.comp-delta-val.positive { color: #10b981; }
+.comp-delta-val.negative { color: #ef4444; }
+.comp-delta-pct { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; }
+.comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-top: 6px; }
+
+/* ---- Category comparison list ---- */
+.cc-header-row {
+  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
+  padding: 8px 16px; border-bottom: 2px solid var(--border);
+}
+.cc-head { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+.cc-head-a { text-align: right; padding-right: 12px; }
+.cc-head-mid { text-align: center; }
+.cc-head-b { text-align: left; padding-left: 12px; }
+.cc-head-delta { text-align: center; }
+
+.cc-row {
+  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
+  align-items: center; padding: 11px 16px;
+  border-bottom: 1px solid var(--border); transition: background 0.12s;
+}
+.cc-row:last-child { border-bottom: none; }
+.cc-row:hover { background: var(--surface-alt); }
+
+.cc-side-a { display: flex; align-items: center; gap: 9px; flex-direction: row-reverse; }
+.cc-side-b { display: flex; align-items: center; gap: 9px; }
+.cc-bar-wrap { flex: 1; height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.cc-fill-a { height: 9px; border-radius: 5px; margin-left: auto; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
+.cc-fill-b { height: 9px; border-radius: 5px; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
+.cc-amt { font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.cc-amt-a { color: #6366f1; }
+.cc-amt-b { color: #f59e0b; }
+
+.cc-name-col { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.cc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cc-name { font-size: 12px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+
+.cc-delta { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cc-delta-arrow { font-size: 13px; line-height: 1; }
+.cc-delta-amt { font-size: 11px; font-weight: 800; white-space: nowrap; }
+.cc-delta-pct { font-size: 10px; font-weight: 600; opacity: 0.8; }
+.cc-delta.positive { color: #10b981; }
+.cc-delta.negative { color: #ef4444; }
+
+@media (max-width: 700px) {
+  .comp-panel-row { grid-template-columns: 1fr; }
+  .comp-center-col { padding: 0; }
+  .cc-header-row, .cc-row { grid-template-columns: 1fr 100px 1fr 60px; }
+  .cc-name { max-width: 60px; }
 }
 
 /* ---- Period Filter (barre globale en haut du contenu) ---- */
@@ -1659,55 +1722,57 @@ body {
       <!-- COMPARISONS -->
       <section class="section hidden" id="section-comparisons">
         <div class="section-header">
-          <h1>Comparaisons de périodes</h1>
+          <h1>Comparaison de périodes</h1>
         </div>
-        <div class="comp-period-selectors">
-          <div class="comp-period-group">
-            <label>Période A :</label>
-            <input type="month" id="comp-period-a" class="select-input">
+
+        <!-- Side-by-side panels -->
+        <div class="comp-panel-row">
+          <div class="comp-panel comp-panel-a">
+            <div class="comp-panel-header">
+              <span class="comp-badge comp-badge-a">A</span>
+              <input type="month" id="comp-period-a" class="comp-month-input">
+            </div>
+            <div class="comp-main-amount" id="comp-total-a">0 €</div>
+            <div class="comp-main-label">Dépenses totales</div>
+            <div class="comp-panel-stats" id="comp-stats-a"></div>
           </div>
-          <span class="comp-vs">vs</span>
-          <div class="comp-period-group">
-            <label>Période B :</label>
-            <input type="month" id="comp-period-b" class="select-input">
+
+          <div class="comp-center-col">
+            <div class="comp-delta-card" id="comp-total-diff-card">
+              <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
+              <div class="comp-delta-val" id="comp-total-diff">—</div>
+              <div class="comp-delta-pct" id="comp-delta-pct"></div>
+              <div class="comp-delta-label">B vs A</div>
+            </div>
+          </div>
+
+          <div class="comp-panel comp-panel-b">
+            <div class="comp-panel-header">
+              <span class="comp-badge comp-badge-b">B</span>
+              <input type="month" id="comp-period-b" class="comp-month-input">
+            </div>
+            <div class="comp-main-amount" id="comp-total-b">0 €</div>
+            <div class="comp-main-label">Dépenses totales</div>
+            <div class="comp-panel-stats" id="comp-stats-b"></div>
           </div>
         </div>
-        <div class="kpi-grid-3">
-          <div class="kpi-card info">
-            <div class="kpi-badge">A</div>
-            <div class="kpi-label">Total Période A</div>
-            <div class="kpi-value" id="comp-total-a">0 €</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-badge">B</div>
-            <div class="kpi-label">Total Période B</div>
-            <div class="kpi-value" id="comp-total-b">0 €</div>
-          </div>
-          <div class="kpi-card" id="comp-total-diff-card">
-            <div class="kpi-badge">Δ</div>
-            <div class="kpi-label">Différence (B − A)</div>
-            <div class="kpi-value" id="comp-total-diff">0 €</div>
-          </div>
+
+        <!-- Butterfly chart -->
+        <div class="chart-card mt-md">
+          <h3>Répartition par catégorie — vue comparative</h3>
+          <div class="chart-container" style="height:300px"><canvas id="chart-comparison"></canvas></div>
         </div>
-        <div class="chart-card" style="margin-bottom:24px">
-          <h3>Comparaison par catégorie</h3>
-          <div class="chart-container"><canvas id="chart-comparison"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Catégorie</th>
-                  <th>Période A</th>
-                  <th>Période B</th>
-                  <th>Différence (€)</th>
-                  <th>Différence (%)</th>
-                </tr>
-              </thead>
-              <tbody id="comp-tbody"></tbody>
-            </table>
+
+        <!-- Visual category list -->
+        <div class="card mt-md">
+          <div class="cc-header-row">
+            <div class="cc-head cc-head-a">← Période A</div>
+            <div class="cc-head cc-head-mid">Catégorie</div>
+            <div class="cc-head cc-head-b">Période B →</div>
+            <div class="cc-head cc-head-delta">Évolution</div>
           </div>
+          <div id="comp-cat-list"></div>
+          <div id="comp-empty" class="empty-state hidden"><p>Aucune dépense pour ces périodes.</p></div>
         </div>
       </section>
 
@@ -2307,26 +2372,60 @@ const Charts = {
     });
   },
 
-  comparisonBar(expA, expB, periodA, periodB) {
+  comparisonButterfly(expA, expB, periodA, periodB) {
     const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
     if (!allCategories.length) { this.destroy('chart-comparison'); return; }
 
     const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
     const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+    const labelA = Utils.getMonthLabel(periodA);
+    const labelB = Utils.getMonthLabel(periodB);
 
     this.create('chart-comparison', {
       type: 'bar',
       data: {
         labels: allCategories,
         datasets: [
-          { label: Utils.getMonthLabel(periodA), data: dataA, backgroundColor: '#6366f1', borderRadius: 4 },
-          { label: Utils.getMonthLabel(periodB), data: dataB, backgroundColor: '#f59e0b', borderRadius: 4 },
+          {
+            label: labelA,
+            data: dataA.map(v => -v),
+            backgroundColor: 'rgba(99,102,241,0.75)',
+            borderColor: '#6366f1',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+          {
+            label: labelB,
+            data: dataB,
+            backgroundColor: 'rgba(245,158,11,0.75)',
+            borderColor: '#f59e0b',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
         ],
       },
       options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 14, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { callback: (v) => Utils.formatCurrency(Math.abs(v)) },
+            grid: {
+              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.04)',
+              lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
+            },
+          },
+          y: { grid: { display: false } },
+        },
       },
     });
   },
@@ -3900,6 +3999,8 @@ const Comparisons = {
   periodA: '',
   periodB: '',
 
+  _CAT_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
+
   init() {
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -3912,14 +4013,8 @@ const Comparisons = {
 
     const selA = document.getElementById('comp-period-a');
     const selB = document.getElementById('comp-period-b');
-    if (selA) {
-      selA.value = this.periodA;
-      selA.addEventListener('change', (e) => { this.periodA = e.target.value; this.render(); });
-    }
-    if (selB) {
-      selB.value = this.periodB;
-      selB.addEventListener('change', (e) => { this.periodB = e.target.value; this.render(); });
-    }
+    if (selA) { selA.value = this.periodA; selA.addEventListener('change', (e) => { this.periodA = e.target.value; this.render(); }); }
+    if (selB) { selB.value = this.periodB; selB.addEventListener('change', (e) => { this.periodB = e.target.value; this.render(); }); }
   },
 
   render() {
@@ -3929,62 +4024,107 @@ const Comparisons = {
 
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
-    const totalDiff = totalB - totalA;
-    const totalPct = totalA > 0 ? ((totalDiff / totalA) * 100) : (totalB > 0 ? 100 : 0);
+    const diff   = totalB - totalA;
+    const pct    = totalA > 0 ? (diff / totalA * 100) : (totalB > 0 ? 100 : 0);
 
-    document.getElementById('comp-total-a').textContent = Utils.formatCurrency(totalA);
-    document.getElementById('comp-total-b').textContent = Utils.formatCurrency(totalB);
-    const diffEl = document.getElementById('comp-total-diff');
-    diffEl.textContent = (totalDiff >= 0 ? '+' : '') + Utils.formatCurrency(totalDiff) + ' (' + (totalDiff >= 0 ? '+' : '') + totalPct.toFixed(1) + '%)';
-    diffEl.className = 'kpi-value ' + (totalDiff <= 0 ? 'positive' : 'negative');
-    document.getElementById('comp-total-diff-card').className = 'kpi-card ' + (totalDiff <= 0 ? 'success' : 'danger');
+    // Panel KPIs
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('comp-total-a', Utils.formatCurrency(totalA));
+    set('comp-total-b', Utils.formatCurrency(totalB));
 
-    this._renderTable(expA, expB);
-    Charts.comparisonBar(expA, expB, this.periodA, this.periodB);
+    this._renderPanelStats('comp-stats-a', expA, totalA);
+    this._renderPanelStats('comp-stats-b', expB, totalB);
+
+    // Delta card
+    const diffEl  = document.getElementById('comp-total-diff');
+    const pctEl   = document.getElementById('comp-delta-pct');
+    const iconEl  = document.getElementById('comp-delta-icon');
+    const cardEl  = document.getElementById('comp-total-diff-card');
+    if (diffEl) {
+      diffEl.textContent = (diff >= 0 ? '+' : '') + Utils.formatCurrency(diff);
+      diffEl.className = 'comp-delta-val ' + (diff <= 0 ? 'positive' : 'negative');
+    }
+    if (pctEl)  pctEl.textContent  = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+    if (iconEl) iconEl.textContent = diff > 0 ? '↑' : diff < 0 ? '↓' : '⟺';
+    if (cardEl) cardEl.className   = 'comp-delta-card ' + (diff <= 0 ? 'good' : 'bad');
+
+    this._renderCatList(expA, expB, totalA, totalB);
+    Charts.comparisonButterfly(expA, expB, this.periodA, this.periodB);
   },
 
-  _renderTable(expA, expB) {
-    const tbody = document.getElementById('comp-tbody');
-    const allCategories = new Set([...expA.map(e => e.category), ...expB.map(e => e.category)]);
+  _renderPanelStats(containerId, expenses, total) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const count = expenses.length;
+    const avg   = count > 0 ? total / count : 0;
+    const cats  = {};
+    expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
+    const topCat = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
+    el.innerHTML = `
+      <div class="comp-stat-row"><span class="comp-stat-label">Transactions</span><span class="comp-stat-val">${count}</span></div>
+      <div class="comp-stat-row"><span class="comp-stat-label">Panier moyen</span><span class="comp-stat-val">${Utils.formatCurrency(avg)}</span></div>
+      ${topCat ? `<div class="comp-stat-row"><span class="comp-stat-label">Top catégorie</span><span class="comp-stat-val comp-stat-top">${topCat[0]}</span></div>` : ''}
+    `;
+  },
 
-    if (!allCategories.size) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:24px">Aucune dépense pour ces périodes</td></tr>';
+  _renderCatList(expA, expB, totalA, totalB) {
+    const container = document.getElementById('comp-cat-list');
+    const empty     = document.getElementById('comp-empty');
+    if (!container) return;
+
+    const allCats = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])];
+    const allCatsSorted = Storage.getCategories().map(c => c.name).filter(n => allCats.includes(n))
+      .concat(allCats.filter(n => !Storage.getCategories().map(c => c.name).includes(n)));
+
+    if (!allCatsSorted.length) {
+      container.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
       return;
     }
+    if (empty) empty.classList.add('hidden');
 
-    const rows = [...allCategories].sort().map(cat => {
+    const maxVal = Math.max(
+      ...allCatsSorted.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)),
+      ...allCatsSorted.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)),
+      1
+    );
+
+    const knownCats = Storage.getCategories().map(c => c.name);
+    const rows = allCatsSorted.map(cat => {
       const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
       const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
       const diff = amtB - amtA;
-      const pct = amtA > 0 ? ((diff / amtA) * 100) : (amtB > 0 ? 100 : 0);
-      const cls = diff <= 0 ? 'positive' : 'negative';
+      const pct  = amtA > 0 ? (diff / amtA * 100) : (amtB > 0 ? 100 : 0);
+      const barA = (amtA / maxVal * 100).toFixed(1);
+      const barB = (amtB / maxVal * 100).toFixed(1);
+      const cls  = diff <= 0 ? 'positive' : 'negative';
       const sign = diff >= 0 ? '+' : '';
-      return `<tr>
-        <td><span class="badge badge-category">${cat}</span></td>
-        <td>${Utils.formatCurrency(amtA)}</td>
-        <td>${Utils.formatCurrency(amtB)}</td>
-        <td class="${cls}">${sign}${Utils.formatCurrency(diff)}</td>
-        <td class="${cls}">${sign}${pct.toFixed(1)}%</td>
-      </tr>`;
+      const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
+      const catIdx = knownCats.indexOf(cat);
+      const color = this._CAT_COLORS[(catIdx >= 0 ? catIdx : allCatsSorted.indexOf(cat)) % this._CAT_COLORS.length];
+
+      return `<div class="cc-row">
+        <div class="cc-side-a">
+          <span class="cc-amt cc-amt-a">${amtA > 0 ? Utils.formatCurrency(amtA) : '—'}</span>
+          <div class="cc-bar-wrap"><div class="cc-fill-a" style="width:${barA}%;background:${color}"></div></div>
+        </div>
+        <div class="cc-name-col">
+          <span class="cc-dot" style="background:${color}"></span>
+          <span class="cc-name">${cat}</span>
+        </div>
+        <div class="cc-side-b">
+          <div class="cc-bar-wrap"><div class="cc-fill-b" style="width:${barB}%;background:${color}"></div></div>
+          <span class="cc-amt cc-amt-b">${amtB > 0 ? Utils.formatCurrency(amtB) : '—'}</span>
+        </div>
+        <div class="cc-delta ${cls}">
+          <span class="cc-delta-arrow">${arrow}</span>
+          <span class="cc-delta-amt">${amtA > 0 || amtB > 0 ? sign + Utils.formatCurrency(Math.abs(diff)) : '—'}</span>
+          ${amtA > 0 ? `<span class="cc-delta-pct">${sign}${pct.toFixed(0)}%</span>` : ''}
+        </div>
+      </div>`;
     });
 
-    // Total row
-    const totalA = expA.reduce((s, e) => s + e.amount, 0);
-    const totalB = expB.reduce((s, e) => s + e.amount, 0);
-    const totalDiff = totalB - totalA;
-    const totalPct = totalA > 0 ? ((totalDiff / totalA) * 100) : (totalB > 0 ? 100 : 0);
-    const totalSign = totalDiff >= 0 ? '+' : '';
-    const totalCls = totalDiff <= 0 ? 'positive' : 'negative';
-
-    rows.push(`<tr style="font-weight:700;border-top:2px solid var(--border)">
-      <td>Total</td>
-      <td>${Utils.formatCurrency(totalA)}</td>
-      <td>${Utils.formatCurrency(totalB)}</td>
-      <td class="${totalCls}">${totalSign}${Utils.formatCurrency(totalDiff)}</td>
-      <td class="${totalCls}">${totalSign}${totalPct.toFixed(1)}%</td>
-    </tr>`);
-
-    tbody.innerHTML = rows.join('');
+    container.innerHTML = rows.join('');
   },
 };
 

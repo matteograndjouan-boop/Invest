@@ -185,26 +185,60 @@ const Charts = {
     });
   },
 
-  comparisonBar(expA, expB, periodA, periodB) {
+  comparisonButterfly(expA, expB, periodA, periodB) {
     const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
     if (!allCategories.length) { this.destroy('chart-comparison'); return; }
 
     const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
     const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
+    const labelA = Utils.getMonthLabel(periodA);
+    const labelB = Utils.getMonthLabel(periodB);
 
     this.create('chart-comparison', {
       type: 'bar',
       data: {
         labels: allCategories,
         datasets: [
-          { label: Utils.getMonthLabel(periodA), data: dataA, backgroundColor: '#6366f1', borderRadius: 4 },
-          { label: Utils.getMonthLabel(periodB), data: dataB, backgroundColor: '#f59e0b', borderRadius: 4 },
+          {
+            label: labelA,
+            data: dataA.map(v => -v),
+            backgroundColor: 'rgba(99,102,241,0.75)',
+            borderColor: '#6366f1',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+          {
+            label: labelB,
+            data: dataB,
+            backgroundColor: 'rgba(245,158,11,0.75)',
+            borderColor: '#f59e0b',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
         ],
       },
       options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: { beginAtZero: true, ticks: { callback: (v) => Utils.formatCurrency(v) } } },
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 14, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { callback: (v) => Utils.formatCurrency(Math.abs(v)) },
+            grid: {
+              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.04)',
+              lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
+            },
+          },
+          y: { grid: { display: false } },
+        },
       },
     });
   },

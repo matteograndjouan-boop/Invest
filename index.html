@@ -440,55 +440,57 @@
       <!-- COMPARISONS -->
       <section class="section hidden" id="section-comparisons">
         <div class="section-header">
-          <h1>Comparaisons de périodes</h1>
+          <h1>Comparaison de périodes</h1>
         </div>
-        <div class="comp-period-selectors">
-          <div class="comp-period-group">
-            <label>Période A :</label>
-            <input type="month" id="comp-period-a" class="select-input">
+
+        <!-- Side-by-side panels -->
+        <div class="comp-panel-row">
+          <div class="comp-panel comp-panel-a">
+            <div class="comp-panel-header">
+              <span class="comp-badge comp-badge-a">A</span>
+              <input type="month" id="comp-period-a" class="comp-month-input">
+            </div>
+            <div class="comp-main-amount" id="comp-total-a">0 €</div>
+            <div class="comp-main-label">Dépenses totales</div>
+            <div class="comp-panel-stats" id="comp-stats-a"></div>
           </div>
-          <span class="comp-vs">vs</span>
-          <div class="comp-period-group">
-            <label>Période B :</label>
-            <input type="month" id="comp-period-b" class="select-input">
+
+          <div class="comp-center-col">
+            <div class="comp-delta-card" id="comp-total-diff-card">
+              <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
+              <div class="comp-delta-val" id="comp-total-diff">—</div>
+              <div class="comp-delta-pct" id="comp-delta-pct"></div>
+              <div class="comp-delta-label">B vs A</div>
+            </div>
+          </div>
+
+          <div class="comp-panel comp-panel-b">
+            <div class="comp-panel-header">
+              <span class="comp-badge comp-badge-b">B</span>
+              <input type="month" id="comp-period-b" class="comp-month-input">
+            </div>
+            <div class="comp-main-amount" id="comp-total-b">0 €</div>
+            <div class="comp-main-label">Dépenses totales</div>
+            <div class="comp-panel-stats" id="comp-stats-b"></div>
           </div>
         </div>
-        <div class="kpi-grid-3">
-          <div class="kpi-card info">
-            <div class="kpi-badge">A</div>
-            <div class="kpi-label">Total Période A</div>
-            <div class="kpi-value" id="comp-total-a">0 €</div>
-          </div>
-          <div class="kpi-card warning">
-            <div class="kpi-badge">B</div>
-            <div class="kpi-label">Total Période B</div>
-            <div class="kpi-value" id="comp-total-b">0 €</div>
-          </div>
-          <div class="kpi-card" id="comp-total-diff-card">
-            <div class="kpi-badge">Δ</div>
-            <div class="kpi-label">Différence (B − A)</div>
-            <div class="kpi-value" id="comp-total-diff">0 €</div>
-          </div>
+
+        <!-- Butterfly chart -->
+        <div class="chart-card mt-md">
+          <h3>Répartition par catégorie — vue comparative</h3>
+          <div class="chart-container" style="height:300px"><canvas id="chart-comparison"></canvas></div>
         </div>
-        <div class="chart-card" style="margin-bottom:24px">
-          <h3>Comparaison par catégorie</h3>
-          <div class="chart-container"><canvas id="chart-comparison"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Catégorie</th>
-                  <th>Période A</th>
-                  <th>Période B</th>
-                  <th>Différence (€)</th>
-                  <th>Différence (%)</th>
-                </tr>
-              </thead>
-              <tbody id="comp-tbody"></tbody>
-            </table>
+
+        <!-- Visual category list -->
+        <div class="card mt-md">
+          <div class="cc-header-row">
+            <div class="cc-head cc-head-a">← Période A</div>
+            <div class="cc-head cc-head-mid">Catégorie</div>
+            <div class="cc-head cc-head-b">Période B →</div>
+            <div class="cc-head cc-head-delta">Évolution</div>
           </div>
+          <div id="comp-cat-list"></div>
+          <div id="comp-empty" class="empty-state hidden"><p>Aucune dépense pour ces périodes.</p></div>
         </div>
       </section>
 
