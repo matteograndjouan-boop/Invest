@@ -133,6 +133,75 @@ input:focus:not(:focus-visible) { outline: none; }
   flex-direction: column;
   gap: 6px;
 }
+.sidebar-footer-row {
+  display: flex;
+  gap: 5px;
+}
+.sidebar-foot-btn {
+  flex: 1;
+  font-size: 11px;
+  padding: 6px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-foot-bank {
+  color: #a5b4fc;
+  border-color: #4f46e5;
+}
+.sidebar-foot-bank:hover { background: rgba(99,102,241,0.15); color: #c4b5fd; }
+.btn-icon-sm {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--sidebar-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.btn-icon-sm:hover { background: rgba(255,255,255,0.08); border-color: #4f46e5; }
+.btn-icon-sm.settings-configured { border-color: #10b981; color: #34d399; }
+
+/* ---- Bank Import ---- */
+.settings-section { padding: 4px 0 0; }
+.settings-icon-row { text-align: center; font-size: 40px; margin-bottom: 12px; }
+.settings-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.bank-import-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.bank-note-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.bank-note-warn a { color: #b45309; font-weight: 600; }
+.bank-note-ok { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.bank-preview-wrap {
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.bank-preview-table td { padding: 6px 8px; font-size: 12px; vertical-align: middle; }
+.bank-preview-table input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+.bank-desc { max-width: 220px; word-break: break-word; }
+.bank-cat-sel { font-size: 11px; padding: 3px 6px; }
+.bank-preview-actions { margin-top: 12px; }
 
 .main-content {
   flex: 1;

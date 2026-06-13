@@ -69,9 +69,16 @@
       </nav>
 
       <div class="sidebar-footer">
-        <button class="btn-secondary btn-sm" id="export-btn">📥 Exporter</button>
-        <button class="btn-secondary btn-sm" id="import-btn">📤 Importer</button>
+        <div class="sidebar-footer-row">
+          <button class="btn-secondary btn-sm sidebar-foot-btn" id="export-btn">📥 Exporter</button>
+          <button class="btn-secondary btn-sm sidebar-foot-btn" id="import-btn">📤 Importer</button>
+        </div>
+        <div class="sidebar-footer-row">
+          <button class="btn-secondary btn-sm sidebar-foot-btn sidebar-foot-bank" id="bank-import-btn">🏦 Relevé bancaire</button>
+          <button class="btn-icon-sm" id="settings-btn" title="Paramètres">⚙️</button>
+        </div>
         <input type="file" id="import-file" accept=".json,.xlsx,.xls,.csv,.pdf" style="display:none">
+        <input type="file" id="bank-import-file" accept=".csv,.xlsx,.xls" style="display:none">
       </div>
     </aside>
 
@@ -664,6 +671,7 @@
   <script src="js/data-entry.js"></script>
   <script src="js/budget.js"></script>
   <script src="js/patrimony.js"></script>
+  <script src="js/bank-import.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
