@@ -203,6 +203,17 @@ input:focus:not(:focus-visible) { outline: none; }
 .bank-cat-sel { font-size: 11px; padding: 3px 6px; }
 .bank-preview-actions { margin-top: 12px; }
 
+.invest-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-new    { background: #d1fae5; color: #065f46; }
+.badge-update { background: #dbeafe; color: #1e40af; }
+
 .main-content {
   flex: 1;
   overflow-y: auto;

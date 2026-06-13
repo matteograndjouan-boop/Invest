@@ -379,6 +379,7 @@ function navigateTo(sectionId) {
 document.addEventListener('DOMContentLoaded', () => {
   PeriodFilter.renderUI();
   BankImport.init();
+  InvestImport.init();
   Expenses.init();
   Revenues.init();
   Flux.init();
