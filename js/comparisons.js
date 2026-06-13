@@ -4,6 +4,12 @@ const Comparisons = {
 
   _CAT_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
+  _shortLabel(period) {
+    const [y, m] = period.split('-').map(Number);
+    const MONTHS = ['jan.','fév.','mar.','avr.','mai','jun.','jul.','aoû.','sep.','oct.','nov.','déc.'];
+    return MONTHS[m - 1] + ' \'' + String(y).slice(2);
+  },
+
   init() {
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -24,6 +30,18 @@ const Comparisons = {
     const expenses = Storage.getExpenses();
     const expA = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodA);
     const expB = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodB);
+
+    // Update period name labels
+    const nameA = document.getElementById('comp-period-name-a');
+    const nameB = document.getElementById('comp-period-name-b');
+    if (nameA) nameA.textContent = Utils.getMonthLabel(this.periodA);
+    if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
+    const deltaLabel = document.getElementById('comp-delta-label');
+    if (deltaLabel) deltaLabel.textContent = `${this._shortLabel(this.periodB)} vs ${this._shortLabel(this.periodA)}`;
+    const headA = document.getElementById('cc-head-a');
+    const headB = document.getElementById('cc-head-b');
+    if (headA) headA.textContent = `← ${this._shortLabel(this.periodA)}`;
+    if (headB) headB.textContent = `${this._shortLabel(this.periodB)} →`;
 
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);

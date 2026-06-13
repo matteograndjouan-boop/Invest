@@ -268,6 +268,28 @@ input:focus:not(:focus-visible) { outline: none; }
 .dash-flux-card { margin-bottom: 1rem; }
 .chart-tall { height: 240px !important; }
 
+/* ---- Dashboard Insights ---- */
+.dash-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+.insight-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface);
+  border-left-width: 3px;
+}
+.insight-item.insight-danger  { border-left-color: var(--danger);  background: rgba(239,68,68,0.03); }
+.insight-item.insight-warning { border-left-color: var(--warning); background: rgba(245,158,11,0.03); }
+.insight-item.insight-success { border-left-color: var(--success); background: rgba(16,185,129,0.03); }
+.insight-item.insight-info    { border-left-color: var(--primary); background: rgba(99,102,241,0.03); }
+.insight-icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+.insight-body { flex: 1; min-width: 0; }
+.insight-title { font-weight: 700; font-size: 13px; color: var(--text); }
+.insight-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
 .dashboard-bottom-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -572,17 +594,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .comp-panel-a { border-top: 4px solid #6366f1; }
 .comp-panel-b { border-top: 4px solid #f59e0b; }
 
-.comp-panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.comp-badge {
-  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 900; letter-spacing: 0;
-}
-.comp-badge-a { background: rgba(99,102,241,0.13); color: #6366f1; }
-.comp-badge-b { background: rgba(245,158,11,0.13); color: #f59e0b; }
+.comp-panel-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.comp-period-name { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.comp-panel-a .comp-period-name { color: #6366f1; }
+.comp-panel-b .comp-period-name { color: #f59e0b; }
 .comp-month-input {
-  border: none; background: transparent; font-size: 14px; font-weight: 700;
-  color: var(--text); cursor: pointer; padding: 0; outline: none; width: auto;
+  border: 1px solid var(--border); background: var(--bg); font-size: 12px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; padding: 4px 8px; outline: none;
+  border-radius: var(--radius-sm); width: fit-content;
 }
 .comp-main-amount { font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
 .comp-panel-a .comp-main-amount { color: #6366f1; }
@@ -1574,6 +1593,8 @@ input:focus:not(:focus-visible) { outline: none; }
           </div>
         </div>
 
+        <div id="dash-insights-panel"></div>
+
         <div class="chart-card dash-flux-card">
           <h3>Flux des 6 derniers mois</h3>
           <div class="chart-container chart-tall"><canvas id="chart-dashboard-flux"></canvas></div>
@@ -1906,7 +1927,7 @@ input:focus:not(:focus-visible) { outline: none; }
         <div class="comp-panel-row">
           <div class="comp-panel comp-panel-a">
             <div class="comp-panel-header">
-              <span class="comp-badge comp-badge-a">A</span>
+              <div class="comp-period-name" id="comp-period-name-a">—</div>
               <input type="month" id="comp-period-a" class="comp-month-input">
             </div>
             <div class="comp-main-amount" id="comp-total-a">0 €</div>
@@ -1919,13 +1940,13 @@ input:focus:not(:focus-visible) { outline: none; }
               <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
               <div class="comp-delta-val" id="comp-total-diff">—</div>
               <div class="comp-delta-pct" id="comp-delta-pct"></div>
-              <div class="comp-delta-label">B vs A</div>
+              <div class="comp-delta-label" id="comp-delta-label">— vs —</div>
             </div>
           </div>
 
           <div class="comp-panel comp-panel-b">
             <div class="comp-panel-header">
-              <span class="comp-badge comp-badge-b">B</span>
+              <div class="comp-period-name" id="comp-period-name-b">—</div>
               <input type="month" id="comp-period-b" class="comp-month-input">
             </div>
             <div class="comp-main-amount" id="comp-total-b">0 €</div>
@@ -1943,9 +1964,9 @@ input:focus:not(:focus-visible) { outline: none; }
         <!-- Visual category list -->
         <div class="card mt-md">
           <div class="cc-header-row">
-            <div class="cc-head cc-head-a">← Période A</div>
+            <div class="cc-head cc-head-a" id="cc-head-a">—</div>
             <div class="cc-head cc-head-mid">Catégorie</div>
-            <div class="cc-head cc-head-b">Période B →</div>
+            <div class="cc-head cc-head-b" id="cc-head-b">—</div>
             <div class="cc-head cc-head-delta">Évolution</div>
           </div>
           <div id="comp-cat-list"></div>
@@ -4224,6 +4245,12 @@ const Comparisons = {
 
   _CAT_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
+  _shortLabel(period) {
+    const [y, m] = period.split('-').map(Number);
+    const MONTHS = ['jan.','fév.','mar.','avr.','mai','jun.','jul.','aoû.','sep.','oct.','nov.','déc.'];
+    return MONTHS[m - 1] + ' \'' + String(y).slice(2);
+  },
+
   init() {
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -4244,6 +4271,18 @@ const Comparisons = {
     const expenses = Storage.getExpenses();
     const expA = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodA);
     const expB = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodB);
+
+    // Update period name labels
+    const nameA = document.getElementById('comp-period-name-a');
+    const nameB = document.getElementById('comp-period-name-b');
+    if (nameA) nameA.textContent = Utils.getMonthLabel(this.periodA);
+    if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
+    const deltaLabel = document.getElementById('comp-delta-label');
+    if (deltaLabel) deltaLabel.textContent = `${this._shortLabel(this.periodB)} vs ${this._shortLabel(this.periodA)}`;
+    const headA = document.getElementById('cc-head-a');
+    const headB = document.getElementById('cc-head-b');
+    if (headA) headA.textContent = `← ${this._shortLabel(this.periodA)}`;
+    if (headB) headB.textContent = `${this._shortLabel(this.periodB)} →`;
 
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
@@ -5757,9 +5796,86 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
+    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep);
     this._renderFluxChart(expenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
+  },
+
+  _renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep) {
+    const container = document.getElementById('dash-insights-panel');
+    if (!container) return;
+
+    const month = Utils.getCurrentMonth();
+    const [my, mm] = month.split('-').map(Number);
+
+    // Baseline: last 3 months before current
+    const baseline = [1, 2, 3].map(i => {
+      const d = new Date(my, mm - 1 - i, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    });
+
+    const insights = [];
+
+    // Budget overruns
+    const themes = Storage.getBudgetThemes();
+    themes.forEach(theme => {
+      const spent = monthExp.filter(e => e.category === theme.name).reduce((s, e) => s + e.amount, 0);
+      if (!theme.planned) return;
+      const pct = spent / theme.planned;
+      if (pct >= 1) {
+        insights.push({ type: 'danger', icon: '⚠️', title: `Budget « ${theme.name} » dépassé`, desc: `${Utils.formatCurrency(spent)} sur ${Utils.formatCurrency(theme.planned)} prévu (${Math.round(pct * 100)}%)` });
+      } else if (pct >= 0.85) {
+        insights.push({ type: 'warning', icon: '🔶', title: `« ${theme.name} » presque atteint`, desc: `${Math.round(pct * 100)}% du budget — ${Utils.formatCurrency(theme.planned - spent)} restant` });
+      }
+    });
+
+    // Category anomalies vs 3-month average
+    const catGroups = {};
+    monthExp.forEach(e => { catGroups[e.category] = (catGroups[e.category] || 0) + e.amount; });
+    Object.entries(catGroups).forEach(([cat, amount]) => {
+      const baseAmts = baseline.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m && e.category === cat).reduce((s, e) => s + e.amount, 0));
+      const avg = baseAmts.reduce((s, v) => s + v, 0) / 3;
+      if (avg > 30 && amount > avg * 1.6) {
+        const rise = Math.round((amount / avg - 1) * 100);
+        insights.push({ type: 'warning', icon: '📈', title: `${cat} en forte hausse`, desc: `+${rise}% vs la moyenne des 3 derniers mois (${Utils.formatCurrency(avg)} → ${Utils.formatCurrency(amount)})` });
+      }
+    });
+
+    // Overall spending trend vs previous month
+    if (prevDep > 50 && totalDep > 0) {
+      const diff = totalDep - prevDep;
+      const pct  = Math.round(Math.abs(diff / prevDep) * 100);
+      if (diff < 0 && pct > 10) {
+        insights.push({ type: 'success', icon: '✅', title: 'Dépenses en baisse', desc: `−${pct}% ce mois (${Utils.formatCurrency(Math.abs(diff))} de moins qu'en mois précédent)` });
+      } else if (diff > 0 && pct > 20) {
+        insights.push({ type: 'warning', icon: '📉', title: 'Dépenses en hausse', desc: `+${pct}% vs le mois précédent (+${Utils.formatCurrency(diff)})` });
+      }
+    }
+
+    // High savings rate
+    if (totalRev > 0) {
+      const rate = (totalRev - totalDep) / totalRev * 100;
+      if (rate >= 30) {
+        insights.push({ type: 'success', icon: '🎉', title: 'Excellent taux d\'épargne', desc: `${rate.toFixed(0)}% de tes revenus épargnés ce mois — continue !` });
+      }
+    }
+
+    if (!insights.length) { container.innerHTML = ''; return; }
+
+    const order = { danger: 0, warning: 1, success: 2, info: 3 };
+    insights.sort((a, b) => order[a.type] - order[b.type]);
+
+    container.innerHTML = `<div class="dash-insights-grid">${
+      insights.slice(0, 4).map(i => `
+        <div class="insight-item insight-${i.type}">
+          <span class="insight-icon">${i.icon}</span>
+          <div class="insight-body">
+            <div class="insight-title">${i.title}</div>
+            <div class="insight-desc">${i.desc}</div>
+          </div>
+        </div>`).join('')
+    }</div>`;
   },
 
   _renderFluxChart(expenses, revenues) {
@@ -5791,10 +5907,10 @@ const Dashboard = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: Charts._leg('top'),
+          tooltip: { ...Charts._tip(), mode: 'index', callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: { beginAtZero: false, ticks: { callback: v => Utils.formatCurrency(v) } } },
+        scales: { y: Charts._yAxis({ beginAtZero: false }), x: Charts._xAxis() },
       },
     });
     Charts._instances['chart-dashboard-flux'] = chart;

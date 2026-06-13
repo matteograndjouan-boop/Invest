@@ -115,6 +115,8 @@
           </div>
         </div>
 
+        <div id="dash-insights-panel"></div>
+
         <div class="chart-card dash-flux-card">
           <h3>Flux des 6 derniers mois</h3>
           <div class="chart-container chart-tall"><canvas id="chart-dashboard-flux"></canvas></div>
@@ -447,7 +449,7 @@
         <div class="comp-panel-row">
           <div class="comp-panel comp-panel-a">
             <div class="comp-panel-header">
-              <span class="comp-badge comp-badge-a">A</span>
+              <div class="comp-period-name" id="comp-period-name-a">—</div>
               <input type="month" id="comp-period-a" class="comp-month-input">
             </div>
             <div class="comp-main-amount" id="comp-total-a">0 €</div>
@@ -460,13 +462,13 @@
               <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
               <div class="comp-delta-val" id="comp-total-diff">—</div>
               <div class="comp-delta-pct" id="comp-delta-pct"></div>
-              <div class="comp-delta-label">B vs A</div>
+              <div class="comp-delta-label" id="comp-delta-label">— vs —</div>
             </div>
           </div>
 
           <div class="comp-panel comp-panel-b">
             <div class="comp-panel-header">
-              <span class="comp-badge comp-badge-b">B</span>
+              <div class="comp-period-name" id="comp-period-name-b">—</div>
               <input type="month" id="comp-period-b" class="comp-month-input">
             </div>
             <div class="comp-main-amount" id="comp-total-b">0 €</div>
@@ -484,9 +486,9 @@
         <!-- Visual category list -->
         <div class="card mt-md">
           <div class="cc-header-row">
-            <div class="cc-head cc-head-a">← Période A</div>
+            <div class="cc-head cc-head-a" id="cc-head-a">—</div>
             <div class="cc-head cc-head-mid">Catégorie</div>
-            <div class="cc-head cc-head-b">Période B →</div>
+            <div class="cc-head cc-head-b" id="cc-head-b">—</div>
             <div class="cc-head cc-head-delta">Évolution</div>
           </div>
           <div id="comp-cat-list"></div>

@@ -96,9 +96,86 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
+    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep);
     this._renderFluxChart(expenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
+  },
+
+  _renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep) {
+    const container = document.getElementById('dash-insights-panel');
+    if (!container) return;
+
+    const month = Utils.getCurrentMonth();
+    const [my, mm] = month.split('-').map(Number);
+
+    // Baseline: last 3 months before current
+    const baseline = [1, 2, 3].map(i => {
+      const d = new Date(my, mm - 1 - i, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    });
+
+    const insights = [];
+
+    // Budget overruns
+    const themes = Storage.getBudgetThemes();
+    themes.forEach(theme => {
+      const spent = monthExp.filter(e => e.category === theme.name).reduce((s, e) => s + e.amount, 0);
+      if (!theme.planned) return;
+      const pct = spent / theme.planned;
+      if (pct >= 1) {
+        insights.push({ type: 'danger', icon: '⚠️', title: `Budget « ${theme.name} » dépassé`, desc: `${Utils.formatCurrency(spent)} sur ${Utils.formatCurrency(theme.planned)} prévu (${Math.round(pct * 100)}%)` });
+      } else if (pct >= 0.85) {
+        insights.push({ type: 'warning', icon: '🔶', title: `« ${theme.name} » presque atteint`, desc: `${Math.round(pct * 100)}% du budget — ${Utils.formatCurrency(theme.planned - spent)} restant` });
+      }
+    });
+
+    // Category anomalies vs 3-month average
+    const catGroups = {};
+    monthExp.forEach(e => { catGroups[e.category] = (catGroups[e.category] || 0) + e.amount; });
+    Object.entries(catGroups).forEach(([cat, amount]) => {
+      const baseAmts = baseline.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m && e.category === cat).reduce((s, e) => s + e.amount, 0));
+      const avg = baseAmts.reduce((s, v) => s + v, 0) / 3;
+      if (avg > 30 && amount > avg * 1.6) {
+        const rise = Math.round((amount / avg - 1) * 100);
+        insights.push({ type: 'warning', icon: '📈', title: `${cat} en forte hausse`, desc: `+${rise}% vs la moyenne des 3 derniers mois (${Utils.formatCurrency(avg)} → ${Utils.formatCurrency(amount)})` });
+      }
+    });
+
+    // Overall spending trend vs previous month
+    if (prevDep > 50 && totalDep > 0) {
+      const diff = totalDep - prevDep;
+      const pct  = Math.round(Math.abs(diff / prevDep) * 100);
+      if (diff < 0 && pct > 10) {
+        insights.push({ type: 'success', icon: '✅', title: 'Dépenses en baisse', desc: `−${pct}% ce mois (${Utils.formatCurrency(Math.abs(diff))} de moins qu'en mois précédent)` });
+      } else if (diff > 0 && pct > 20) {
+        insights.push({ type: 'warning', icon: '📉', title: 'Dépenses en hausse', desc: `+${pct}% vs le mois précédent (+${Utils.formatCurrency(diff)})` });
+      }
+    }
+
+    // High savings rate
+    if (totalRev > 0) {
+      const rate = (totalRev - totalDep) / totalRev * 100;
+      if (rate >= 30) {
+        insights.push({ type: 'success', icon: '🎉', title: 'Excellent taux d\'épargne', desc: `${rate.toFixed(0)}% de tes revenus épargnés ce mois — continue !` });
+      }
+    }
+
+    if (!insights.length) { container.innerHTML = ''; return; }
+
+    const order = { danger: 0, warning: 1, success: 2, info: 3 };
+    insights.sort((a, b) => order[a.type] - order[b.type]);
+
+    container.innerHTML = `<div class="dash-insights-grid">${
+      insights.slice(0, 4).map(i => `
+        <div class="insight-item insight-${i.type}">
+          <span class="insight-icon">${i.icon}</span>
+          <div class="insight-body">
+            <div class="insight-title">${i.title}</div>
+            <div class="insight-desc">${i.desc}</div>
+          </div>
+        </div>`).join('')
+    }</div>`;
   },
 
   _renderFluxChart(expenses, revenues) {
@@ -130,10 +207,10 @@ const Dashboard = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          legend: Charts._leg('top'),
+          tooltip: { ...Charts._tip(), mode: 'index', callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: { beginAtZero: false, ticks: { callback: v => Utils.formatCurrency(v) } } },
+        scales: { y: Charts._yAxis({ beginAtZero: false }), x: Charts._xAxis() },
       },
     });
     Charts._instances['chart-dashboard-flux'] = chart;

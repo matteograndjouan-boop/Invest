@@ -261,6 +261,28 @@ input:focus:not(:focus-visible) { outline: none; }
 .dash-flux-card { margin-bottom: 1rem; }
 .chart-tall { height: 240px !important; }
 
+/* ---- Dashboard Insights ---- */
+.dash-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+.insight-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface);
+  border-left-width: 3px;
+}
+.insight-item.insight-danger  { border-left-color: var(--danger);  background: rgba(239,68,68,0.03); }
+.insight-item.insight-warning { border-left-color: var(--warning); background: rgba(245,158,11,0.03); }
+.insight-item.insight-success { border-left-color: var(--success); background: rgba(16,185,129,0.03); }
+.insight-item.insight-info    { border-left-color: var(--primary); background: rgba(99,102,241,0.03); }
+.insight-icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+.insight-body { flex: 1; min-width: 0; }
+.insight-title { font-weight: 700; font-size: 13px; color: var(--text); }
+.insight-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
 .dashboard-bottom-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -565,17 +587,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .comp-panel-a { border-top: 4px solid #6366f1; }
 .comp-panel-b { border-top: 4px solid #f59e0b; }
 
-.comp-panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.comp-badge {
-  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 900; letter-spacing: 0;
-}
-.comp-badge-a { background: rgba(99,102,241,0.13); color: #6366f1; }
-.comp-badge-b { background: rgba(245,158,11,0.13); color: #f59e0b; }
+.comp-panel-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.comp-period-name { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.comp-panel-a .comp-period-name { color: #6366f1; }
+.comp-panel-b .comp-period-name { color: #f59e0b; }
 .comp-month-input {
-  border: none; background: transparent; font-size: 14px; font-weight: 700;
-  color: var(--text); cursor: pointer; padding: 0; outline: none; width: auto;
+  border: 1px solid var(--border); background: var(--bg); font-size: 12px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; padding: 4px 8px; outline: none;
+  border-radius: var(--radius-sm); width: fit-content;
 }
 .comp-main-amount { font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
 .comp-panel-a .comp-main-amount { color: #6366f1; }
