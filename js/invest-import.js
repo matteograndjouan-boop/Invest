@@ -163,8 +163,6 @@ Réponds UNIQUEMENT en JSON valide :
   },
 
   _guessMapping(headerRow) {
-    const norm = s => String(s).toLowerCase().normalize('NFD').replace(/̀-ͯ/g, '').trim();
-    // Simpler normalization to avoid regex charset issues
     const n = s => String(s).toLowerCase()
       .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îï]/g, 'i')
       .replace(/[ôö]/g, 'o').replace(/[ùûü]/g, 'u').replace(/ç/g, 'c')
@@ -172,15 +170,21 @@ Réponds UNIQUEMENT en JSON valide :
     const h = headerRow.map(n);
     const find = (...terms) => { const i = h.findIndex(c => terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
 
-    const nameIdx = find('libelle', 'support', 'designation', 'nom du', 'valeur mobiliere', 'actif', 'fonds', 'titre', 'placement');
+    // 'placement' volontairement absent — c'est le libellé de l'enveloppe (PEA, AV...) pas le nom du fonds
+    // 'nom du' matche "Nom du support" (Linxea) sans matcher "Placement"
+    // 'support' matche "Nom du support" sans matcher d'autres colonnes Linxea
+    const nameIdx = find('nom du', 'libelle', 'designation', 'valeur mobiliere', 'support', 'actif', 'intitule', 'titre');
     const isinIdx = find('isin', 'code isin', 'code valeur', 'code titre');
-    const qtyIdx  = find('quantite', 'nombre de parts', 'nombre parts', 'nb parts', 'nb titres', 'parts', 'qte', 'nombre d\'unites');
-    const buyIdx  = find('pru', 'prix de revient', 'px revient', 'prix achat', 'pa ', 'cout unitaire', 'valeur achat', 'pm ', 'prix moyen');
-    const curIdx  = find('cours', 'valeur liquidative', 'vl ', 'vl$', 'prix actuel', 'dernier cours', 'cotation', 'cours actuel');
-    const totIdx  = find('valorisation', 'montant', 'valeur portefeuille', 'valeur totale', 'encours', 'epargne acquise', 'capital', 'total');
+    // 'nbre de parts' en premier pour matcher Linxea ("Nbre de parts")
+    const qtyIdx  = find('nbre de parts', 'nombre de parts', 'nombre parts', 'nb parts', 'nb titres', 'quantite', 'parts', 'qte');
+    const buyIdx  = find('pru', 'prix de revient', 'px revient', 'prix achat', 'cout unitaire', 'valeur achat', 'prix moyen');
+    // 'cotation' en premier pour matcher "Dernière cotation" (Linxea)
+    const curIdx  = find('cotation', 'valeur liquidative', 'cours actuel', 'dernier cours', 'cours', 'vl ', 'prix actuel');
+    // 'somme en compte' + 'somme' pour Linxea ; 'montant'/'valorisation' pour Boursorama
+    const totIdx  = find('somme en compte', 'valorisation', 'montant', 'valeur portefeuille', 'valeur totale', 'encours', 'epargne acquise', 'somme', 'capital');
 
     return {
-      name:          nameIdx ?? 0, // fallback to col 0 if nothing found
+      name:          nameIdx,   // null = on cherchera la 1ère cellule texte dans _parseWithMapping
       isin:          isinIdx,
       quantity:      qtyIdx,
       buyPrice:      buyIdx,
@@ -225,8 +229,10 @@ Réponds UNIQUEMENT en JSON valide :
     dataRows.forEach((row, rowIdx) => {
       if (!row || row.every(c => c === '' || c === null || c === undefined)) return;
 
-      const name = String(row[mapping.name] ?? '').trim();
-      if (!name || name === '-' || /^\d+$/.test(name)) return; // skip empty or pure numbers
+      // Si mapping.name est null, prendre la première cellule texte longue (> 3 chars)
+      const nameCol = mapping.name ?? row.findIndex(c => typeof c === 'string' && c.trim().length > 3 && !/^\d/.test(c.trim()));
+      const name = nameCol >= 0 ? String(row[nameCol] ?? '').trim() : '';
+      if (!name || name === '-' || /^\d+$/.test(name)) return;
 
       const isin     = mapping.isin !== null ? String(row[mapping.isin] ?? '').trim().toUpperCase() : '';
       const quantity = mapping.quantity !== null ? this._parseNum(row[mapping.quantity]) : null;
