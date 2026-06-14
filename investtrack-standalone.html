@@ -177,6 +177,57 @@ input:focus:not(:focus-visible) { outline: none; }
 
 /* ---- Bank Import ---- */
 .settings-section { padding: 4px 0 0; }
+.settings-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-top: 12px;
+}
+.settings-block-primary { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.settings-block-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-badge-free {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #d1fae5;
+  color: #065f46;
+  letter-spacing: 0.3px;
+}
+.settings-badge-optional {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  letter-spacing: 0.3px;
+}
+.settings-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.privacy-badge {
+  display: block;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
 .settings-icon-row { text-align: center; font-size: 40px; margin-bottom: 12px; }
 .settings-desc {
   font-size: 13px;
@@ -2222,6 +2273,7 @@ input:focus:not(:focus-visible) { outline: none; }
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="js/gemini-cat.js"></script>
   <script src="js/bank-import.js"></script>
   <script src="js/invest-import.js"></script>
 <script>
