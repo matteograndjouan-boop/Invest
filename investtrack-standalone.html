@@ -1521,6 +1521,8 @@ input:focus:not(:focus-visible) { outline: none; }
 .port-pos-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
 .port-pos-bar { height: 4px; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
 .port-pos-right { text-align: right; font-size: 13px; font-weight: 600; }
+.port-pos-actions { display: flex; gap: 2px; margin-left: 8px; opacity: 0; transition: opacity .15s; }
+.port-position-row:hover .port-pos-actions { opacity: 1; }
 
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
@@ -1744,7 +1746,7 @@ input:focus:not(:focus-visible) { outline: none; }
         </div>
         <div class="port-bottom-grid">
           <div class="chart-card">
-            <h3>Top 5 positions</h3>
+            <h3>Positions</h3>
             <div id="port-top-positions"></div>
           </div>
           <div class="chart-card">
@@ -3367,7 +3369,7 @@ const Investments = {
   _renderTopPositions(investments) {
     const container = document.getElementById('port-top-positions');
     if (!container) return;
-    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice)).slice(0, 5);
+    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     if (!sorted.length) { container.innerHTML = '<p class="text-muted">Aucune position</p>'; return; }
     container.innerHTML = sorted.map(inv => {
@@ -3385,6 +3387,10 @@ const Investments = {
         <div class="port-pos-right">
           <div>${Utils.formatCurrency(value)}</div>
           <div class="${gainCls}" style="font-size:12px">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</div>
+        </div>
+        <div class="port-pos-actions">
+          <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
         </div>
       </div>`;
     }).join('');

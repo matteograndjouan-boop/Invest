@@ -35,7 +35,7 @@ const Investments = {
   _renderTopPositions(investments) {
     const container = document.getElementById('port-top-positions');
     if (!container) return;
-    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice)).slice(0, 5);
+    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     if (!sorted.length) { container.innerHTML = '<p class="text-muted">Aucune position</p>'; return; }
     container.innerHTML = sorted.map(inv => {
@@ -53,6 +53,10 @@ const Investments = {
         <div class="port-pos-right">
           <div>${Utils.formatCurrency(value)}</div>
           <div class="${gainCls}" style="font-size:12px">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</div>
+        </div>
+        <div class="port-pos-actions">
+          <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
         </div>
       </div>`;
     }).join('');

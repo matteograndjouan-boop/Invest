@@ -1514,6 +1514,8 @@ input:focus:not(:focus-visible) { outline: none; }
 .port-pos-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
 .port-pos-bar { height: 4px; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
 .port-pos-right { text-align: right; font-size: 13px; font-weight: 600; }
+.port-pos-actions { display: flex; gap: 2px; margin-left: 8px; opacity: 0; transition: opacity .15s; }
+.port-position-row:hover .port-pos-actions { opacity: 1; }
 
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
