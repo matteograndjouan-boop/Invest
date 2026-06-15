@@ -6517,9 +6517,9 @@ const BankImport = {
     try {
       Modal.open('Lecture du PDF…', `
         <div style="text-align:center;padding:52px 20px">
-          <div style="font-size:52px;margin-bottom:20px">📄</div>
+          <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
           <p style="font-size:15px;font-weight:700">Extraction du texte en cours…</p>
-          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n'est envoyé sur internet.</p>
+          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n’est envoyé sur internet.</p>
         </div>
       `);
 
@@ -6529,7 +6529,10 @@ const BankImport = {
 
       const buffer = await file.arrayBuffer();
       const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
-      const lines  = [];
+      const rowData = []; // [{text, amtXs:[]}] — amtXs = x-positions of amount-like items
+
+      // Regex to identify individual PDF items that look like amounts (comma decimal)
+      const amtItemRe = /\d+[,]\d{2}/;
 
       for (let p = 1; p <= pdf.numPages; p++) {
         const page    = await pdf.getPage(p);
@@ -6543,19 +6546,127 @@ const BankImport = {
         }
         [...byY.entries()]
           .sort((a, b) => b[0] - a[0])
-          .forEach(([, items]) =>
-            lines.push(items.sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
-          );
+          .forEach(([, items]) => {
+            const sorted = items.sort((a, b) => a.x - b.x);
+            const text   = sorted.map(i => i.str).join(' ');
+            const amtXs  = sorted
+              .filter(i => amtItemRe.test(i.str.trim()))
+              .map(i => i.x);
+            rowData.push({ text, amtXs });
+          });
       }
 
       Modal.close();
       const allCats = Storage.getCategories();
-      this._showPDFWizard(lines, allCats);
+
+      // Auto-parse with x-position tracking (no wizard needed for most PDFs)
+      const transactions = this._parsePDFRows(rowData, allCats);
+
+      if (!transactions.length) {
+        // Fallback: show wizard so user can pick an example line
+        this._showPDFWizard(rowData.map(r => r.text), allCats);
+        return;
+      }
+
+      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, allCats);
+        transactions.forEach(t => {
+          if (!t.isRevenue && catMap[t.description]) {
+            const { category, subcategory } = catMap[t.description];
+            if (category) t.category = category;
+            if (subcategory) t.subcategory = subcategory;
+          }
+        });
+      }
+
+      document.getElementById('modal')?.classList.add('modal-wide');
+      this._showPreview(transactions, 'pdf');
     } catch (err) {
       console.error(err);
       Modal.close();
-      alert('Erreur lors de la lecture du PDF : ' + err.message);
+      alert('Erreur lors de la lecture du PDF : ' + err.message);
     }
+  },
+
+  // Parse PDF rows using x-position clustering for debit/credit detection.
+  // rowData: [{text, amtXs:[]}] from _handlePDF
+  _parsePDFRows(rowData, allCats = []) {
+    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
+    const rAmount = /(\d{1,3}(?:[\s  ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
+    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
+
+    // Build blocks: each date-line opens a block; non-date lines accumulate
+    const blocks = [];
+    let cur = null;
+    for (const row of rowData) {
+      const line = row.text.trim();
+      if (!line || skipPat.test(line)) continue;
+      const dm = line.match(rDate);
+      if (dm) {
+        if (cur) blocks.push(cur);
+        cur = { date: dm[1], parts: [line], amtXs: [...row.amtXs] };
+      } else if (cur) {
+        cur.parts.push(line);
+        cur.amtXs.push(...row.amtXs);
+      }
+    }
+    if (cur) blocks.push(cur);
+
+    // First pass: parse transactions, track leftmost amount x-position per block
+    const rawTxns = [];
+    for (const block of blocks) {
+      const dateStr = this._parseDate(block.date);
+      if (!dateStr) continue;
+
+      const fullText = block.parts.join(' ');
+      let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
+
+      const amtMatches = [...work.matchAll(rAmount)];
+      if (!amtMatches.length) continue;
+
+      const amount = this._parseAmount(amtMatches[0][1]);
+      if (!amount || Math.abs(amount) < 0.01) continue;
+
+      let desc = work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' ');
+      // Filter false positives: require ≥3 alphabetic characters in description
+      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
+
+      // Leftmost amount x = transaction amount column (rightmost = balance column)
+      const txnAmtX = block.amtXs.length ? Math.min(...block.amtXs) : null;
+
+      const guess = this._smartGuess(desc, allCats);
+      rawTxns.push({ date: dateStr, description: desc,
+        amount: Math.abs(amount), isRevenue: false,
+        category: guess.category, subcategory: guess.subcategory,
+        _amtX: txnAmtX });
+    }
+
+    // Second pass: cluster amount x-positions to detect separate debit/credit columns
+    // If the PDF has distinct debit & credit columns, the x-positions will form 2+ clusters.
+    const validXs = rawTxns.map(t => t._amtX).filter(x => x !== null).sort((a, b) => a - b);
+    let creditMinX = Infinity;
+    if (validXs.length >= 4) {
+      // Find the largest gap in x-distribution (= column boundary)
+      let maxGap = 0, splitAt = -1;
+      for (let i = 1; i < validXs.length; i++) {
+        const gap = validXs[i] - validXs[i - 1];
+        if (gap > maxGap) { maxGap = gap; splitAt = validXs[i]; }
+      }
+      // Only use split if gap is meaningful (> 40pt) and not all on the same side
+      if (maxGap > 40) creditMinX = splitAt;
+    }
+
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const revCatName = (allCats.find(c => n(c.name).includes('revenu')) || {}).name || '';
+
+    rawTxns.forEach(t => {
+      if (t._amtX !== null && t._amtX >= creditMinX) t.isRevenue = true;
+      if (revCatName && t.category === revCatName) t.isRevenue = true;
+      delete t._amtX;
+    });
+
+    return rawTxns;
   },
 
   _showPDFWizard(lines, allCats) {
