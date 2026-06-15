@@ -379,11 +379,20 @@ const BankImport = {
       return d.toISOString().split('T')[0];
     }
     const s = String(val).trim();
+    // DD/MM/YYYY ou DD/MM/YY
     const m = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
     if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+    // ISO
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // YYYYMMDD
     const ym = s.match(/^(\d{4})(\d{2})(\d{2})$/);
     if (ym) return `${ym[1]}-${ym[2]}-${ym[3]}`;
+    // DD/MM sans année (courant dans les relevés PDF) → année en cours
+    const short = s.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+    if (short) {
+      const y = new Date().getFullYear();
+      return `${y}-${short[2].padStart(2,'0')}-${short[1].padStart(2,'0')}`;
+    }
     return '';
   },
 
@@ -455,7 +464,6 @@ const BankImport = {
       for (let p = 1; p <= pdf.numPages; p++) {
         const page    = await pdf.getPage(p);
         const content = await page.getTextContent();
-        // Grouper par ligne : tolérance 8pt (assez large pour PDF bancaires)
         const byY = new Map();
         for (const item of content.items) {
           if (!item.str?.trim()) continue;
@@ -469,44 +477,10 @@ const BankImport = {
             lines.push(items.sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
           );
       }
-      console.debug('[PDF] Lignes extraites :', lines.length);
-      lines.slice(0, 30).forEach((l, i) => console.debug(`[PDF] L${i}: ${l}`));
 
-      const allCats      = Storage.getCategories();
-      const transactions = this._parsePDFTransactions(lines, allCats);
-
-      if (!transactions.length) {
-        Modal.close();
-        const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
-        if (canUseAI) {
-          const go = confirm(
-            '⚠️ La lecture locale n\'a pas détecté de transactions dans ce PDF.\n\n' +
-            'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
-            'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
-          );
-          if (go) await this._parsePDFWithAI(lines.join('\n'));
-        } else {
-          alert('📄 Aucune transaction détectée dans ce PDF.\n\n'
-            + 'Si ce relevé est dans un format difficile, activez « IA pour PDF difficiles »'
-            + ' dans les Paramètres (nécessite une clé API Anthropic).');
-        }
-        return;
-      }
-
-      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
-      if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => {
-          if (!t.isRevenue && catMap[t.description]) {
-            const { category, subcategory } = catMap[t.description];
-            if (category) t.category = category;
-            if (subcategory) t.subcategory = subcategory;
-          }
-        });
-      }
-
-      document.getElementById('modal')?.classList.add('modal-wide');
-      this._showPreview(transactions, 'pdf');
+      Modal.close();
+      const allCats = Storage.getCategories();
+      this._showPDFWizard(lines, allCats);
     } catch (err) {
       console.error(err);
       Modal.close();
@@ -514,27 +488,132 @@ const BankImport = {
     }
   },
 
-  _parsePDFTransactions(lines, allCats = []) {
-    const transactions = [];
-
-    // Date JJ/MM ou JJ/MM/AA ou JJ/MM/AAAA
-    const rDate   = /\b(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
-    // Montant FR : "1 234,56" / "1 234,56" / "1234,56" — espace insécable compris
+  _showPDFWizard(lines, allCats) {
+    const rDate   = /\b(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/g;
     const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
 
-    // Lignes à ignorer (entêtes, totaux, soldes…)
-    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
+    const displayLines = lines.filter(l => l.trim().length > 3).slice(0, 80);
 
-    // ── Construire des "blocs" : une date lance un bloc, on accumule
-    // les lignes suivantes jusqu'à la prochaine date (= transaction suivante).
-    // Cela permet de gérer les libellés sur 2 lignes ET les montants décalés.
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const renderAnalysis = (line) => {
+      const dates   = [...line.matchAll(rDate)].map(m => m[1]);
+      const amounts = [...line.matchAll(rAmount)].map(m => m[1]);
+      if (!dates.length) return `<p class="pdf-wiz-hint">⚠️ Aucune date détectée dans cette ligne — choisissez une ligne de transaction.</p>`;
+      if (!amounts.length) return `<p class="pdf-wiz-hint">⚠️ Aucun montant détecté — choisissez une ligne de transaction.</p>`;
+
+      // Description = texte sans dates et avant le 1er montant
+      let work = line;
+      dates.forEach(d => { work = work.replace(d, ' '); });
+      const firstAmtIdx = work.search(rAmount);
+      const desc = (firstAmtIdx > 0 ? work.slice(0, firstAmtIdx) : work).trim().replace(/\s+/g,' ');
+
+      let html = `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-date">📅 Date</span>${esc(dates[0])}</div>`;
+      html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-desc">✏️ Libellé</span>${esc(desc) || '<em style="color:var(--text-muted)">non détecté</em>'}</div>`;
+
+      if (amounts.length === 1) {
+        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montant</span>${esc(amounts[0])}</div>`;
+      } else {
+        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montants</span>`;
+        html += `<span style="color:var(--text-muted);font-size:12px">Plusieurs montants détectés — lequel est le montant de l'opération ?</span><br>`;
+        amounts.forEach((a, i) => {
+          html += `<label class="pdf-amt-radio"><input type="radio" name="pdfAmt" value="${i}" ${i===0?'checked':''}> ${esc(a)}</label> `;
+        });
+        html += `</div>`;
+      }
+      return html;
+    };
+
+    const linesHtml = displayLines.map((line, i) =>
+      `<div class="pdf-wiz-line" data-idx="${i}">${esc(line)}</div>`
+    ).join('');
+
+    Modal.open('Relevé PDF — Sélectionnez une ligne exemple', `
+      <div class="mapping-wizard">
+        <p class="pdf-wiz-hint">Cliquez sur une ligne qui représente une opération bancaire (avec date et montant).</p>
+        <div class="pdf-wiz-scroll" id="pdf-wiz-list">${linesHtml}</div>
+        <div class="pdf-wiz-analysis" id="pdf-wiz-analysis">
+          <span style="color:var(--text-muted);font-size:13px">← Cliquez sur une ligne ci-dessus</span>
+        </div>
+        <div class="mapping-footer">
+          <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button class="btn-primary" id="pdf-wiz-btn" disabled onclick="BankImport._confirmPDFWizard()">Importer →</button>
+        </div>
+      </div>
+    `);
+    document.getElementById('modal')?.classList.add('modal-wide');
+
+    this._pdfWizState = { lines, allCats, displayLines };
+
+    document.getElementById('pdf-wiz-list').addEventListener('click', e => {
+      const el = e.target.closest('.pdf-wiz-line');
+      if (!el) return;
+      document.querySelectorAll('.pdf-wiz-line').forEach(l => l.classList.remove('pdf-wiz-line-sel'));
+      el.classList.add('pdf-wiz-line-sel');
+      const idx = parseInt(el.dataset.idx);
+      this._pdfWizState.selectedLine = displayLines[idx];
+      document.getElementById('pdf-wiz-analysis').innerHTML = renderAnalysis(displayLines[idx]);
+      document.getElementById('pdf-wiz-btn').disabled = false;
+    });
+  },
+
+  async _confirmPDFWizard() {
+    const { lines, allCats, selectedLine } = this._pdfWizState || {};
+    if (!selectedLine) return;
+
+    const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
+    const amounts = [...selectedLine.matchAll(rAmount)].map(m => m[1]);
+    const radio   = document.querySelector('input[name="pdfAmt"]:checked');
+    const amtIdx  = radio ? parseInt(radio.value) : 0;
+
+    Modal.open('Import PDF…', `<div style="text-align:center;padding:40px"><p>Analyse en cours…</p></div>`);
+
+    const transactions = this._parsePDFTransactions(lines, allCats, amtIdx);
+
+    if (!transactions.length) {
+      Modal.close();
+      const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
+      if (canUseAI) {
+        const go = confirm(
+          '⚠️ Aucune transaction détectée avec ce paramétrage.\n\n' +
+          'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
+          'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
+        );
+        if (go) await this._parsePDFWithAI(lines.join('\n'));
+      } else {
+        alert('📄 Aucune transaction détectée.\n\nEssayez de cliquer sur une autre ligne, ou activez « IA pour PDF difficiles » dans les Paramètres.');
+      }
+      return;
+    }
+
+    const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+    if (labels.length) {
+      const catMap = await GeminiCat.categorize(labels, allCats);
+      transactions.forEach(t => {
+        if (!t.isRevenue && catMap[t.description]) {
+          const { category, subcategory } = catMap[t.description];
+          if (category) t.category = category;
+          if (subcategory) t.subcategory = subcategory;
+        }
+      });
+    }
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    this._showPreview(transactions, 'pdf');
+  },
+
+  _parsePDFTransactions(lines, allCats = [], amtIdx = 0) {
+    const transactions = [];
+
+    const rDate   = /\b(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
+    const rAmount = /(\d{1,3}(?:[\s\u00A0 ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
+    const skipPat = /\b(?:solde|total|report|relev[e\u00e9]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
+
     const blocks = [];
     let cur = null;
-
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line || skipPat.test(line)) continue;
-
       const dm = line.match(rDate);
       if (dm) {
         if (cur) blocks.push(cur);
@@ -545,26 +624,21 @@ const BankImport = {
     }
     if (cur) blocks.push(cur);
 
-    console.debug('[PDF] Blocs candidats :', blocks.length);
-
     for (const block of blocks) {
       const dateStr = this._parseDate(block.date);
       if (!dateStr) continue;
 
-      // Texte complet du bloc (toutes les parties)
       const fullText = block.parts.join(' ');
-
-      // Retirer toutes les occurrences de dates (date op + date valeur fréquentes)
       let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
 
       const amtMatches = [...work.matchAll(rAmount)];
       if (!amtMatches.length) continue;
 
-      const amtStr = amtMatches[0][1];
-      const amount  = this._parseAmount(amtStr);
+      const idx    = amtIdx < 0 ? amtMatches.length + amtIdx : amtIdx;
+      const chosen = amtMatches[Math.min(idx, amtMatches.length - 1)];
+      const amount = this._parseAmount(chosen[1]);
       if (amount === null || Math.abs(amount) < 0.01) continue;
 
-      // Description = tout ce qui précède le premier montant
       let desc = work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' ');
       if (!desc || desc.length < 2) continue;
 
@@ -574,7 +648,6 @@ const BankImport = {
         category: guess.category, subcategory: guess.subcategory });
     }
 
-    console.debug('[PDF] Transactions détectées :', transactions.length);
     return transactions;
   },
 

@@ -1594,6 +1594,21 @@ input:focus:not(:focus-visible) { outline: none; }
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
 .row-dup { opacity: 0.55; }
 
+/* ---- PDF Wizard ---- */
+.pdf-wiz-hint { font-size: 13px; color: var(--text-muted); margin: 0; }
+.pdf-wiz-scroll { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; background: var(--bg); }
+.pdf-wiz-line { padding: 5px 12px; font-family: monospace; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: pre-wrap; word-break: break-all; border-bottom: 1px solid transparent; transition: background 0.1s; }
+.pdf-wiz-line:hover { background: var(--bg-card); color: var(--text); }
+.pdf-wiz-line-sel { background: var(--primary-light) !important; color: var(--primary-dark) !important; font-weight: 600; }
+.pdf-wiz-analysis { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; min-height: 56px; }
+.pdf-tok-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
+.pdf-tok-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+.pdf-tok-date { background: #dbeafe; color: #1d4ed8; }
+.pdf-tok-desc { background: #dcfce7; color: #166534; }
+.pdf-tok-amt  { background: #fef9c3; color: #854d0e; }
+.pdf-amt-radio { margin-right: 12px; cursor: pointer; }
+.mapping-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .performer-row:last-child { border-bottom: none; }
