@@ -558,7 +558,7 @@ const BankImport = {
       const amount = this._parseAmount(amtMatches[0][1]);
       if (!amount || Math.abs(amount) < 0.01) continue;
 
-      let desc = work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' ');
+      let desc = this._cleanDesc(work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' '));
       // Filter false positives: require ≥3 alphabetic characters in description
       if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
 
@@ -752,7 +752,7 @@ const BankImport = {
       const amount = this._parseAmount(chosen[1]);
       if (amount === null || Math.abs(amount) < 0.01) continue;
 
-      let desc = work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' ');
+      let desc = this._cleanDesc(work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' '));
       if (!desc || desc.length < 2) continue;
 
       const guess = this._smartGuess(desc, allCats);
@@ -834,6 +834,35 @@ const BankImport = {
     }
   },
 
+  // ── NETTOYAGE DU LIBELLÉ BANCAIRE ────────────────────────────────────────
+
+  // Supprime les codes internes des banques pour ne garder que le nom du commerçant.
+  // Ex : "DU 180426 G20 PARIS" → "G20 PARIS"
+  //      "FACTURE(S) CARTE 4974XXXX8930 DU 190426 CERNAY ALIMENTA REIMS" → "CERNAY ALIMENTA REIMS"
+  _cleanDesc(raw) {
+    let s = (raw || '').trim();
+
+    // Codes de référence bancaire : "DU YYMMDD" ou "DU DDMMYY" (6 chiffres consécutifs)
+    s = s.replace(/\bDU\s+\d{6}\b/gi, '');
+
+    // Numéros de carte masqués : 4974XXXXXXXX8930, XXXX XXXX XXXX 1234
+    s = s.replace(/\b[0-9]{4}[X*0-9]{6,}\b/g, '');
+    s = s.replace(/\b(?:X{4}\s*){3}[X\d]{4}\b/g, '');
+
+    // Préfixes courants à supprimer
+    s = s.replace(/^(?:PAIEMENT\s+(?:PAR\s+)?(?:CB|CARTE)\s+|FACTURES?\s+(?:DE\s+)?(?:CARTE\s+)?|CB\s+|RETRAIT\s+(?:DAB\s+|GAB\s+)?)/i, '');
+
+    // Préfixes à raccourcir
+    s = s.replace(/^PRELEVEMENT\s+(?:SEPA\s+)?/i, 'PREL ');
+    s = s.replace(/^VIREMENT\s+(?:SEPA\s+|INST\s+|PERMANENT\s+)?/i, 'VIR ');
+
+    // Dates résiduelles en fin de libellé (ex : "CARREFOUR 21/04" ou "21.04")
+    s = s.replace(/\s+\d{2}[\/\.]\d{2}(?:\s+\d{2,4})?$/, '');
+
+    s = s.replace(/\s{2,}/g, ' ').trim();
+    return s || (raw || '').trim();
+  },
+
   // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
 
   // Fallback lorsque Gemini n'est pas disponible — base de 100+ enseignes/marques françaises.
@@ -859,7 +888,7 @@ const BankImport = {
     if (/boulangerie|paul |brioche doree|eric kayser|patisserie/.test(d))                  return res('Alimentation','Boulangerie');
     if (/restaurant|brasserie|bistro|mcdonald|burger king|kfc|quick |pizza|kebab|sushi|ramen|thai |japonais|vietnamien|grec |chinois|indien|tacos|brunch|izakaya/.test(d)) return res('Alimentation','Resto');
     if (/izly/.test(d))                                                                     return res('Alimentation','Izly');
-    if (/auchan|leclerc|carrefour|intermarche|lidl|aldi|super u|biocoop|naturalia|monoprix|franprix|picard|casino |cora |simply|netto |market|supermarche|hypermarche|epicerie|primeur|grand frais/.test(d)) return res('Alimentation','Courses');
+    if (/auchan|leclerc|carrefour|intermarche|lidl|aldi|super u|biocoop|naturalia|monoprix|franprix|picard|casino |cora |simply|netto |market|supermarche|hypermarche|epicerie|primeur|grand frais|g20 |vival|spar |coccinelle|proxi |8 a huit|huit a huit|dia |leader price|cernay|alimenta/.test(d)) return res('Alimentation','Courses');
 
     // Transport
     if (/sncf|ter |tgv |ouigo|trenitalia|eurostar|lyria|izy /.test(d))                    return res('Transport','Train');
