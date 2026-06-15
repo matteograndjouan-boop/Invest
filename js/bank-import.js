@@ -250,7 +250,7 @@ const BankImport = {
                 <div class="mapping-split-row mapping-split-3">
                   <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label><select id="map-date-day" class="select-input">${colOpts(mapping.dateDay, true)}</select></div>
                   <div><label class="mapping-sub-lbl">Mois</label><select id="map-date-month" class="select-input">${colOpts(mapping.dateMonth, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Année</label><select id="map-date-year" class="select-input">${colOpts(mapping.dateYear, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Année <small style="color:var(--text-muted)">(an en cours si vide)</small></label><select id="map-date-year" class="select-input">${colOpts(mapping.dateYear, true)}</select></div>
                 </div>
               </div>
             </div>
@@ -363,8 +363,9 @@ const BankImport = {
       const s = String(month||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').slice(0,3);
       m = MONTHS[s] || 0;
     }
+    // Si pas d'année fournie → année en cours
     let y = parseInt(year, 10);
-    if (!y) return '';
+    if (!y) y = new Date().getFullYear();
     if (y < 100) y = 2000 + y;
     const d = (day !== null && day !== '' && day !== undefined) ? (parseInt(day, 10) || 1) : 1;
     if (!m || m > 12) return '';
