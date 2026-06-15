@@ -1568,6 +1568,30 @@ input:focus:not(:focus-visible) { outline: none; }
 .port-pos-actions { display: flex; gap: 2px; margin-left: 8px; opacity: 0; transition: opacity .15s; }
 .port-position-row:hover .port-pos-actions { opacity: 1; }
 
+/* ---- Mapping Wizard ---- */
+.mapping-wizard { display: flex; flex-direction: column; gap: 16px; }
+.mapping-top-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mapping-profile-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.mapping-profile-known { background: #d1fae5; color: #065f46; }
+.mapping-profile-new   { background: #fef3c7; color: #92400e; }
+.mapping-top-info { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.mapping-sample-wrap { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.mapping-sample-label { font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 8px 12px; background: var(--bg); border-bottom: 1px solid var(--border); }
+.mapping-sample-scroll { overflow-x: auto; max-height: 110px; overflow-y: auto; }
+.mapping-sample-table { font-size: 11px; border-collapse: collapse; white-space: nowrap; min-width: 100%; }
+.mapping-sample-table th { padding: 5px 10px; background: var(--bg); color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
+.mapping-sample-table td { padding: 4px 10px; border-bottom: 1px solid var(--border); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.mapping-fields { display: flex; flex-direction: column; gap: 12px; }
+.mapping-field-row { display: grid; grid-template-columns: 140px 1fr; align-items: start; gap: 10px; }
+.mapping-field-label { font-size: 13px; font-weight: 600; padding-top: 8px; }
+.mapping-amount-type { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.mapping-radio-lbl { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.mapping-split-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mapping-sub-lbl { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.mapping-save-lbl { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 10px 12px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+.row-dup { opacity: 0.55; }
+
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .performer-row:last-child { border-bottom: none; }

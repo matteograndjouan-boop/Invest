@@ -1,7 +1,8 @@
 const BankImport = {
-  // Clé Claude — optionnelle, pour la détection automatique des colonnes uniquement
   getApiKey()      { return localStorage.getItem('claude_api_key') || ''; },
   saveApiKey(key)  { if (key) localStorage.setItem('claude_api_key', key); else localStorage.removeItem('claude_api_key'); },
+  _getPdfAiEnabled() { return localStorage.getItem('bank_pdf_ai_enabled') === '1'; },
+  _setPdfAiEnabled(v) { localStorage.setItem('bank_pdf_ai_enabled', v ? '1' : '0'); },
 
   init() {
     document.getElementById('bank-import-file')?.addEventListener('change', (e) => {
@@ -19,8 +20,7 @@ const BankImport = {
     if (!btn) return;
     const hasGemini = !!GeminiCat.getApiKey();
     const hasClaude = !!this.getApiKey();
-    btn.title = hasGemini
-      ? 'Paramètres (Gemini IA configuré ✓)'
+    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)'
       : hasClaude ? 'Paramètres (Claude configuré)' : 'Paramètres';
     btn.classList.toggle('settings-configured', hasGemini || hasClaude);
   },
@@ -28,18 +28,16 @@ const BankImport = {
   openSettings() {
     const geminiKey = GeminiCat.getApiKey();
     const claudeKey = this.getApiKey();
-    Modal.open('Paramètres IA', `
+    const pdfAi    = this._getPdfAiEnabled();
+    Modal.open('Paramètres IA & Import', `
       <div class="settings-section">
 
-        <!-- ── Gemini (catégorisation, gratuit) ───────────────────────── -->
         <div class="settings-block settings-block-primary">
           <div class="settings-block-title">🤖 Google Gemini — Catégorisation automatique <span class="settings-badge-free">Gratuit</span></div>
           <p class="settings-desc">
-            À l'import d'un relevé, Gemini lit les libellés de vos transactions et
-            suggère automatiquement la bonne catégorie (Alimentation, Transport…).<br><br>
-            <strong>Confidentialité :</strong> seul le texte du libellé est envoyé à Google.
-            Les montants, dates, soldes et toute information personnelle restent
-            strictement dans votre navigateur.
+            Gemini suggère automatiquement la catégorie de chaque dépense à partir du libellé.<br><br>
+            <strong>Confidentialité :</strong> seul le texte du libellé est envoyé à Google —
+            jamais les montants, dates ni données personnelles.
           </p>
           <div class="form-group" style="margin-top:14px">
             <label class="settings-label">Clé API Google Gemini</label>
@@ -52,22 +50,32 @@ const BankImport = {
           </div>
         </div>
 
-        <!-- ── Claude (détection colonnes, optionnel) ──────────────────── -->
-        <div class="settings-block" style="margin-top:16px">
-          <div class="settings-block-title">⚡ Claude Anthropic — Détection des colonnes <span class="settings-badge-optional">Optionnel</span></div>
+        <div class="settings-block" style="margin-top:14px">
+          <div class="settings-block-title">⚡ Claude Anthropic — Détection colonnes <span class="settings-badge-optional">Optionnel</span></div>
           <p class="settings-desc">
-            Permet de détecter automatiquement les colonnes de n'importe quel relevé.
-            Sans cette clé, la détection se fait par règles (fonctionne pour les formats courants).
+            Améliore la détection des colonnes pour les formats atypiques.
+            Sans cette clé la détection fonctionne par règles (couvre la plupart des banques).
           </p>
           <div class="form-group" style="margin-top:14px">
             <label class="settings-label">Clé API Anthropic</label>
             <input type="password" id="settings-claude-key" class="form-input"
               value="${claudeKey}" placeholder="sk-ant-api03-…"
               style="width:100%;font-family:monospace;font-size:13px;margin-top:6px">
-            <p style="font-size:12px;color:var(--text-muted);margin-top:6px">
-              Clé sur <strong>console.anthropic.com</strong> → API Keys (payant, ~0,001 € / import)
-            </p>
           </div>
+        </div>
+
+        <div class="settings-block" style="margin-top:14px">
+          <div class="settings-block-title">📄 Import PDF — IA pour PDF difficiles <span class="settings-badge-optional">Désactivé par défaut</span></div>
+          <p class="settings-desc">
+            Pour les PDF que la lecture locale n'arrive pas à parser.<br><br>
+            ⚠️ <strong>Attention :</strong> si activée, cette option envoie le contenu complet du
+            relevé (montants, dates, données personnelles) à l'IA.
+            Contrairement à la catégorisation, ce mode ne se limite pas aux libellés.
+          </p>
+          <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
+            Activer l'IA pour les PDF difficiles (opt-in, envoie les données complètes)
+          </label>
         </div>
 
       </div>
@@ -80,147 +88,226 @@ const BankImport = {
   },
 
   _clearAllKeys() {
-    this.saveApiKey('');
-    GeminiCat.saveApiKey('');
-    Modal.close();
-    this._refreshSettingsIndicator();
+    this.saveApiKey(''); GeminiCat.saveApiKey('');
+    Modal.close(); this._refreshSettingsIndicator();
   },
 
   _saveSettings() {
     GeminiCat.saveApiKey((document.getElementById('settings-gemini-key')?.value || '').trim());
     this.saveApiKey((document.getElementById('settings-claude-key')?.value || '').trim());
-    Modal.close();
-    this._refreshSettingsIndicator();
+    this._setPdfAiEnabled(document.getElementById('settings-pdf-ai')?.checked || false);
+    Modal.close(); this._refreshSettingsIndicator();
   },
 
-  openFilePicker() {
-    document.getElementById('bank-import-file')?.click();
-  },
+  openFilePicker() { document.getElementById('bank-import-file')?.click(); },
 
   async handleFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
-      alert('Format non supporté. Utilisez un fichier CSV ou Excel (.xlsx / .xls).');
-      return;
-    }
+    if (ext === 'pdf') await this._handlePDF(file);
+    else if (['csv', 'xlsx', 'xls', 'tsv'].includes(ext)) await this._handleSpreadsheet(file);
+    else alert('Format non supporté. Utilisez CSV, Excel (.xlsx/.xls/.tsv) ou PDF.');
+  },
 
+  // ── TABLEUR ───────────────────────────────────────────────────────────────
+
+  async _handleSpreadsheet(file) {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const wb = XLSX.read(evt.target.result, { type: 'array', codepage: 1252 });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        let rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const wb  = XLSX.read(evt.target.result, { type: 'array', codepage: 1252 });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        let rows  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         rows = rows.filter(r => r.some(c => c !== '' && c !== null && c !== undefined));
-
         if (rows.length < 2) { alert('Fichier vide ou aucune donnée détectée.'); return; }
 
+        const headerIdx  = this._findHeaderRow(rows);
+        const guessed    = this._guessMapping(rows[headerIdx]);
+        const profileKey = this._profileKey(rows[headerIdx]);
+        const saved      = this._getProfiles()[profileKey];
+
         document.getElementById('modal')?.classList.add('modal-wide');
-        Modal.open('Analyse du relevé…', `
-          <div style="text-align:center;padding:52px 20px">
-            <div style="font-size:52px;margin-bottom:20px">🤖</div>
-            <p style="font-size:15px;font-weight:700;margin-bottom:8px">Analyse en cours…</p>
-            <p style="color:var(--text-muted);font-size:13px">Détection des colonnes et catégorisation</p>
-          </div>
-        `);
-
-        // Étape 1 : détection des colonnes (Claude si clé dispo, sinon règles)
-        let mapping;
-        const claudeKey = this.getApiKey();
-        if (claudeKey) {
-          try {
-            mapping = await this._detectColumnsWithClaude(rows, claudeKey);
-          } catch (err) {
-            console.warn('Claude colonne fallback:', err.message);
-            mapping = this._guessMapping(rows[0]);
-          }
-        } else {
-          mapping = this._guessMapping(rows[0]);
-        }
-
-        // Étape 2 : parse des transactions (catégorie provisoire par mots-clés)
-        const transactions = this._parseWithMapping(rows, mapping);
-        if (!transactions.length) {
-          document.getElementById('modal')?.classList.remove('modal-wide');
-          Modal.close();
-          alert('Aucune transaction valide détectée.\n\nVérifiez que le fichier contient des colonnes de date et de montant.');
-          return;
-        }
-
-        // Étape 3 : catégorisation Gemini (par lot, avec cache)
-        const userCats = Storage.getCategories().map(c => c.name);
-        const expenseLabels = transactions.filter(t => !t.isRevenue).map(t => t.description);
-        if (expenseLabels.length) {
-          const catMap = await GeminiCat.categorize(expenseLabels, userCats);
-          transactions.forEach(t => {
-            if (!t.isRevenue && catMap[t.description]) {
-              const { category, subcategory } = catMap[t.description];
-              if (category) t.category = category;
-              if (subcategory) t.subcategory = subcategory;
-            }
-          });
-        }
-
-        this._showPreview(transactions);
+        this._showMappingWizard(rows, headerIdx, saved || guessed, profileKey, !!saved, file.name);
       } catch (err) {
         console.error(err);
-        document.getElementById('modal')?.classList.remove('modal-wide');
-        Modal.close();
         alert('Erreur lors de la lecture : ' + err.message);
       }
     };
     reader.readAsArrayBuffer(file);
   },
 
-  // Appel Claude pour la détection des colonnes uniquement (pas de catégorisation)
-  async _detectColumnsWithClaude(rows, apiKey) {
-    const headers  = rows[0];
-    const samples  = rows.slice(1, Math.min(5, rows.length));
-    const prompt = `Tu analyses la structure d'un relevé bancaire.
-En-têtes : ${headers.map((h, i) => `${i}:"${h}"`).join(', ')}
-${samples.map((r, i) => `Ligne ${i + 1}: ${r.map((v, j) => `${j}:"${v}"`).join(', ')}`).join('\n')}
-
-Identifie les colonnes : date, description (libellé), amount (unique), debit (séparé), credit (séparé).
-Réponds UNIQUEMENT en JSON : {"date":<idx|null>,"description":<idx|null>,"amount":<idx|null>,"debit":<idx|null>,"credit":<idx|null>}`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Claude ${resp.status}`);
+  _findHeaderRow(rows) {
+    let best = 0, bestScore = -Infinity;
+    for (let i = 0; i < Math.min(10, rows.length); i++) {
+      let score = 0;
+      for (const cell of rows[i]) {
+        const s = String(cell).trim();
+        if (!s) continue;
+        if (isNaN(parseFloat(s)) && !/^\d{1,2}[\/\-]\d{1,2}/.test(s)) score += 2;
+        else score -= 3;
+      }
+      if (score > bestScore) { bestScore = score; best = i; }
     }
-    const data  = await resp.json();
-    const text  = data.content?.[0]?.text || '';
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Réponse Claude invalide');
-    return JSON.parse(match[0]);
+    return best;
   },
 
   _guessMapping(headerRow) {
     const n = s => String(s).toLowerCase()
-      .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îï]/g, 'i')
-      .replace(/[ôö]/g, 'o').replace(/[ùûü]/g, 'u').replace(/ç/g, 'c').trim();
+      .replace(/[àâä]/g,'a').replace(/[éèêë]/g,'e').replace(/[îï]/g,'i')
+      .replace(/[ôö]/g,'o').replace(/[ùûü]/g,'u').replace(/ç/g,'c').trim();
     const h = headerRow.map(n);
     const find = (...terms) => { const i = h.findIndex(c => terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
     return {
-      date:        find('date treso', 'date ope', 'date val', 'date'),
-      description: find('libelle', 'description', 'commentaire', 'label', 'intitule', 'operation', 'nature'),
-      amount:      find('montant', 'amount', 'valeur'),
-      debit:       find('debit', 'sortie', 'depense', 'retrait'),
-      credit:      find('credit', 'entree', 'revenu', 'depot'),
+      date:        find('date treso','date compta','date ope','date val','date','jour','day'),
+      description: find('libelle','description','commentaire','label','intitule','operation','nature','motif','objet','details'),
+      amount:      find('montant','amount','valeur','somme'),
+      debit:       find('debit','sortie','depense','retrait','imputation'),
+      credit:      find('credit','entree','revenu','depot','versement'),
     };
+  },
+
+  _profileKey(headerRow) {
+    return headerRow.map(h => String(h).toLowerCase().trim()).filter(Boolean).sort().join('|');
+  },
+
+  _getProfiles() {
+    try { return JSON.parse(localStorage.getItem('invest_bank_profiles') || '{}'); } catch { return {}; }
+  },
+  _saveProfile(key, mapping) {
+    const p = this._getProfiles(); p[key] = mapping;
+    try { localStorage.setItem('invest_bank_profiles', JSON.stringify(p)); } catch(e) {}
+  },
+
+  _showMappingWizard(rows, headerIdx, mapping, profileKey, isKnown, fileName) {
+    window._bankMappingData = { rows, headerIdx, profileKey };
+
+    const headerRow  = rows[headerIdx];
+    const sampleRows = rows.slice(headerIdx + 1, headerIdx + 4).filter(r => r.some(c => c !== '' && c !== null));
+    const isSplit    = mapping.debit !== null || mapping.credit !== null;
+
+    const colOpts = (selected, withNone = false) =>
+      (withNone ? '<option value="">— aucune —</option>' : '') +
+      headerRow.map((h, i) =>
+        `<option value="${i}"${selected === i ? ' selected' : ''}>${String(h).trim() || 'Col. ' + (i + 1)}</option>`
+      ).join('');
+
+    const thCells = headerRow.map(h => `<th>${String(h).trim() || '—'}</th>`).join('');
+    const tdRows  = sampleRows.map(row =>
+      `<tr>${headerRow.map((_, i) => `<td>${String(row[i] ?? '').trim().slice(0, 22)}</td>`).join('')}</tr>`
+    ).join('');
+
+    const badge = isKnown
+      ? `<span class="mapping-profile-badge mapping-profile-known">✓ Format reconnu — mapping appliqué</span>`
+      : `<span class="mapping-profile-badge mapping-profile-new">Nouveau format — vérifiez les champs</span>`;
+
+    Modal.open('Correspondance des colonnes', `
+      <div class="mapping-wizard">
+        <div class="mapping-top-bar">
+          ${badge}
+          <span class="mapping-top-info">${rows.length - headerIdx - 1} ligne(s) · ${fileName}</span>
+        </div>
+
+        <div class="mapping-sample-wrap">
+          <div class="mapping-sample-label">Aperçu des premières lignes :</div>
+          <div class="mapping-sample-scroll">
+            <table class="mapping-sample-table"><thead><tr>${thCells}</tr></thead><tbody>${tdRows}</tbody></table>
+          </div>
+        </div>
+
+        <div class="mapping-fields">
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">📅 Date</label>
+            <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+          </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">📝 Libellé</label>
+            <select id="map-desc" class="select-input">${colOpts(mapping.description, true)}</select>
+          </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">💶 Montant</label>
+            <div>
+              <div class="mapping-amount-type">
+                <label class="mapping-radio-lbl"><input type="radio" name="map-amt-type" value="single"${!isSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-single-wrap').style.display='';document.getElementById('map-split-wrap').style.display='none'">
+                  Colonne unique (+/−)</label>
+                <label class="mapping-radio-lbl"><input type="radio" name="map-amt-type" value="split"${isSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-single-wrap').style.display='none';document.getElementById('map-split-wrap').style.display=''">
+                  Débit / Crédit séparés</label>
+              </div>
+              <div id="map-single-wrap"${isSplit ? ' style="display:none"' : ''}>
+                <select id="map-amount" class="select-input">${colOpts(mapping.amount, true)}</select>
+              </div>
+              <div id="map-split-wrap"${!isSplit ? ' style="display:none"' : ''}>
+                <div class="mapping-split-row">
+                  <div><label class="mapping-sub-lbl">Débit (sorties)</label><select id="map-debit" class="select-input">${colOpts(mapping.debit, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label><select id="map-credit" class="select-input">${colOpts(mapping.credit, true)}</select></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <label class="mapping-save-lbl">
+          <input type="checkbox" id="map-save-profile" checked>
+          Mémoriser ce mapping pour les prochains fichiers de ce format
+        </label>
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
+        <button class="btn-primary" onclick="BankImport._confirmMapping()">Continuer →</button>
+      </div>
+    `);
+  },
+
+  _confirmMapping() {
+    const { rows, headerIdx, profileKey } = window._bankMappingData || {};
+    if (!rows) return;
+    const isSplit = document.querySelector('[name="map-amt-type"]:checked')?.value === 'split';
+    const pi = v => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
+    const mapping = {
+      date:        pi(document.getElementById('map-date')?.value),
+      description: pi(document.getElementById('map-desc')?.value),
+      amount:      !isSplit ? pi(document.getElementById('map-amount')?.value)  : null,
+      debit:       isSplit  ? pi(document.getElementById('map-debit')?.value)   : null,
+      credit:      isSplit  ? pi(document.getElementById('map-credit')?.value)  : null,
+    };
+    if (document.getElementById('map-save-profile')?.checked && profileKey) {
+      this._saveProfile(profileKey, mapping);
+    }
+    this._runImportPipeline(rows, headerIdx, mapping);
+  },
+
+  async _runImportPipeline(rows, headerIdx, mapping) {
+    Modal.open('Catégorisation…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">🤖</div>
+        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
+        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
+      </div>
+    `);
+
+    const transactions = this._parseWithMapping(rows, headerIdx, mapping);
+    if (!transactions.length) {
+      document.getElementById('modal')?.classList.remove('modal-wide');
+      Modal.close();
+      alert('Aucune transaction valide détectée.\nVérifiez les correspondances de colonnes.');
+      return;
+    }
+
+    const userCats = Storage.getCategories().map(c => c.name);
+    const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+    if (labels.length) {
+      const catMap = await GeminiCat.categorize(labels, userCats);
+      transactions.forEach(t => {
+        if (!t.isRevenue && catMap[t.description]) {
+          const { category, subcategory } = catMap[t.description];
+          if (category) t.category = category;
+          if (subcategory) t.subcategory = subcategory;
+        }
+      });
+    }
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    this._showPreview(transactions);
   },
 
   _parseDate(val) {
@@ -233,86 +320,272 @@ Réponds UNIQUEMENT en JSON : {"date":<idx|null>,"description":<idx|null>,"amoun
     const m = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
     if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const ym = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (ym) return `${ym[1]}-${ym[2]}-${ym[3]}`;
     return '';
   },
 
   _parseAmount(val) {
     if (val === '' || val === null || val === undefined) return null;
     if (typeof val === 'number') return val;
-    const s = String(val).trim().replace(/[ \s]/g, '');
-    const cleaned = s.replace(/\.(?=\d{3}(?:[,]|$))/g, '').replace(',', '.');
-    const n = parseFloat(cleaned);
+    let s = String(val).trim().replace(/\s/g, '');
+    // Format français : "1.234,56" → enlever le point millier puis virgule→point
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(',', '.');
+    const n = parseFloat(s);
     return isNaN(n) ? null : n;
   },
 
-  _parseWithMapping(rows, mapping) {
+  _parseWithMapping(rows, headerIdx, mapping) {
     const transactions = [];
-    for (let i = 1; i < rows.length; i++) {
+    for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
-
       const date = mapping.date !== null ? this._parseDate(row[mapping.date]) : '';
       if (!date) continue;
-
-      const desc = mapping.description !== null ? String(row[mapping.description] || '').trim() : 'Opération';
-
+      const desc = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
       let amount = null, isRevenue = false;
       if (mapping.amount !== null) {
         const raw = this._parseAmount(row[mapping.amount]);
         if (raw !== null && raw !== 0) { amount = Math.abs(raw); isRevenue = raw > 0; }
       } else {
-        const dAmt = mapping.debit  !== null ? this._parseAmount(row[mapping.debit])  : null;
-        const cAmt = mapping.credit !== null ? this._parseAmount(row[mapping.credit]) : null;
-        if (dAmt && Math.abs(dAmt) > 0) { amount = Math.abs(dAmt); isRevenue = false; }
-        else if (cAmt && Math.abs(cAmt) > 0) { amount = Math.abs(cAmt); isRevenue = true; }
+        const d = mapping.debit  !== null ? this._parseAmount(row[mapping.debit])  : null;
+        const c = mapping.credit !== null ? this._parseAmount(row[mapping.credit]) : null;
+        if (d && Math.abs(d) > 0) { amount = Math.abs(d); isRevenue = false; }
+        else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
       }
       if (!amount || amount <= 0) continue;
+      transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
+        category: isRevenue ? 'Revenus' : guessCategory(desc), subcategory: '' });
+    }
+    return transactions;
+  },
+
+  // ── PDF ───────────────────────────────────────────────────────────────────
+
+  async _handlePDF(file) {
+    try {
+      Modal.open('Lecture du PDF…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">📄</div>
+          <p style="font-size:15px;font-weight:700">Extraction du texte en cours…</p>
+          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n'est envoyé sur internet.</p>
+        </div>
+      `);
+
+      if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non disponible');
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+      const buffer = await file.arrayBuffer();
+      const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const lines  = [];
+
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page    = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        // Grouper les items par ligne (position y arrondie à 3 pt)
+        const byY = new Map();
+        for (const item of content.items) {
+          if (!item.str?.trim()) continue;
+          const y = Math.round(item.transform[5] / 3) * 3;
+          if (!byY.has(y)) byY.set(y, []);
+          byY.get(y).push({ x: item.transform[4], str: item.str });
+        }
+        // y décroissant (PDF : y=0 en bas de page) puis items par x
+        [...byY.entries()]
+          .sort((a, b) => b[0] - a[0])
+          .forEach(([, items]) =>
+            lines.push(items.sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
+          );
+      }
+
+      const transactions = this._parsePDFTransactions(lines);
+
+      if (!transactions.length) {
+        Modal.close();
+        const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
+        if (canUseAI) {
+          const go = confirm(
+            '⚠️ La lecture locale n\'a pas détecté de transactions dans ce PDF.\n\n' +
+            'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
+            'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
+          );
+          if (go) await this._parsePDFWithAI(lines.join('\n'));
+        } else {
+          alert('📄 Aucune transaction détectée dans ce PDF.\n\n'
+            + 'Si ce relevé est dans un format difficile, activez « IA pour PDF difficiles »'
+            + ' dans les Paramètres (nécessite une clé API Anthropic).');
+        }
+        return;
+      }
+
+      const userCats = Storage.getCategories().map(c => c.name);
+      const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, userCats);
+        transactions.forEach(t => {
+          if (!t.isRevenue && catMap[t.description]) {
+            const { category, subcategory } = catMap[t.description];
+            if (category) t.category = category;
+            if (subcategory) t.subcategory = subcategory;
+          }
+        });
+      }
+
+      document.getElementById('modal')?.classList.add('modal-wide');
+      this._showPreview(transactions, 'pdf');
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur lors de la lecture du PDF : ' + err.message);
+    }
+  },
+
+  _parsePDFTransactions(lines) {
+    const transactions = [];
+    // Date en début de ligne ou précédant un libellé
+    const rDate   = /(?:^|\s)(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
+    // Montant : "1 234,56" ou "1234,56" ou "1234.56" avec signe optionnel
+    const rAmount = /(-?\d{1,3}(?:[\s]\d{3})*[,]\d{2}|-?\d+[,.]\d{2})/g;
+
+    for (const line of lines) {
+      const dm = line.match(rDate);
+      if (!dm) continue;
+      const dateStr = this._parseDate(dm[1]);
+      if (!dateStr) continue;
+
+      const afterDate   = line.slice(line.indexOf(dm[0]) + dm[0].length);
+      const amtMatches  = [...afterDate.matchAll(rAmount)];
+      if (!amtMatches.length) continue;
+
+      // Premier montant significatif après la date = transaction
+      const amtStr = amtMatches[0][1];
+      const amount  = this._parseAmount(amtStr);
+      if (amount === null || Math.abs(amount) < 0.01) continue;
+
+      // Description = texte entre la date et le premier montant
+      let desc = afterDate.slice(0, afterDate.indexOf(amtMatches[0][0])).trim().replace(/\s+/g, ' ');
+      if (!desc || desc.length < 3) continue;
 
       transactions.push({
-        date,
-        description: desc || 'Opération',
-        amount,
-        isRevenue,
-        category:    isRevenue ? 'Revenus' : guessCategory(desc),
-        subcategory: '',
+        date: dateStr, description: desc,
+        amount: Math.abs(amount), isRevenue: amount > 0,
+        category: guessCategory(desc), subcategory: '',
       });
     }
     return transactions;
   },
 
-  _showPreview(transactions) {
+  async _parsePDFWithAI(fullText) {
+    const apiKey = this.getApiKey();
+    if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
+    try {
+      Modal.open('Extraction IA…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">🤖</div>
+          <p style="font-size:15px;font-weight:700">Extraction par IA en cours…</p>
+          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Claude.</p>
+        </div>
+      `);
+
+      const text = fullText.slice(0, 15000); // limite ~15 000 caractères
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-calls': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content:
+            'Extrais les transactions bancaires de ce relevé.\n' +
+            'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
+            'Montant négatif = dépense, positif = crédit.\n\n' + text
+          }],
+        }),
+      });
+      if (!resp.ok) throw new Error('Claude HTTP ' + resp.status);
+      const data  = await resp.json();
+      const raw   = data.content?.[0]?.text || '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Réponse invalide');
+      const parsed = JSON.parse(match[0]);
+      const transactions = (parsed.t || [])
+        .map(t => ({
+          date: t.date, description: String(t.desc || '').trim(),
+          amount: Math.abs(t.amount), isRevenue: t.amount > 0,
+          category: guessCategory(String(t.desc || '')), subcategory: '',
+        }))
+        .filter(t => t.date && t.description && t.amount > 0);
+
+      if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
+
+      const userCats = Storage.getCategories().map(c => c.name);
+      const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, userCats);
+        transactions.forEach(t => {
+          if (!t.isRevenue && catMap[t.description]) {
+            const { category, subcategory } = catMap[t.description];
+            if (category) t.category = category;
+            if (subcategory) t.subcategory = subcategory;
+          }
+        });
+      }
+      document.getElementById('modal')?.classList.add('modal-wide');
+      this._showPreview(transactions, 'pdf');
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur extraction IA : ' + err.message);
+    }
+  },
+
+  // ── APERÇU ───────────────────────────────────────────────────────────────
+
+  _showPreview(transactions, source = 'spreadsheet') {
     window._bankTransactions = transactions;
-    const userCats = Storage.getCategories().map(c => c.name);
-    const expCats  = userCats.length ? userCats : Utils.EXPENSE_CATEGORIES;
-    const revCats  = Utils.REVENUE_CATEGORIES;
+    const userCats  = Storage.getCategories().map(c => c.name);
+    const expCats   = userCats.length ? userCats : Utils.EXPENSE_CATEGORIES;
+    const revCats   = Utils.REVENUE_CATEGORIES;
     const hasGemini = !!GeminiCat.getApiKey();
 
+    // Détection des doublons
+    const expKeys = new Set(Storage.getExpenses().map(e => `${e.date}|${e.description}|${e.amount}`));
+    const revKeys = new Set(Storage.getRevenues().map(r => `${r.date}|${r.description}|${r.amount}`));
+    const dupKey  = t => `${t.date}|${t.description}|${t.amount}`;
+
+    let dupCount = 0;
     const rows = transactions.map((t, i) => {
-      const cats = t.isRevenue ? revCats : expCats;
-      const opts = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
-      return `<tr>
-        <td><input type="checkbox" data-idx="${i}" checked></td>
+      const cats  = t.isRevenue ? revCats : expCats;
+      const opts  = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
+      const isDup = (t.isRevenue ? revKeys : expKeys).has(dupKey(t));
+      if (isDup) dupCount++;
+      const escDesc = t.description.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<tr${isDup ? ' class="row-dup"' : ''}>
+        <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
         <td>${Utils.formatDate(t.date)}</td>
-        <td class="bank-desc">${t.description}</td>
+        <td class="bank-desc">${t.description}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
         <td><select data-cat="${i}" class="select-input bank-cat-sel"
-          onchange="GeminiCat.learn('${t.description.replace(/'/g,"\\'")}', this.value, '')">${opts}</select></td>
+          onchange="GeminiCat.learn('${escDesc}',this.value,'')">${opts}</select></td>
       </tr>`;
     }).join('');
 
-    const note = hasGemini
-      ? `<div class="bank-import-note bank-note-ok">
-           🤖 <strong>Catégorisation par Gemini IA.</strong>
-           <span class="privacy-badge">🔒 Seuls les libellés sont envoyés — jamais les montants, dates ni données personnelles.</span>
-         </div>`
-      : `<div class="bank-import-note bank-note-warn">
-           💡 Catégories détectées par mots-clés.
-           <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini (gratuit) →</a>
-         </div>`;
+    const geminiNote = hasGemini
+      ? `<div class="bank-import-note bank-note-ok">🤖 <strong>Catégorisation Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés sont envoyés — jamais les montants, dates ni données personnelles.</span></div>`
+      : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés. <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`;
+    const dupNote = dupCount
+      ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>${dupCount} doublon(s) détecté(s)</strong> et décochés — cochez-les pour forcer l'import.</div>`
+      : '';
 
     document.getElementById('modal')?.classList.add('modal-wide');
-    Modal.open(`Relevé bancaire — ${transactions.length} opération(s)`, `
-      ${note}
+    Modal.open(`Relevé${source === 'pdf' ? ' PDF' : ''} — ${transactions.length} opération(s)`, `
+      ${geminiNote}${dupNote}
       <div class="bank-preview-wrap">
         <table class="data-table bank-preview-table">
           <thead><tr>
@@ -328,13 +601,14 @@ Réponds UNIQUEMENT en JSON : {"date":<idx|null>,"description":<idx|null>,"amoun
       </div>
     `);
 
-    document.getElementById('bank-check-all')?.addEventListener('change', (e) => {
+    document.getElementById('bank-check-all')?.addEventListener('change', e => {
       document.querySelectorAll('[data-idx]').forEach(cb => { cb.checked = e.target.checked; });
     });
   },
 
   _cancelPreview() {
     window._bankTransactions = null;
+    window._bankMappingData  = null;
     document.getElementById('modal')?.classList.remove('modal-wide');
     Modal.close();
   },
@@ -351,17 +625,14 @@ Réponds UNIQUEMENT en JSON : {"date":<idx|null>,"description":<idx|null>,"amoun
       if (!cb.checked) return;
       const t   = transactions[i];
       const cat = catSelects[i]?.value || t.category;
-
-      // Apprentissage : si la catégorie finale diffère de la suggestion, on mémorise
-      if (!t.isRevenue && cat !== t.category) {
-        GeminiCat.learn(t.description, cat, '');
-      }
-
+      if (!t.isRevenue && cat !== t.category) GeminiCat.learn(t.description, cat, '');
       if (t.isRevenue) {
-        revenues.push({ id: Utils.generateId(), description: t.description, amount: t.amount, category: cat, date: t.date, notes: 'Import bancaire' });
+        revenues.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
+          category: cat, date: t.date, notes: 'Import bancaire' });
         impRev++;
       } else {
-        expenses.push({ id: Utils.generateId(), description: t.description, amount: t.amount, category: cat, subcategory: t.subcategory || '', date: t.date, notes: 'Import bancaire' });
+        expenses.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
+          category: cat, subcategory: t.subcategory || '', date: t.date, notes: 'Import bancaire' });
         impExp++;
       }
     });
@@ -369,6 +640,7 @@ Réponds UNIQUEMENT en JSON : {"date":<idx|null>,"description":<idx|null>,"amoun
     Storage.saveExpenses(expenses);
     Storage.saveRevenues(revenues);
     window._bankTransactions = null;
+    window._bankMappingData  = null;
     document.getElementById('modal')?.classList.remove('modal-wide');
     Modal.close();
     navigateTo('flux');
