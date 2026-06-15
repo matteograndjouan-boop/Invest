@@ -1588,6 +1588,7 @@ input:focus:not(:focus-visible) { outline: none; }
 .mapping-amount-type { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .mapping-radio-lbl { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .mapping-split-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mapping-split-3   { grid-template-columns: 1fr 1fr 1fr; }
 .mapping-sub-lbl { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
 .mapping-save-lbl { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 10px 12px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }

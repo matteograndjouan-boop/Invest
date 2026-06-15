@@ -159,9 +159,22 @@ const BankImport = {
       .replace(/[àâä]/g,'a').replace(/[éèêë]/g,'e').replace(/[îï]/g,'i')
       .replace(/[ôö]/g,'o').replace(/[ùûü]/g,'u').replace(/ç/g,'c').trim();
     const h = headerRow.map(n);
+    // Correspondance par inclusion
     const find = (...terms) => { const i = h.findIndex(c => terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
+    // Correspondance exacte (pour éviter que "jour" matche "bonjour")
+    const exact = (...terms) => { const i = h.findIndex(c => terms.some(t => c === t)); return i >= 0 ? i : null; };
+
+    const date     = find('date treso','date compta','date ope','date val','date transaction','date');
+    // Ne chercher les composants que si aucune colonne date unifiée n'est trouvée
+    const dateDay   = date === null ? (exact('jour','day','jj','j')   ?? find('jour','day'))   : null;
+    const dateMonth = date === null ? (exact('mois','month','mm','m') ?? find('mois','month'))  : null;
+    const dateYear  = date === null ? (exact('annee','an','year','yyyy','aaaa') ?? find('annee','an ','year','aaaa')) : null;
+
     return {
-      date:        find('date treso','date compta','date ope','date val','date','jour','day'),
+      date,
+      dateDay,
+      dateMonth,
+      dateYear,
       description: find('libelle','description','commentaire','label','intitule','operation','nature','motif','objet','details'),
       amount:      find('montant','amount','valeur','somme'),
       debit:       find('debit','sortie','depense','retrait','imputation'),
@@ -186,7 +199,8 @@ const BankImport = {
 
     const headerRow  = rows[headerIdx];
     const sampleRows = rows.slice(headerIdx + 1, headerIdx + 4).filter(r => r.some(c => c !== '' && c !== null));
-    const isSplit    = mapping.debit !== null || mapping.credit !== null;
+    const isSplit      = mapping.debit !== null || mapping.credit !== null;
+    const isDateSplit  = mapping.dateMonth !== null || mapping.dateYear !== null;
 
     const colOpts = (selected, withNone = false) =>
       (withNone ? '<option value="">— aucune —</option>' : '') +
@@ -220,7 +234,26 @@ const BankImport = {
         <div class="mapping-fields">
           <div class="mapping-field-row">
             <label class="mapping-field-label">📅 Date</label>
-            <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+            <div>
+              <div class="mapping-amount-type">
+                <label class="mapping-radio-lbl"><input type="radio" name="map-date-type" value="single"${!isDateSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-date-single').style.display='';document.getElementById('map-date-parts').style.display='none'">
+                  Colonne unique</label>
+                <label class="mapping-radio-lbl"><input type="radio" name="map-date-type" value="parts"${isDateSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-date-single').style.display='none';document.getElementById('map-date-parts').style.display=''">
+                  Colonnes séparées (Jour / Mois / Année)</label>
+              </div>
+              <div id="map-date-single"${isDateSplit ? ' style="display:none"' : ''}>
+                <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+              </div>
+              <div id="map-date-parts"${!isDateSplit ? ' style="display:none"' : ''}>
+                <div class="mapping-split-row mapping-split-3">
+                  <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label><select id="map-date-day" class="select-input">${colOpts(mapping.dateDay, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Mois</label><select id="map-date-month" class="select-input">${colOpts(mapping.dateMonth, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Année</label><select id="map-date-year" class="select-input">${colOpts(mapping.dateYear, true)}</select></div>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">📝 Libellé</label>
@@ -265,14 +298,18 @@ const BankImport = {
   _confirmMapping() {
     const { rows, headerIdx, profileKey } = window._bankMappingData || {};
     if (!rows) return;
-    const isSplit = document.querySelector('[name="map-amt-type"]:checked')?.value === 'split';
+    const isAmtSplit  = document.querySelector('[name="map-amt-type"]:checked')?.value === 'split';
+    const isDateSplit = document.querySelector('[name="map-date-type"]:checked')?.value === 'parts';
     const pi = v => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
     const mapping = {
-      date:        pi(document.getElementById('map-date')?.value),
+      date:        !isDateSplit ? pi(document.getElementById('map-date')?.value)        : null,
+      dateDay:     isDateSplit  ? pi(document.getElementById('map-date-day')?.value)    : null,
+      dateMonth:   isDateSplit  ? pi(document.getElementById('map-date-month')?.value)  : null,
+      dateYear:    isDateSplit  ? pi(document.getElementById('map-date-year')?.value)   : null,
       description: pi(document.getElementById('map-desc')?.value),
-      amount:      !isSplit ? pi(document.getElementById('map-amount')?.value)  : null,
-      debit:       isSplit  ? pi(document.getElementById('map-debit')?.value)   : null,
-      credit:      isSplit  ? pi(document.getElementById('map-credit')?.value)  : null,
+      amount:      !isAmtSplit  ? pi(document.getElementById('map-amount')?.value)      : null,
+      debit:       isAmtSplit   ? pi(document.getElementById('map-debit')?.value)       : null,
+      credit:      isAmtSplit   ? pi(document.getElementById('map-credit')?.value)      : null,
     };
     if (document.getElementById('map-save-profile')?.checked && profileKey) {
       this._saveProfile(profileKey, mapping);
@@ -314,6 +351,26 @@ const BankImport = {
     this._showPreview(transactions);
   },
 
+  // Reconstitue une date ISO depuis des colonnes Jour, Mois, Année séparées.
+  // Mois accepte : 1-12, "01"-"12", "Janvier", "Jan", "January", "janv."…
+  _buildDateFromParts(day, month, year) {
+    const MONTHS = {
+      jan:1, fev:2, feb:2, mar:3, avr:4, apr:4, mai:5, may:5,
+      jun:6, jul:7, aou:8, aug:8, sep:9, oct:10, nov:11, dec:12,
+    };
+    let m = parseInt(month, 10);
+    if (isNaN(m)) {
+      const s = String(month||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').slice(0,3);
+      m = MONTHS[s] || 0;
+    }
+    let y = parseInt(year, 10);
+    if (!y) return '';
+    if (y < 100) y = 2000 + y;
+    const d = (day !== null && day !== '' && day !== undefined) ? (parseInt(day, 10) || 1) : 1;
+    if (!m || m > 12) return '';
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  },
+
   _parseDate(val) {
     if (val === '' || val === null || val === undefined) return '';
     if (typeof val === 'number') {
@@ -347,7 +404,13 @@ const BankImport = {
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
-      const date = mapping.date !== null ? this._parseDate(row[mapping.date]) : '';
+      const date = mapping.date !== null
+        ? this._parseDate(row[mapping.date])
+        : this._buildDateFromParts(
+            mapping.dateDay   !== null ? row[mapping.dateDay]   : null,
+            mapping.dateMonth !== null ? row[mapping.dateMonth] : null,
+            mapping.dateYear  !== null ? row[mapping.dateYear]  : null
+          );
       if (!date) continue;
       const desc = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
       let amount = null, isRevenue = false;
