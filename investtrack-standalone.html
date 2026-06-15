@@ -6594,7 +6594,7 @@ const BankImport = {
   _parsePDFRows(rowData, allCats = []) {
     const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
     const rAmount = /(\d{1,3}(?:[\s  ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
+    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte|taeg|taux\s+nominal|trimestriel|usure|autorisation\s+de)\b/i;
 
     // Build blocks: each date-line opens a block; non-date lines accumulate
     const blocks = [];
@@ -6653,8 +6653,10 @@ const BankImport = {
         const gap = validXs[i] - validXs[i - 1];
         if (gap > maxGap) { maxGap = gap; splitAt = validXs[i]; }
       }
-      // Only use split if gap is meaningful (> 40pt) and not all on the same side
-      if (maxGap > 40) creditMinX = splitAt;
+      // Split only if gap is large AND both clusters have ≥2 members (avoids outlier inversion)
+      const leftCount  = validXs.filter(x => x < splitAt).length;
+      const rightCount = validXs.filter(x => x >= splitAt).length;
+      if (maxGap > 40 && leftCount >= 2 && rightCount >= 2) creditMinX = splitAt;
     }
 
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
