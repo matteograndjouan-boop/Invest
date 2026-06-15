@@ -94,34 +94,57 @@ const GeminiCat = {
     return result;
   },
 
+  clearCache() {
+    localStorage.removeItem(this._CACHE_KEY);
+  },
+
   // Appel effectif à l'API Gemini.
   // SEULS les libellés (texte du libellé bancaire) sont transmis — rien d'autre.
   async _callGemini(labels, userCategories) {
-    // Construction de la liste catégories + sous-catégories pour le prompt
-    // userCategories peut être string[] ou {name, subcategories[]}[]
+    // Descriptions sémantiques pour aider Gemini à comprendre chaque catégorie
+    const _HINTS = {
+      alimentation: 'courses alimentaires, supermarchés, épiceries, restaurants, boulangeries, traiteurs',
+      transport: 'déplacements : train, TGV, SNCF, bus, métro, tram, taxi, VTC, trottinette',
+      shopping: 'achats physiques : vêtements, chaussures, sport, mode, électronique, maison, mobilier',
+      abonnements: 'services NUMÉRIQUES récurrents uniquement : streaming, forfait mobile/internet',
+      logement: 'loyer, charges, énergie, eau, gaz, travaux, habitat',
+      loisir: 'culture, cinéma, sport, spectacles, musées, jeux vidéo, divertissement',
+      sante: 'médicaments, médecins, pharmacie, soins, mutuelles, assurance maladie',
+      epargne: 'virements d\'épargne, placements, investissements, livret',
+      divers: 'autres dépenses non classées, frais bancaires, colis',
+      revenus: 'salaires, revenus, remboursements, aides',
+    };
+    const normHint = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
     let catBlock;
     if (userCategories.length && typeof userCategories[0] === 'object') {
       catBlock = userCategories.map(c => {
+        const hint = _HINTS[normHint(c.name)] || '';
         const subs = (c.subcategories || []).join(', ');
-        return subs ? `• ${c.name} (sous-catégories : ${subs})` : `• ${c.name}`;
+        const hintStr = hint ? ` — ${hint}` : '';
+        const subStr  = subs ? ` → ${subs}` : '';
+        return `• ${c.name}${hintStr}${subStr}`;
       }).join('\n');
     } else {
       catBlock = userCategories.map(c => `• ${c}`).join('\n');
     }
 
-    // On envoie uniquement les libellés, numérotés, sans aucune autre donnée
     const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
 
     const prompt =
 `Tu catégorises des transactions bancaires françaises.
 
-Catégories et sous-catégories disponibles :
+Catégories disponibles et leur signification :
 ${catBlock}
 
-Pour chaque libellé :
-- Choisis LA catégorie la plus appropriée parmi la liste.
-- Choisis LA sous-catégorie la plus précise parmi celles listées pour cette catégorie.
-- Si aucune sous-catégorie ne convient, laisse "s" vide ("").
+Règles importantes :
+- Identifie l'enseigne ou la marque et classe-la selon son secteur réel.
+- Marques de vêtements/sport (ADIDAS, NIKE, ZARA, H&M, DECATHLON…) → Shopping/Vêtements.
+- Supermarchés (AUCHAN, LECLERC, CARREFOUR, LIDL…) → Alimentation/Courses.
+- Abonnements = services numériques RÉCURRENTS SEULEMENT (Netflix, Spotify, SFR…). Ne jamais mettre une enseigne physique dans Abonnements.
+- Choisis LA catégorie ET LA sous-catégorie les plus précises.
+- Utilise UNIQUEMENT les catégories et sous-catégories listées ci-dessus.
+- Si aucune sous-catégorie ne convient, laisse "s" vide.
 
 Libellés :
 ${labelLines}

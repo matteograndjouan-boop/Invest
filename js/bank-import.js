@@ -79,8 +79,12 @@ const BankImport = {
         </div>
 
       </div>
-      <div class="form-actions" style="margin-top:20px">
-        ${(geminiKey || claudeKey) ? '<button class="btn-sm" style="margin-right:auto;color:var(--danger);border:1px solid var(--danger);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="BankImport._clearAllKeys()">Effacer les clés</button>' : ''}
+      <div class="form-actions" style="margin-top:20px;flex-wrap:wrap;gap:8px">
+        <button class="btn-sm" style="color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;margin-right:auto"
+          onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
+          🗑 Vider le cache Gemini
+        </button>
+        ${(geminiKey || claudeKey) ? '<button class="btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="BankImport._clearAllKeys()">Effacer les clés</button>' : ''}
         <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
       </div>
@@ -285,7 +289,8 @@ const BankImport = {
       </div>
     `);
 
-    const transactions = this._parseWithMapping(rows, headerIdx, mapping);
+    const allCats  = Storage.getCategories();
+    const transactions = this._parseWithMapping(rows, headerIdx, mapping, allCats);
     if (!transactions.length) {
       document.getElementById('modal')?.classList.remove('modal-wide');
       Modal.close();
@@ -293,10 +298,9 @@ const BankImport = {
       return;
     }
 
-    const userCats = Storage.getCategories(); // objets complets avec sous-catégories
     const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
     if (labels.length) {
-      const catMap = await GeminiCat.categorize(labels, userCats);
+      const catMap = await GeminiCat.categorize(labels, allCats);
       transactions.forEach(t => {
         if (!t.isRevenue && catMap[t.description]) {
           const { category, subcategory } = catMap[t.description];
@@ -336,8 +340,10 @@ const BankImport = {
     return isNaN(n) ? null : n;
   },
 
-  _parseWithMapping(rows, headerIdx, mapping) {
+  _parseWithMapping(rows, headerIdx, mapping, allCats = []) {
     const transactions = [];
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const revCatName = allCats.find(c => n(c.name).includes('revenu'))?.name || 'Revenus';
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
@@ -355,8 +361,9 @@ const BankImport = {
         else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
       }
       if (!amount || amount <= 0) continue;
+      const guess = isRevenue ? { category: revCatName, subcategory: '' } : this._smartGuess(desc, allCats);
       transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
-        category: isRevenue ? 'Revenus' : guessCategory(desc), subcategory: '' });
+        category: guess.category, subcategory: guess.subcategory });
     }
     return transactions;
   },
@@ -400,7 +407,8 @@ const BankImport = {
           );
       }
 
-      const transactions = this._parsePDFTransactions(lines);
+      const allCats      = Storage.getCategories();
+      const transactions = this._parsePDFTransactions(lines, allCats);
 
       if (!transactions.length) {
         Modal.close();
@@ -420,10 +428,9 @@ const BankImport = {
         return;
       }
 
-      const userCats = Storage.getCategories();
-      const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
       if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, userCats);
+        const catMap = await GeminiCat.categorize(labels, allCats);
         transactions.forEach(t => {
           if (!t.isRevenue && catMap[t.description]) {
             const { category, subcategory } = catMap[t.description];
@@ -442,7 +449,7 @@ const BankImport = {
     }
   },
 
-  _parsePDFTransactions(lines) {
+  _parsePDFTransactions(lines, allCats = []) {
     const transactions = [];
     // Date en début de ligne ou précédant un libellé
     const rDate   = /(?:^|\s)(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
@@ -468,11 +475,10 @@ const BankImport = {
       let desc = afterDate.slice(0, afterDate.indexOf(amtMatches[0][0])).trim().replace(/\s+/g, ' ');
       if (!desc || desc.length < 3) continue;
 
-      transactions.push({
-        date: dateStr, description: desc,
+      const guess = this._smartGuess(desc, allCats);
+      transactions.push({ date: dateStr, description: desc,
         amount: Math.abs(amount), isRevenue: amount > 0,
-        category: guessCategory(desc), subcategory: '',
-      });
+        category: guess.category, subcategory: guess.subcategory });
     }
     return transactions;
   },
@@ -513,21 +519,23 @@ const BankImport = {
       const raw   = data.content?.[0]?.text || '';
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('Réponse invalide');
-      const parsed = JSON.parse(match[0]);
+      const allCats    = Storage.getCategories();
+      const parsed     = JSON.parse(match[0]);
       const transactions = (parsed.t || [])
-        .map(t => ({
-          date: t.date, description: String(t.desc || '').trim(),
-          amount: Math.abs(t.amount), isRevenue: t.amount > 0,
-          category: guessCategory(String(t.desc || '')), subcategory: '',
-        }))
+        .map(t => {
+          const desc  = String(t.desc || '').trim();
+          const guess = this._smartGuess(desc, allCats);
+          return { date: t.date, description: desc,
+            amount: Math.abs(t.amount), isRevenue: t.amount > 0,
+            category: guess.category, subcategory: guess.subcategory };
+        })
         .filter(t => t.date && t.description && t.amount > 0);
 
       if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
 
-      const userCats = Storage.getCategories();
-      const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
       if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, userCats);
+        const catMap = await GeminiCat.categorize(labels, allCats);
         transactions.forEach(t => {
           if (!t.isRevenue && catMap[t.description]) {
             const { category, subcategory } = catMap[t.description];
@@ -543,6 +551,88 @@ const BankImport = {
       Modal.close();
       alert('Erreur extraction IA : ' + err.message);
     }
+  },
+
+  // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
+
+  // Fallback lorsque Gemini n'est pas disponible — base de 100+ enseignes/marques françaises.
+  // Renvoie {category, subcategory} en résolvant les noms réels de l'utilisateur.
+  _smartGuess(desc, allCats) {
+    const d = (desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+    // Résout un hint de catégorie vers le nom réel de l'utilisateur
+    const cat = h => allCats.find(c => n(c.name) === n(h))
+                  || allCats.find(c => n(c.name).includes(n(h)) || n(h).includes(n(c.name)));
+    // Résout un hint de sous-catégorie dans une catégorie utilisateur
+    const sub = (c, h) => !c || !h ? ''
+      : c.subcategories.find(s => n(s) === n(h))
+     || c.subcategories.find(s => n(s).includes(n(h)) || n(h).includes(n(s))) || '';
+    // Construit le résultat final
+    const res = (catH, subH) => {
+      const c = cat(catH);
+      return { category: c?.name || catH, subcategory: sub(c, subH) };
+    };
+
+    // Alimentation
+    if (/boulangerie|paul |brioche doree|eric kayser|patisserie/.test(d))                  return res('Alimentation','Boulangerie');
+    if (/restaurant|brasserie|bistro|mcdonald|burger king|kfc|quick |pizza|kebab|sushi|ramen|thai |japonais|vietnamien|grec |chinois|indien|tacos|brunch|izakaya/.test(d)) return res('Alimentation','Resto');
+    if (/izly/.test(d))                                                                     return res('Alimentation','Izly');
+    if (/auchan|leclerc|carrefour|intermarche|lidl|aldi|super u|biocoop|naturalia|monoprix|franprix|picard|casino |cora |simply|netto |market|supermarche|hypermarche|epicerie|primeur|grand frais/.test(d)) return res('Alimentation','Courses');
+
+    // Transport
+    if (/sncf|ter |tgv |ouigo|trenitalia|eurostar|lyria|izy /.test(d))                    return res('Transport','Train');
+    if (/tram|tramway/.test(d))                                                             return res('Transport','Tram');
+    if (/ratp|navigo|metro |tiseo|tcl |tbm |tan |tbc |stib|bus |navette|transpole/.test(d)) return res('Transport','Bus');
+    if (/uber|bolt |heetch|taxi|g7 |lecab|vtc |kapten|chauffeur/.test(d))                  return res('Transport','Bus');
+    if (/velib|lime |tier |bird |dott |pony |trotinette|trottinette/.test(d))              return res('Transport','Bus');
+
+    // Shopping — Vêtements / Sport
+    if (/adidas|nike |zara |h&m |primark|asos |shein|kiabi|uniqlo|gap |levi|lacoste|ralph lauren|tommy|hugo boss|calvin klein|gucci|louis vuitton|hermes |chanel |balenciaga|jacquemus|mango |sandro |maje |iro |ba&sh|fred perry|the north face|columbia |timberland|vans |converse|puma |reebok|new balance|under armour|salomon|asics|celio|jules |la halle|andre |eram |minelli|bocage|bobbies/.test(d)) return res('Shopping','Vêtements');
+    if (/decathlon|sport 2000|go sport|intersport|foot locker|courir |athlete/.test(d))    return res('Shopping','Vêtements');
+
+    // Shopping — Électronique
+    if (/fnac |darty|boulanger|ldlc|materiel.net|cdiscount|rue du commerce|grosbill|topachat|back market/.test(d)) return res('Shopping','Electronique');
+    if (/apple store|apple.com|samsung |sony |microsoft |dell |lenovo|hp |asus /.test(d)) return res('Shopping','Electronique');
+
+    // Shopping — Maison
+    if (/ikea|maisons du monde|la redoute|castorama|leroy merlin|bricorama|mr bricolage|bricoman|lapeyre|zodio|fly |but |conforama|habitat |made.com/.test(d)) return res('Shopping','Maison');
+
+    // Abonnements — streaming/Internet
+    if (/netflix|disney\+|disney plus|apple tv|hulu|canal\+|ocs |arte |molotov|crunchyroll/.test(d)) return res('Abonnements','Internet');
+    if (/spotify|deezer|apple music|amazon music|youtube premium|tidal|qobuz/.test(d))    return res('Abonnements','Internet');
+    if (/amazon prime/.test(d))                                                             return res('Abonnements','Internet');
+    // Abonnements — téléphonie
+    if (/sfr |orange |bouygues|free |numericable|sosh |red by sfr|prixtel|coriolis|lebara|lycamobile|auchan telecom/.test(d)) return res('Abonnements','Téléphone');
+
+    // Logement
+    if (/loyer |charges locatives|syndic|fonciere|agence immo|bail /.test(d))              return res('Logement','Loyer');
+    if (/edf|enedis|engie|total energie|ekwateur|ilek|electricite |gaz |eau |veolia|suez /.test(d)) return res('Logement','');
+    if (/airbnb/.test(d))                                                                   return res('Logement','');
+
+    // Santé
+    if (/pharmacie|parapharmacie/.test(d))                                                  return res('Santé','Pharmacie');
+    if (/medecin|docteur|dr |clinique|hopital|chu |radiologie|dentiste|orthodontiste|ophtalmo|kine |osteopathe|dermatologue|cardiologue/.test(d)) return res('Santé','Médecin');
+    if (/cpam|ameli|securite sociale/.test(d))                                              return res('Santé','CPAM');
+    if (/mutuelle|mgen|april|swisslife|generali|groupama|allianz/.test(d))                 return res('Santé','Pharmacie');
+
+    // Loisir
+    if (/cinema|cine |mk2|ugc |pathe |odeon|theatre|opera|concert|spectacle|musee|expo |louvre|orsay|pompidou/.test(d)) return res('Loisir','Culture');
+    if (/fnac |cultura|librairie/.test(d))                                                  return res('Loisir','Culture');
+    if (/steam |playstation|xbox |nintendo|epic games|jeux?.video|gaming/.test(d))         return res('Loisir','Culture');
+    if (/gym |fitness|basic fit|neoness|keep cool|salle de sport|musculation|piscine|tennis|badminton|squash|yoga|pilates|crossfit/.test(d)) return res('Loisir','Sport');
+
+    // Épargne
+    if (/boursorama|bourse direct|degiro|trade republic/.test(d))                          return res('Epargne','Bourso');
+    if (/livret|pel |plan epargne|assurance vie|per |placement/.test(d))                   return res('Epargne','');
+
+    // Divers
+    if (/frais bancaire|cotisation carte|commission |agios|interet /.test(d))              return res('Divers','Frais bancaires');
+    if (/la poste|chronopost|colissimo|ups |fedex|dhl |mondial relay/.test(d))             return res('Divers','Autre');
+
+    // Aucune correspondance
+    const fallback = allCats.find(c => n(c.name) === 'divers') || allCats[allCats.length - 1];
+    return { category: fallback?.name || 'Divers', subcategory: '' };
   },
 
   // ── APERÇU ───────────────────────────────────────────────────────────────

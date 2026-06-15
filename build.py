@@ -10,28 +10,21 @@ def read(path):
 
 html = read('index.html')
 
-# Replace <link rel="stylesheet" href="css/style.css"> with inlined <style>
+# Inline CSS
 css = read('css/style.css')
 html = html.replace(
     '<link rel="stylesheet" href="css/style.css">',
     f'<style>\n{css}\n</style>'
 )
 
-# JS files in load order (same as index.html script tags)
-JS_ORDER = [
-    'js/storage.js', 'js/utils.js', 'js/charts.js', 'js/period-filter.js',
-    'js/investments.js', 'js/expenses.js', 'js/revenues.js', 'js/flux.js',
-    'js/comparisons.js', 'js/categories.js', 'js/data-entry.js',
-    'js/budget.js', 'js/patrimony.js', 'js/app.js',
-]
+# Collect all local JS files referenced in index.html (in document order)
+js_refs = re.findall(r'<script src="(js/[^"]+\.js)"></script>', html)
 
-# Remove existing <script src="..."> tags and replace with inlined versions
-for js_path in JS_ORDER:
-    filename = js_path.split('/')[-1]
-    html = re.sub(rf'\s*<script src="{re.escape(js_path)}"></script>', '', html)
+# Remove all <script src="js/..."> tags from html
+html = re.sub(r'\s*<script src="js/[^"]+\.js"></script>', '', html)
 
-# Find where to insert scripts (before </body>)
-inlined = '\n'.join(f'<script>\n{read(p)}\n</script>' for p in JS_ORDER)
+# Inline each JS file before </body>
+inlined = '\n'.join(f'<script>\n{read(p)}\n</script>' for p in js_refs)
 html = html.replace('</body>', f'{inlined}\n</body>')
 
 out = os.path.join(BASE, 'investtrack-standalone.html')

@@ -2298,9 +2298,6 @@ input:focus:not(:focus-visible) { outline: none; }
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script src="js/gemini-cat.js"></script>
-  <script src="js/bank-import.js"></script>
-  <script src="js/invest-import.js"></script>
 <script>
 const Storage = {
   KEYS: {
@@ -5869,6 +5866,1395 @@ const Patrimony = {
     Storage.savePatrimony(Storage.getPatrimony().filter(i => i.id !== id));
     this.render();
     Dashboard.render();
+  },
+};
+
+</script>
+<script>
+// Module de catégorisation automatique via Google Gemini (gratuit)
+//
+// CONFIDENTIALITÉ : seuls les libellés/descriptions des transactions sont envoyés
+// à l'API Gemini. Jamais les montants, dates, soldes, numéros de compte,
+// noms de titulaires ou toute autre information personnelle ou financière.
+// Tout le reste reste strictement en local dans le navigateur.
+const GeminiCat = {
+  _CACHE_KEY: 'invest_gemini_cache',
+  _MODEL:     'gemini-2.0-flash-lite', // modèle gratuit Google AI Studio
+
+  getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
+  saveApiKey(key) {
+    if (key) localStorage.setItem('gemini_api_key', key);
+    else localStorage.removeItem('gemini_api_key');
+  },
+
+  _getCache() {
+    try { return JSON.parse(localStorage.getItem(this._CACHE_KEY) || '{}'); }
+    catch { return {}; }
+  },
+  _saveCache(cache) {
+    try { localStorage.setItem(this._CACHE_KEY, JSON.stringify(cache)); }
+    catch (e) { console.warn('[GeminiCat] Erreur cache:', e); }
+  },
+
+  // Normalise un libellé pour la clé de cache :
+  // supprime les dates et codes de référence qui varient à chaque transaction
+  // pour que "CB CARREFOUR 01/06" et "CB CARREFOUR 15/07" matchent la même entrée
+  _normalize(label) {
+    return String(label).toUpperCase()
+      .replace(/\b\d{2}[\/\-]\d{2}([\/\-]\d{2,4})?\b/g, '') // dates JJ/MM ou JJ/MM/AAAA
+      .replace(/\b[A-Z0-9*]{8,}\b/g, '')                      // codes de référence longs
+      .replace(/\b\d+\b/g, '')                                 // autres chiffres isolés
+      .replace(/\s+/g, ' ')
+      .trim();
+  },
+
+  // Apprend une correction manuelle et l'enregistre dans le cache.
+  // Appelé quand l'utilisateur modifie manuellement la catégorie d'une transaction.
+  learn(rawLabel, category, subcategory) {
+    const key = this._normalize(rawLabel);
+    if (!key) return;
+    const cache = this._getCache();
+    cache[key] = { category, subcategory: subcategory || '' };
+    this._saveCache(cache);
+  },
+
+  // Point d'entrée principal : catégorise un tableau de libellés.
+  // Retourne un objet { "libellé": { category, subcategory } }
+  // 1. Vérifie le cache → 2. Appelle Gemini pour les inconnus → 3. Fallback mots-clés
+  async categorize(labels, userCategories) {
+    const cache   = this._getCache();
+    const result  = {};
+    const toFetch = [];
+
+    // Séparation : libellés connus (cache) vs inconnus (à envoyer à Gemini)
+    for (const label of labels) {
+      const key = this._normalize(label);
+      if (cache[key]) {
+        result[label] = cache[key];
+      } else {
+        result[label] = null;
+        toFetch.push(label);
+      }
+    }
+
+    if (!toFetch.length) return result;
+
+    const apiKey = this.getApiKey();
+    if (apiKey) {
+      try {
+        const geminiResult = await this._callGemini(toFetch, userCategories);
+        const updatedCache = this._getCache();
+        for (const label of toFetch) {
+          const cat = geminiResult[label] || { category: guessCategory(label), subcategory: '' };
+          result[label] = cat;
+          const key = this._normalize(label);
+          if (key) updatedCache[key] = cat;
+        }
+        this._saveCache(updatedCache);
+      } catch (err) {
+        console.warn('[GeminiCat] Fallback mots-clés (' + err.message + ')');
+        for (const label of toFetch) {
+          result[label] = { category: guessCategory(label), subcategory: '' };
+        }
+      }
+    } else {
+      // Pas de clé API → fallback silencieux sur la détection par mots-clés
+      for (const label of toFetch) {
+        result[label] = { category: guessCategory(label), subcategory: '' };
+      }
+    }
+
+    return result;
+  },
+
+  clearCache() {
+    localStorage.removeItem(this._CACHE_KEY);
+  },
+
+  // Appel effectif à l'API Gemini.
+  // SEULS les libellés (texte du libellé bancaire) sont transmis — rien d'autre.
+  async _callGemini(labels, userCategories) {
+    // Descriptions sémantiques pour aider Gemini à comprendre chaque catégorie
+    const _HINTS = {
+      alimentation: 'courses alimentaires, supermarchés, épiceries, restaurants, boulangeries, traiteurs',
+      transport: 'déplacements : train, TGV, SNCF, bus, métro, tram, taxi, VTC, trottinette',
+      shopping: 'achats physiques : vêtements, chaussures, sport, mode, électronique, maison, mobilier',
+      abonnements: 'services NUMÉRIQUES récurrents uniquement : streaming, forfait mobile/internet',
+      logement: 'loyer, charges, énergie, eau, gaz, travaux, habitat',
+      loisir: 'culture, cinéma, sport, spectacles, musées, jeux vidéo, divertissement',
+      sante: 'médicaments, médecins, pharmacie, soins, mutuelles, assurance maladie',
+      epargne: 'virements d\'épargne, placements, investissements, livret',
+      divers: 'autres dépenses non classées, frais bancaires, colis',
+      revenus: 'salaires, revenus, remboursements, aides',
+    };
+    const normHint = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+    let catBlock;
+    if (userCategories.length && typeof userCategories[0] === 'object') {
+      catBlock = userCategories.map(c => {
+        const hint = _HINTS[normHint(c.name)] || '';
+        const subs = (c.subcategories || []).join(', ');
+        const hintStr = hint ? ` — ${hint}` : '';
+        const subStr  = subs ? ` → ${subs}` : '';
+        return `• ${c.name}${hintStr}${subStr}`;
+      }).join('\n');
+    } else {
+      catBlock = userCategories.map(c => `• ${c}`).join('\n');
+    }
+
+    const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
+
+    const prompt =
+`Tu catégorises des transactions bancaires françaises.
+
+Catégories disponibles et leur signification :
+${catBlock}
+
+Règles importantes :
+- Identifie l'enseigne ou la marque et classe-la selon son secteur réel.
+- Marques de vêtements/sport (ADIDAS, NIKE, ZARA, H&M, DECATHLON…) → Shopping/Vêtements.
+- Supermarchés (AUCHAN, LECLERC, CARREFOUR, LIDL…) → Alimentation/Courses.
+- Abonnements = services numériques RÉCURRENTS SEULEMENT (Netflix, Spotify, SFR…). Ne jamais mettre une enseigne physique dans Abonnements.
+- Choisis LA catégorie ET LA sous-catégorie les plus précises.
+- Utilise UNIQUEMENT les catégories et sous-catégories listées ci-dessus.
+- Si aucune sous-catégorie ne convient, laisse "s" vide.
+
+Libellés :
+${labelLines}
+
+Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
+{"r":[{"i":1,"c":"catégorie","s":"sous-catégorie ou vide"},{"i":2,"c":"...","s":"..."}]}`;
+
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this._MODEL}:generateContent?key=${this.getApiKey()}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        }),
+      }
+    );
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Gemini HTTP ${resp.status}`);
+    }
+
+    const data  = await resp.json();
+    const text  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Réponse Gemini non-JSON');
+
+    const parsed  = JSON.parse(match[0]);
+    const results = {};
+    (parsed.r || []).forEach(item => {
+      const label = labels[item.i - 1];
+      if (label) results[label] = { category: item.c || '', subcategory: item.s || '' };
+    });
+    return results;
+  },
+};
+
+</script>
+<script>
+const BankImport = {
+  getApiKey()      { return localStorage.getItem('claude_api_key') || ''; },
+  saveApiKey(key)  { if (key) localStorage.setItem('claude_api_key', key); else localStorage.removeItem('claude_api_key'); },
+  _getPdfAiEnabled() { return localStorage.getItem('bank_pdf_ai_enabled') === '1'; },
+  _setPdfAiEnabled(v) { localStorage.setItem('bank_pdf_ai_enabled', v ? '1' : '0'); },
+
+  init() {
+    document.getElementById('bank-import-file')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) this.handleFile(file);
+      e.target.value = '';
+    });
+    document.getElementById('bank-import-btn')?.addEventListener('click', () => this.openFilePicker());
+    document.getElementById('settings-btn')?.addEventListener('click', () => this.openSettings());
+    this._refreshSettingsIndicator();
+  },
+
+  _refreshSettingsIndicator() {
+    const btn = document.getElementById('settings-btn');
+    if (!btn) return;
+    const hasGemini = !!GeminiCat.getApiKey();
+    const hasClaude = !!this.getApiKey();
+    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)'
+      : hasClaude ? 'Paramètres (Claude configuré)' : 'Paramètres';
+    btn.classList.toggle('settings-configured', hasGemini || hasClaude);
+  },
+
+  openSettings() {
+    const geminiKey = GeminiCat.getApiKey();
+    const claudeKey = this.getApiKey();
+    const pdfAi    = this._getPdfAiEnabled();
+    Modal.open('Paramètres IA & Import', `
+      <div class="settings-section">
+
+        <div class="settings-block settings-block-primary">
+          <div class="settings-block-title">🤖 Google Gemini — Catégorisation automatique <span class="settings-badge-free">Gratuit</span></div>
+          <p class="settings-desc">
+            Gemini suggère automatiquement la catégorie de chaque dépense à partir du libellé.<br><br>
+            <strong>Confidentialité :</strong> seul le texte du libellé est envoyé à Google —
+            jamais les montants, dates ni données personnelles.
+          </p>
+          <div class="form-group" style="margin-top:14px">
+            <label class="settings-label">Clé API Google Gemini</label>
+            <input type="password" id="settings-gemini-key" class="form-input"
+              value="${geminiKey}" placeholder="AIza…"
+              style="width:100%;font-family:monospace;font-size:13px;margin-top:6px">
+            <p style="font-size:12px;color:var(--text-muted);margin-top:6px">
+              Clé gratuite sur <strong>aistudio.google.com</strong> → Get API key (sans CB)
+            </p>
+          </div>
+        </div>
+
+        <div class="settings-block" style="margin-top:14px">
+          <div class="settings-block-title">⚡ Claude Anthropic — Détection colonnes <span class="settings-badge-optional">Optionnel</span></div>
+          <p class="settings-desc">
+            Améliore la détection des colonnes pour les formats atypiques.
+            Sans cette clé la détection fonctionne par règles (couvre la plupart des banques).
+          </p>
+          <div class="form-group" style="margin-top:14px">
+            <label class="settings-label">Clé API Anthropic</label>
+            <input type="password" id="settings-claude-key" class="form-input"
+              value="${claudeKey}" placeholder="sk-ant-api03-…"
+              style="width:100%;font-family:monospace;font-size:13px;margin-top:6px">
+          </div>
+        </div>
+
+        <div class="settings-block" style="margin-top:14px">
+          <div class="settings-block-title">📄 Import PDF — IA pour PDF difficiles <span class="settings-badge-optional">Désactivé par défaut</span></div>
+          <p class="settings-desc">
+            Pour les PDF que la lecture locale n'arrive pas à parser.<br><br>
+            ⚠️ <strong>Attention :</strong> si activée, cette option envoie le contenu complet du
+            relevé (montants, dates, données personnelles) à l'IA.
+            Contrairement à la catégorisation, ce mode ne se limite pas aux libellés.
+          </p>
+          <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
+            Activer l'IA pour les PDF difficiles (opt-in, envoie les données complètes)
+          </label>
+        </div>
+
+      </div>
+      <div class="form-actions" style="margin-top:20px;flex-wrap:wrap;gap:8px">
+        <button class="btn-sm" style="color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;margin-right:auto"
+          onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
+          🗑 Vider le cache Gemini
+        </button>
+        ${(geminiKey || claudeKey) ? '<button class="btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="BankImport._clearAllKeys()">Effacer les clés</button>' : ''}
+        <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
+        <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
+      </div>
+    `);
+  },
+
+  _clearAllKeys() {
+    this.saveApiKey(''); GeminiCat.saveApiKey('');
+    Modal.close(); this._refreshSettingsIndicator();
+  },
+
+  _saveSettings() {
+    GeminiCat.saveApiKey((document.getElementById('settings-gemini-key')?.value || '').trim());
+    this.saveApiKey((document.getElementById('settings-claude-key')?.value || '').trim());
+    this._setPdfAiEnabled(document.getElementById('settings-pdf-ai')?.checked || false);
+    Modal.close(); this._refreshSettingsIndicator();
+  },
+
+  openFilePicker() { document.getElementById('bank-import-file')?.click(); },
+
+  async handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') await this._handlePDF(file);
+    else if (['csv', 'xlsx', 'xls', 'tsv'].includes(ext)) await this._handleSpreadsheet(file);
+    else alert('Format non supporté. Utilisez CSV, Excel (.xlsx/.xls/.tsv) ou PDF.');
+  },
+
+  // ── TABLEUR ───────────────────────────────────────────────────────────────
+
+  async _handleSpreadsheet(file) {
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const wb  = XLSX.read(evt.target.result, { type: 'array', codepage: 1252 });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        let rows  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        rows = rows.filter(r => r.some(c => c !== '' && c !== null && c !== undefined));
+        if (rows.length < 2) { alert('Fichier vide ou aucune donnée détectée.'); return; }
+
+        const headerIdx  = this._findHeaderRow(rows);
+        const guessed    = this._guessMapping(rows[headerIdx]);
+        const profileKey = this._profileKey(rows[headerIdx]);
+        const saved      = this._getProfiles()[profileKey];
+
+        document.getElementById('modal')?.classList.add('modal-wide');
+        this._showMappingWizard(rows, headerIdx, saved || guessed, profileKey, !!saved, file.name);
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la lecture : ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  },
+
+  _findHeaderRow(rows) {
+    let best = 0, bestScore = -Infinity;
+    for (let i = 0; i < Math.min(10, rows.length); i++) {
+      let score = 0;
+      for (const cell of rows[i]) {
+        const s = String(cell).trim();
+        if (!s) continue;
+        if (isNaN(parseFloat(s)) && !/^\d{1,2}[\/\-]\d{1,2}/.test(s)) score += 2;
+        else score -= 3;
+      }
+      if (score > bestScore) { bestScore = score; best = i; }
+    }
+    return best;
+  },
+
+  _guessMapping(headerRow) {
+    const n = s => String(s).toLowerCase()
+      .replace(/[àâä]/g,'a').replace(/[éèêë]/g,'e').replace(/[îï]/g,'i')
+      .replace(/[ôö]/g,'o').replace(/[ùûü]/g,'u').replace(/ç/g,'c').trim();
+    const h = headerRow.map(n);
+    const find = (...terms) => { const i = h.findIndex(c => terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
+    return {
+      date:        find('date treso','date compta','date ope','date val','date','jour','day'),
+      description: find('libelle','description','commentaire','label','intitule','operation','nature','motif','objet','details'),
+      amount:      find('montant','amount','valeur','somme'),
+      debit:       find('debit','sortie','depense','retrait','imputation'),
+      credit:      find('credit','entree','revenu','depot','versement'),
+    };
+  },
+
+  _profileKey(headerRow) {
+    return headerRow.map(h => String(h).toLowerCase().trim()).filter(Boolean).sort().join('|');
+  },
+
+  _getProfiles() {
+    try { return JSON.parse(localStorage.getItem('invest_bank_profiles') || '{}'); } catch { return {}; }
+  },
+  _saveProfile(key, mapping) {
+    const p = this._getProfiles(); p[key] = mapping;
+    try { localStorage.setItem('invest_bank_profiles', JSON.stringify(p)); } catch(e) {}
+  },
+
+  _showMappingWizard(rows, headerIdx, mapping, profileKey, isKnown, fileName) {
+    window._bankMappingData = { rows, headerIdx, profileKey };
+
+    const headerRow  = rows[headerIdx];
+    const sampleRows = rows.slice(headerIdx + 1, headerIdx + 4).filter(r => r.some(c => c !== '' && c !== null));
+    const isSplit    = mapping.debit !== null || mapping.credit !== null;
+
+    const colOpts = (selected, withNone = false) =>
+      (withNone ? '<option value="">— aucune —</option>' : '') +
+      headerRow.map((h, i) =>
+        `<option value="${i}"${selected === i ? ' selected' : ''}>${String(h).trim() || 'Col. ' + (i + 1)}</option>`
+      ).join('');
+
+    const thCells = headerRow.map(h => `<th>${String(h).trim() || '—'}</th>`).join('');
+    const tdRows  = sampleRows.map(row =>
+      `<tr>${headerRow.map((_, i) => `<td>${String(row[i] ?? '').trim().slice(0, 22)}</td>`).join('')}</tr>`
+    ).join('');
+
+    const badge = isKnown
+      ? `<span class="mapping-profile-badge mapping-profile-known">✓ Format reconnu — mapping appliqué</span>`
+      : `<span class="mapping-profile-badge mapping-profile-new">Nouveau format — vérifiez les champs</span>`;
+
+    Modal.open('Correspondance des colonnes', `
+      <div class="mapping-wizard">
+        <div class="mapping-top-bar">
+          ${badge}
+          <span class="mapping-top-info">${rows.length - headerIdx - 1} ligne(s) · ${fileName}</span>
+        </div>
+
+        <div class="mapping-sample-wrap">
+          <div class="mapping-sample-label">Aperçu des premières lignes :</div>
+          <div class="mapping-sample-scroll">
+            <table class="mapping-sample-table"><thead><tr>${thCells}</tr></thead><tbody>${tdRows}</tbody></table>
+          </div>
+        </div>
+
+        <div class="mapping-fields">
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">📅 Date</label>
+            <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+          </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">📝 Libellé</label>
+            <select id="map-desc" class="select-input">${colOpts(mapping.description, true)}</select>
+          </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">💶 Montant</label>
+            <div>
+              <div class="mapping-amount-type">
+                <label class="mapping-radio-lbl"><input type="radio" name="map-amt-type" value="single"${!isSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-single-wrap').style.display='';document.getElementById('map-split-wrap').style.display='none'">
+                  Colonne unique (+/−)</label>
+                <label class="mapping-radio-lbl"><input type="radio" name="map-amt-type" value="split"${isSplit ? ' checked' : ''}
+                  onchange="document.getElementById('map-single-wrap').style.display='none';document.getElementById('map-split-wrap').style.display=''">
+                  Débit / Crédit séparés</label>
+              </div>
+              <div id="map-single-wrap"${isSplit ? ' style="display:none"' : ''}>
+                <select id="map-amount" class="select-input">${colOpts(mapping.amount, true)}</select>
+              </div>
+              <div id="map-split-wrap"${!isSplit ? ' style="display:none"' : ''}>
+                <div class="mapping-split-row">
+                  <div><label class="mapping-sub-lbl">Débit (sorties)</label><select id="map-debit" class="select-input">${colOpts(mapping.debit, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label><select id="map-credit" class="select-input">${colOpts(mapping.credit, true)}</select></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <label class="mapping-save-lbl">
+          <input type="checkbox" id="map-save-profile" checked>
+          Mémoriser ce mapping pour les prochains fichiers de ce format
+        </label>
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
+        <button class="btn-primary" onclick="BankImport._confirmMapping()">Continuer →</button>
+      </div>
+    `);
+  },
+
+  _confirmMapping() {
+    const { rows, headerIdx, profileKey } = window._bankMappingData || {};
+    if (!rows) return;
+    const isSplit = document.querySelector('[name="map-amt-type"]:checked')?.value === 'split';
+    const pi = v => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
+    const mapping = {
+      date:        pi(document.getElementById('map-date')?.value),
+      description: pi(document.getElementById('map-desc')?.value),
+      amount:      !isSplit ? pi(document.getElementById('map-amount')?.value)  : null,
+      debit:       isSplit  ? pi(document.getElementById('map-debit')?.value)   : null,
+      credit:      isSplit  ? pi(document.getElementById('map-credit')?.value)  : null,
+    };
+    if (document.getElementById('map-save-profile')?.checked && profileKey) {
+      this._saveProfile(profileKey, mapping);
+    }
+    this._runImportPipeline(rows, headerIdx, mapping);
+  },
+
+  async _runImportPipeline(rows, headerIdx, mapping) {
+    Modal.open('Catégorisation…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">🤖</div>
+        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
+        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
+      </div>
+    `);
+
+    const allCats  = Storage.getCategories();
+    const transactions = this._parseWithMapping(rows, headerIdx, mapping, allCats);
+    if (!transactions.length) {
+      document.getElementById('modal')?.classList.remove('modal-wide');
+      Modal.close();
+      alert('Aucune transaction valide détectée.\nVérifiez les correspondances de colonnes.');
+      return;
+    }
+
+    const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+    if (labels.length) {
+      const catMap = await GeminiCat.categorize(labels, allCats);
+      transactions.forEach(t => {
+        if (!t.isRevenue && catMap[t.description]) {
+          const { category, subcategory } = catMap[t.description];
+          if (category) t.category = category;
+          if (subcategory) t.subcategory = subcategory;
+        }
+      });
+    }
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    this._showPreview(transactions);
+  },
+
+  _parseDate(val) {
+    if (val === '' || val === null || val === undefined) return '';
+    if (typeof val === 'number') {
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return d.toISOString().split('T')[0];
+    }
+    const s = String(val).trim();
+    const m = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
+    if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const ym = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (ym) return `${ym[1]}-${ym[2]}-${ym[3]}`;
+    return '';
+  },
+
+  _parseAmount(val) {
+    if (val === '' || val === null || val === undefined) return null;
+    if (typeof val === 'number') return val;
+    let s = String(val).trim().replace(/\s/g, '');
+    // Format français : "1.234,56" → enlever le point millier puis virgule→point
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(',', '.');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  },
+
+  _parseWithMapping(rows, headerIdx, mapping, allCats = []) {
+    const transactions = [];
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const revCatName = allCats.find(c => n(c.name).includes('revenu'))?.name || 'Revenus';
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
+      const date = mapping.date !== null ? this._parseDate(row[mapping.date]) : '';
+      if (!date) continue;
+      const desc = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
+      let amount = null, isRevenue = false;
+      if (mapping.amount !== null) {
+        const raw = this._parseAmount(row[mapping.amount]);
+        if (raw !== null && raw !== 0) { amount = Math.abs(raw); isRevenue = raw > 0; }
+      } else {
+        const d = mapping.debit  !== null ? this._parseAmount(row[mapping.debit])  : null;
+        const c = mapping.credit !== null ? this._parseAmount(row[mapping.credit]) : null;
+        if (d && Math.abs(d) > 0) { amount = Math.abs(d); isRevenue = false; }
+        else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
+      }
+      if (!amount || amount <= 0) continue;
+      const guess = isRevenue ? { category: revCatName, subcategory: '' } : this._smartGuess(desc, allCats);
+      transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
+        category: guess.category, subcategory: guess.subcategory });
+    }
+    return transactions;
+  },
+
+  // ── PDF ───────────────────────────────────────────────────────────────────
+
+  async _handlePDF(file) {
+    try {
+      Modal.open('Lecture du PDF…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">📄</div>
+          <p style="font-size:15px;font-weight:700">Extraction du texte en cours…</p>
+          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n'est envoyé sur internet.</p>
+        </div>
+      `);
+
+      if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non disponible');
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+      const buffer = await file.arrayBuffer();
+      const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const lines  = [];
+
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page    = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        // Grouper les items par ligne (position y arrondie à 3 pt)
+        const byY = new Map();
+        for (const item of content.items) {
+          if (!item.str?.trim()) continue;
+          const y = Math.round(item.transform[5] / 3) * 3;
+          if (!byY.has(y)) byY.set(y, []);
+          byY.get(y).push({ x: item.transform[4], str: item.str });
+        }
+        // y décroissant (PDF : y=0 en bas de page) puis items par x
+        [...byY.entries()]
+          .sort((a, b) => b[0] - a[0])
+          .forEach(([, items]) =>
+            lines.push(items.sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
+          );
+      }
+
+      const allCats      = Storage.getCategories();
+      const transactions = this._parsePDFTransactions(lines, allCats);
+
+      if (!transactions.length) {
+        Modal.close();
+        const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
+        if (canUseAI) {
+          const go = confirm(
+            '⚠️ La lecture locale n\'a pas détecté de transactions dans ce PDF.\n\n' +
+            'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
+            'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
+          );
+          if (go) await this._parsePDFWithAI(lines.join('\n'));
+        } else {
+          alert('📄 Aucune transaction détectée dans ce PDF.\n\n'
+            + 'Si ce relevé est dans un format difficile, activez « IA pour PDF difficiles »'
+            + ' dans les Paramètres (nécessite une clé API Anthropic).');
+        }
+        return;
+      }
+
+      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, allCats);
+        transactions.forEach(t => {
+          if (!t.isRevenue && catMap[t.description]) {
+            const { category, subcategory } = catMap[t.description];
+            if (category) t.category = category;
+            if (subcategory) t.subcategory = subcategory;
+          }
+        });
+      }
+
+      document.getElementById('modal')?.classList.add('modal-wide');
+      this._showPreview(transactions, 'pdf');
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur lors de la lecture du PDF : ' + err.message);
+    }
+  },
+
+  _parsePDFTransactions(lines, allCats = []) {
+    const transactions = [];
+    // Date en début de ligne ou précédant un libellé
+    const rDate   = /(?:^|\s)(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
+    // Montant : "1 234,56" ou "1234,56" ou "1234.56" avec signe optionnel
+    const rAmount = /(-?\d{1,3}(?:[\s]\d{3})*[,]\d{2}|-?\d+[,.]\d{2})/g;
+
+    for (const line of lines) {
+      const dm = line.match(rDate);
+      if (!dm) continue;
+      const dateStr = this._parseDate(dm[1]);
+      if (!dateStr) continue;
+
+      const afterDate   = line.slice(line.indexOf(dm[0]) + dm[0].length);
+      const amtMatches  = [...afterDate.matchAll(rAmount)];
+      if (!amtMatches.length) continue;
+
+      // Premier montant significatif après la date = transaction
+      const amtStr = amtMatches[0][1];
+      const amount  = this._parseAmount(amtStr);
+      if (amount === null || Math.abs(amount) < 0.01) continue;
+
+      // Description = texte entre la date et le premier montant
+      let desc = afterDate.slice(0, afterDate.indexOf(amtMatches[0][0])).trim().replace(/\s+/g, ' ');
+      if (!desc || desc.length < 3) continue;
+
+      const guess = this._smartGuess(desc, allCats);
+      transactions.push({ date: dateStr, description: desc,
+        amount: Math.abs(amount), isRevenue: amount > 0,
+        category: guess.category, subcategory: guess.subcategory });
+    }
+    return transactions;
+  },
+
+  async _parsePDFWithAI(fullText) {
+    const apiKey = this.getApiKey();
+    if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
+    try {
+      Modal.open('Extraction IA…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">🤖</div>
+          <p style="font-size:15px;font-weight:700">Extraction par IA en cours…</p>
+          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Claude.</p>
+        </div>
+      `);
+
+      const text = fullText.slice(0, 15000); // limite ~15 000 caractères
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-calls': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4000,
+          messages: [{ role: 'user', content:
+            'Extrais les transactions bancaires de ce relevé.\n' +
+            'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
+            'Montant négatif = dépense, positif = crédit.\n\n' + text
+          }],
+        }),
+      });
+      if (!resp.ok) throw new Error('Claude HTTP ' + resp.status);
+      const data  = await resp.json();
+      const raw   = data.content?.[0]?.text || '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Réponse invalide');
+      const allCats    = Storage.getCategories();
+      const parsed     = JSON.parse(match[0]);
+      const transactions = (parsed.t || [])
+        .map(t => {
+          const desc  = String(t.desc || '').trim();
+          const guess = this._smartGuess(desc, allCats);
+          return { date: t.date, description: desc,
+            amount: Math.abs(t.amount), isRevenue: t.amount > 0,
+            category: guess.category, subcategory: guess.subcategory };
+        })
+        .filter(t => t.date && t.description && t.amount > 0);
+
+      if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
+
+      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, allCats);
+        transactions.forEach(t => {
+          if (!t.isRevenue && catMap[t.description]) {
+            const { category, subcategory } = catMap[t.description];
+            if (category) t.category = category;
+            if (subcategory) t.subcategory = subcategory;
+          }
+        });
+      }
+      document.getElementById('modal')?.classList.add('modal-wide');
+      this._showPreview(transactions, 'pdf');
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur extraction IA : ' + err.message);
+    }
+  },
+
+  // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
+
+  // Fallback lorsque Gemini n'est pas disponible — base de 100+ enseignes/marques françaises.
+  // Renvoie {category, subcategory} en résolvant les noms réels de l'utilisateur.
+  _smartGuess(desc, allCats) {
+    const d = (desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+    // Résout un hint de catégorie vers le nom réel de l'utilisateur
+    const cat = h => allCats.find(c => n(c.name) === n(h))
+                  || allCats.find(c => n(c.name).includes(n(h)) || n(h).includes(n(c.name)));
+    // Résout un hint de sous-catégorie dans une catégorie utilisateur
+    const sub = (c, h) => !c || !h ? ''
+      : c.subcategories.find(s => n(s) === n(h))
+     || c.subcategories.find(s => n(s).includes(n(h)) || n(h).includes(n(s))) || '';
+    // Construit le résultat final
+    const res = (catH, subH) => {
+      const c = cat(catH);
+      return { category: c?.name || catH, subcategory: sub(c, subH) };
+    };
+
+    // Alimentation
+    if (/boulangerie|paul |brioche doree|eric kayser|patisserie/.test(d))                  return res('Alimentation','Boulangerie');
+    if (/restaurant|brasserie|bistro|mcdonald|burger king|kfc|quick |pizza|kebab|sushi|ramen|thai |japonais|vietnamien|grec |chinois|indien|tacos|brunch|izakaya/.test(d)) return res('Alimentation','Resto');
+    if (/izly/.test(d))                                                                     return res('Alimentation','Izly');
+    if (/auchan|leclerc|carrefour|intermarche|lidl|aldi|super u|biocoop|naturalia|monoprix|franprix|picard|casino |cora |simply|netto |market|supermarche|hypermarche|epicerie|primeur|grand frais/.test(d)) return res('Alimentation','Courses');
+
+    // Transport
+    if (/sncf|ter |tgv |ouigo|trenitalia|eurostar|lyria|izy /.test(d))                    return res('Transport','Train');
+    if (/tram|tramway/.test(d))                                                             return res('Transport','Tram');
+    if (/ratp|navigo|metro |tiseo|tcl |tbm |tan |tbc |stib|bus |navette|transpole/.test(d)) return res('Transport','Bus');
+    if (/uber|bolt |heetch|taxi|g7 |lecab|vtc |kapten|chauffeur/.test(d))                  return res('Transport','Bus');
+    if (/velib|lime |tier |bird |dott |pony |trotinette|trottinette/.test(d))              return res('Transport','Bus');
+
+    // Shopping — Vêtements / Sport
+    if (/adidas|nike |zara |h&m |primark|asos |shein|kiabi|uniqlo|gap |levi|lacoste|ralph lauren|tommy|hugo boss|calvin klein|gucci|louis vuitton|hermes |chanel |balenciaga|jacquemus|mango |sandro |maje |iro |ba&sh|fred perry|the north face|columbia |timberland|vans |converse|puma |reebok|new balance|under armour|salomon|asics|celio|jules |la halle|andre |eram |minelli|bocage|bobbies/.test(d)) return res('Shopping','Vêtements');
+    if (/decathlon|sport 2000|go sport|intersport|foot locker|courir |athlete/.test(d))    return res('Shopping','Vêtements');
+
+    // Shopping — Électronique
+    if (/fnac |darty|boulanger|ldlc|materiel.net|cdiscount|rue du commerce|grosbill|topachat|back market/.test(d)) return res('Shopping','Electronique');
+    if (/apple store|apple.com|samsung |sony |microsoft |dell |lenovo|hp |asus /.test(d)) return res('Shopping','Electronique');
+
+    // Shopping — Maison
+    if (/ikea|maisons du monde|la redoute|castorama|leroy merlin|bricorama|mr bricolage|bricoman|lapeyre|zodio|fly |but |conforama|habitat |made.com/.test(d)) return res('Shopping','Maison');
+
+    // Abonnements — streaming/Internet
+    if (/netflix|disney\+|disney plus|apple tv|hulu|canal\+|ocs |arte |molotov|crunchyroll/.test(d)) return res('Abonnements','Internet');
+    if (/spotify|deezer|apple music|amazon music|youtube premium|tidal|qobuz/.test(d))    return res('Abonnements','Internet');
+    if (/amazon prime/.test(d))                                                             return res('Abonnements','Internet');
+    // Abonnements — téléphonie
+    if (/sfr |orange |bouygues|free |numericable|sosh |red by sfr|prixtel|coriolis|lebara|lycamobile|auchan telecom/.test(d)) return res('Abonnements','Téléphone');
+
+    // Logement
+    if (/loyer |charges locatives|syndic|fonciere|agence immo|bail /.test(d))              return res('Logement','Loyer');
+    if (/edf|enedis|engie|total energie|ekwateur|ilek|electricite |gaz |eau |veolia|suez /.test(d)) return res('Logement','');
+    if (/airbnb/.test(d))                                                                   return res('Logement','');
+
+    // Santé
+    if (/pharmacie|parapharmacie/.test(d))                                                  return res('Santé','Pharmacie');
+    if (/medecin|docteur|dr |clinique|hopital|chu |radiologie|dentiste|orthodontiste|ophtalmo|kine |osteopathe|dermatologue|cardiologue/.test(d)) return res('Santé','Médecin');
+    if (/cpam|ameli|securite sociale/.test(d))                                              return res('Santé','CPAM');
+    if (/mutuelle|mgen|april|swisslife|generali|groupama|allianz/.test(d))                 return res('Santé','Pharmacie');
+
+    // Loisir
+    if (/cinema|cine |mk2|ugc |pathe |odeon|theatre|opera|concert|spectacle|musee|expo |louvre|orsay|pompidou/.test(d)) return res('Loisir','Culture');
+    if (/fnac |cultura|librairie/.test(d))                                                  return res('Loisir','Culture');
+    if (/steam |playstation|xbox |nintendo|epic games|jeux?.video|gaming/.test(d))         return res('Loisir','Culture');
+    if (/gym |fitness|basic fit|neoness|keep cool|salle de sport|musculation|piscine|tennis|badminton|squash|yoga|pilates|crossfit/.test(d)) return res('Loisir','Sport');
+
+    // Épargne
+    if (/boursorama|bourse direct|degiro|trade republic/.test(d))                          return res('Epargne','Bourso');
+    if (/livret|pel |plan epargne|assurance vie|per |placement/.test(d))                   return res('Epargne','');
+
+    // Divers
+    if (/frais bancaire|cotisation carte|commission |agios|interet /.test(d))              return res('Divers','Frais bancaires');
+    if (/la poste|chronopost|colissimo|ups |fedex|dhl |mondial relay/.test(d))             return res('Divers','Autre');
+
+    // Aucune correspondance
+    const fallback = allCats.find(c => n(c.name) === 'divers') || allCats[allCats.length - 1];
+    return { category: fallback?.name || 'Divers', subcategory: '' };
+  },
+
+  // ── APERÇU ───────────────────────────────────────────────────────────────
+
+  // Construit les <option> pour le select de sous-catégorie d'une catégorie donnée
+  _subcatOpts(catName, selected = '') {
+    const cat  = Storage.getCategories().find(c => c.name === catName);
+    const subs = cat?.subcategories || [];
+    return '<option value="">—</option>' +
+      subs.map(s => `<option value="${s}"${s === selected ? ' selected' : ''}>${s}</option>`).join('');
+  },
+
+  // Mise à jour dynamique des sous-catégories quand l'utilisateur change la catégorie
+  _onCatChange(sel, idx) {
+    const newCat = sel.value;
+    const t = (window._bankTransactions || [])[idx];
+    if (t) GeminiCat.learn(t.description, newCat, '');
+    const subcatSel = document.querySelector(`[data-subcat="${idx}"]`);
+    if (subcatSel) subcatSel.innerHTML = this._subcatOpts(newCat, '');
+  },
+
+  // Mémorise la correction manuelle de sous-catégorie
+  _onSubcatChange(sel, idx) {
+    const t = (window._bankTransactions || [])[idx];
+    if (!t) return;
+    const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
+    GeminiCat.learn(t.description, cat, sel.value);
+  },
+
+  _showPreview(transactions, source = 'spreadsheet') {
+    window._bankTransactions = transactions;
+    const allCats   = Storage.getCategories(); // {name, subcategories[]}[]
+    const expCatNames = allCats.map(c => c.name);
+    const expCats   = expCatNames.length ? expCatNames : Utils.EXPENSE_CATEGORIES;
+    const revCats   = Utils.REVENUE_CATEGORIES;
+    const hasGemini = !!GeminiCat.getApiKey();
+
+    // Détection des doublons
+    const expKeys = new Set(Storage.getExpenses().map(e => `${e.date}|${e.description}|${e.amount}`));
+    const revKeys = new Set(Storage.getRevenues().map(r => `${r.date}|${r.description}|${r.amount}`));
+    const dupKey  = t => `${t.date}|${t.description}|${t.amount}`;
+
+    let dupCount = 0;
+    const rows = transactions.map((t, i) => {
+      const cats  = t.isRevenue ? revCats : expCats;
+      const opts  = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
+      const isDup = (t.isRevenue ? revKeys : expKeys).has(dupKey(t));
+      if (isDup) dupCount++;
+      // Sous-catégories de la catégorie assignée par Gemini
+      const subcatHtml = t.isRevenue ? '' :
+        `<select data-subcat="${i}" class="select-input bank-cat-sel"
+          onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
+      return `<tr${isDup ? ' class="row-dup"' : ''}>
+        <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
+        <td>${Utils.formatDate(t.date)}</td>
+        <td class="bank-desc">${t.description}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
+        <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
+        <td><select data-cat="${i}" class="select-input bank-cat-sel"
+          onchange="BankImport._onCatChange(this,${i})">${opts}</select></td>
+        <td>${subcatHtml}</td>
+      </tr>`;
+    }).join('');
+
+    const geminiNote = hasGemini
+      ? `<div class="bank-import-note bank-note-ok">🤖 <strong>Catégorisation Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés sont envoyés — jamais les montants, dates ni données personnelles.</span></div>`
+      : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés. <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`;
+    const dupNote = dupCount
+      ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>${dupCount} doublon(s) détecté(s)</strong> et décochés — cochez-les pour forcer l'import.</div>`
+      : '';
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    Modal.open(`Relevé${source === 'pdf' ? ' PDF' : ''} — ${transactions.length} opération(s)`, `
+      ${geminiNote}${dupNote}
+      <div class="bank-preview-wrap">
+        <table class="data-table bank-preview-table">
+          <thead><tr>
+            <th style="width:36px"><input type="checkbox" id="bank-check-all" checked></th>
+            <th>Date</th><th>Description</th><th class="text-right">Montant</th>
+            <th>Catégorie</th><th>Sous-catégorie</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="form-actions bank-preview-actions">
+        <button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
+        <button class="btn-primary" onclick="BankImport._confirmImport()">Importer les sélectionnées</button>
+      </div>
+    `);
+
+    document.getElementById('bank-check-all')?.addEventListener('change', e => {
+      document.querySelectorAll('[data-idx]').forEach(cb => { cb.checked = e.target.checked; });
+    });
+  },
+
+  _cancelPreview() {
+    window._bankTransactions = null;
+    window._bankMappingData  = null;
+    document.getElementById('modal')?.classList.remove('modal-wide');
+    Modal.close();
+  },
+
+  _confirmImport() {
+    const transactions = window._bankTransactions || [];
+    const checkboxes   = document.querySelectorAll('[data-idx]');
+    const catSelects   = document.querySelectorAll('[data-cat]');
+    const subcatSelects = document.querySelectorAll('[data-subcat]');
+    const expenses     = Storage.getExpenses();
+    const revenues     = Storage.getRevenues();
+    let impExp = 0, impRev = 0;
+
+    // data-subcat n'existe que pour les dépenses — on indexe par idx
+    const subcatByIdx = {};
+    subcatSelects.forEach(el => { subcatByIdx[el.dataset.subcat] = el.value; });
+
+    checkboxes.forEach((cb, i) => {
+      if (!cb.checked) return;
+      const t      = transactions[i];
+      const cat    = catSelects[i]?.value || t.category;
+      const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
+      if (!t.isRevenue && (cat !== t.category || subcat !== t.subcategory)) {
+        GeminiCat.learn(t.description, cat, subcat);
+      }
+      if (t.isRevenue) {
+        revenues.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
+          category: cat, date: t.date, notes: 'Import bancaire' });
+        impRev++;
+      } else {
+        expenses.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
+          category: cat, subcategory: subcat, date: t.date, notes: 'Import bancaire' });
+        impExp++;
+      }
+    });
+
+    Storage.saveExpenses(expenses);
+    Storage.saveRevenues(revenues);
+    window._bankTransactions = null;
+    window._bankMappingData  = null;
+    document.getElementById('modal')?.classList.remove('modal-wide');
+    Modal.close();
+    navigateTo('flux');
+    alert(`Import terminé ✓\n${impExp} dépense(s) et ${impRev} revenu(s) importé(s).`);
+  },
+};
+
+</script>
+<script>
+const InvestImport = {
+  init() {
+    document.getElementById('invest-import-file')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) this.handleFile(file);
+      e.target.value = '';
+    });
+    document.getElementById('invest-import-btn')?.addEventListener('click', () => {
+      document.getElementById('invest-import-file')?.click();
+    });
+  },
+
+  // Find the actual header row — brokers often add title/metadata rows before the real columns
+  _findHeaderRow(rows) {
+    // Score each row: strings = good, numbers = bad (headers are text, data has numbers)
+    let bestIdx = 0, bestScore = -Infinity;
+    for (let i = 0; i < Math.min(12, rows.length); i++) {
+      const row = rows[i];
+      const nonEmpty = row.filter(c => c !== '' && c !== null && c !== undefined);
+      if (nonEmpty.length < 2) continue;
+      const strings = nonEmpty.filter(c => typeof c === 'string').length;
+      const nums    = nonEmpty.filter(c => typeof c === 'number').length;
+      const score   = strings * 2 - nums * 4;
+      if (score > bestScore) { bestScore = score; bestIdx = i; }
+    }
+    return bestIdx;
+  },
+
+  async handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+      alert('Format non supporté. Utilisez un fichier CSV ou Excel (.xlsx / .xls).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'array', codepage: 1252 });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        let rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        rows = rows.filter(r => r.some(c => c !== '' && c !== null && c !== undefined));
+
+        if (rows.length < 2) { alert('Fichier vide ou aucune donnée détectée.'); return; }
+
+        // Auto-detect the real header row (skips title/metadata rows at the top)
+        const headerRowIdx = this._findHeaderRow(rows);
+        const headerRow    = rows[headerRowIdx];
+        const dataRows     = rows.slice(headerRowIdx + 1);
+
+        if (!dataRows.length) {
+          alert('Aucune ligne de données trouvée sous les en-têtes.');
+          return;
+        }
+
+        document.getElementById('modal')?.classList.add('modal-wide');
+        const apiKey = BankImport.getApiKey();
+        Modal.open('Analyse du portefeuille…', `
+          <div style="text-align:center;padding:52px 20px">
+            <div style="font-size:52px;margin-bottom:20px">📊</div>
+            <p style="font-size:15px;font-weight:700;margin-bottom:8px">Analyse en cours…</p>
+            <p style="color:var(--text-muted);font-size:13px">
+              ${apiKey ? 'Claude IA identifie vos positions' : 'Détection automatique des colonnes'}
+            </p>
+          </div>
+        `);
+
+        let mapping, aiTypes = null;
+
+        if (apiKey) {
+          try {
+            const result = await this._callClaude(headerRow, dataRows, apiKey);
+            mapping  = result.mapping;
+            aiTypes  = result.types;
+          } catch (err) {
+            console.warn('Claude API fallback:', err.message);
+            mapping = this._guessMapping(headerRow);
+          }
+        } else {
+          mapping = this._guessMapping(headerRow);
+        }
+
+        console.log('[InvestImport] header row', headerRowIdx, headerRow);
+        console.log('[InvestImport] mapping', mapping);
+
+        const positions = this._parseWithMapping(dataRows, mapping, aiTypes);
+
+        if (!positions.length) {
+          document.getElementById('modal')?.classList.remove('modal-wide');
+          Modal.close();
+          alert(
+            'Aucune position valide détectée.\n\n' +
+            'En-têtes trouvés (ligne ' + (headerRowIdx + 1) + ') :\n' +
+            headerRow.filter(Boolean).join(', ') + '\n\n' +
+            'Si votre fichier a des colonnes différentes, configurez la clé Claude IA (⚙) pour une détection automatique.'
+          );
+          return;
+        }
+
+        this._showPreview(positions, !apiKey || !aiTypes);
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('modal')?.classList.remove('modal-wide');
+        Modal.close();
+        alert('Erreur lors de la lecture : ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  },
+
+  async _callClaude(headerRow, dataRows, apiKey) {
+    const sampleRows = dataRows.slice(0, Math.min(6, dataRows.length));
+
+    const prompt = `Tu analyses un export de portefeuille boursier (PEA, assurance vie, CTO...).
+
+En-têtes (index 0 à ${headerRow.length - 1}) : ${headerRow.map((h, i) => `${i}:"${h}"`).join(', ')}
+
+${sampleRows.map((r, i) => `Ligne ${i + 1}: ${r.map((v, j) => `${j}:"${v}"`).join(', ')}`).join('\n')}
+
+Identifie les colonnes pour :
+- name : nom du titre / support / libellé (toujours présent)
+- isin : code ISIN 12 caractères (peut être absent ou "-")
+- quantity : quantité / nombre de parts (peut être en €  pour un fonds euros où VL=1)
+- buyPrice : prix d'achat unitaire / PRU (par titre, pas total ; peut être absent)
+- currentPrice : cours actuel / valeur liquidative par titre (pas le total ; peut être 1,00 pour fonds euros)
+- totalValue : valorisation totale = quantité × prix (montant, encours, épargne acquise)
+- currentIsTotal : true si AUCUN prix unitaire n'est disponible, seulement le montant total
+
+Pour chaque ligne, indique le type parmi : action, etf, obligations, immobilier, crypto, autre
+- ISIN IE*/LU* → etf ; FR* → action ; "WORLD","MSCI","INDEX","TRACKER","ETF" dans le nom → etf
+- "EURO","FONDS EUROS","FONDS EN EUROS" → autre (fonds euros d'assurance vie, capital garanti)
+- "SCPI","PIERRE" → immobilier
+
+Réponds UNIQUEMENT en JSON valide :
+{"mapping":{"name":<idx|null>,"isin":<idx|null>,"quantity":<idx|null>,"buyPrice":<idx|null>,"currentPrice":<idx|null>,"totalValue":<idx|null>,"currentIsTotal":<bool>},"types":[${sampleRows.map(() => '"…"').join(',')}]}`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-calls': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 700,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Erreur API ${resp.status}`);
+    }
+
+    const data  = await resp.json();
+    const text  = data.content?.[0]?.text || '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Réponse invalide');
+    return JSON.parse(match[0]);
+  },
+
+  _guessMapping(headerRow) {
+    const n = s => String(s).toLowerCase()
+      .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îï]/g, 'i')
+      .replace(/[ôö]/g, 'o').replace(/[ùûü]/g, 'u').replace(/ç/g, 'c')
+      .trim();
+    const h = headerRow.map(n);
+    const find = (...terms) => { const i = h.findIndex(c => terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
+
+    // 'placement' volontairement absent — c'est le libellé de l'enveloppe (PEA, AV...) pas le nom du fonds
+    // 'nom du' matche "Nom du support" (Linxea) sans matcher "Placement"
+    // 'support' matche "Nom du support" sans matcher d'autres colonnes Linxea
+    const nameIdx = find('nom du', 'libelle', 'designation', 'valeur mobiliere', 'support', 'actif', 'intitule', 'titre');
+    const isinIdx = find('isin', 'code isin', 'code valeur', 'code titre');
+    // 'nbre de parts' en premier pour matcher Linxea ("Nbre de parts")
+    const qtyIdx  = find('nbre de parts', 'nombre de parts', 'nombre parts', 'nb parts', 'nb titres', 'quantite', 'parts', 'qte');
+    const buyIdx  = find('pru', 'prix de revient', 'px revient', 'prix achat', 'cout unitaire', 'valeur achat', 'prix moyen');
+    // 'cotation' en premier pour matcher "Dernière cotation" (Linxea)
+    const curIdx  = find('cotation', 'valeur liquidative', 'cours actuel', 'dernier cours', 'cours', 'vl ', 'prix actuel');
+    // 'somme en compte' + 'somme' pour Linxea ; 'montant'/'valorisation' pour Boursorama
+    const totIdx  = find('somme en compte', 'valorisation', 'montant', 'valeur portefeuille', 'valeur totale', 'encours', 'epargne acquise', 'somme', 'capital');
+
+    return {
+      name:          nameIdx,   // null = on cherchera la 1ère cellule texte dans _parseWithMapping
+      isin:          isinIdx,
+      quantity:      qtyIdx,
+      buyPrice:      buyIdx,
+      currentPrice:  curIdx,
+      totalValue:    totIdx,
+      currentIsTotal: curIdx === null && totIdx !== null,
+    };
+  },
+
+  _parseNum(val) {
+    if (val === '' || val === null || val === undefined) return null;
+    if (typeof val === 'number') return val;
+    const s = String(val).trim()
+      .replace(/[ \s]/g, '')  // remove non-breaking & regular spaces
+      .replace('%', '')
+      .replace(/^[+]/, '');
+    // French number format: 1.234,56 → 1234.56
+    const cleaned = s.replace(/\.(?=\d{3}(?:[,]|$))/g, '').replace(',', '.');
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? null : n;
+  },
+
+  _guessType(name, isin) {
+    const nm = (name || '').toLowerCase()
+      .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îï]/g, 'i')
+      .replace(/[ôö]/g, 'o').replace(/[ùûü]/g, 'u').replace(/ç/g, 'c');
+    const is = (isin || '').toUpperCase();
+    if (/etf|tracker|world|msci|index|s&p|cac 40|stoxx|nasdaq|bloomberg/.test(nm)) return 'etf';
+    if (/scpi|immob|pierre|foncier/.test(nm)) return 'immobilier';
+    if (/bitcoin|ethereum|crypto/.test(nm)) return 'crypto';
+    if (/obligation|bond|monetaire|tresor|corporate/.test(nm)) return 'obligations';
+    if (/fonds euro|fond euro|fonds en euro|capital garanti|actif general/.test(nm)) return 'autre';
+    if (/^IE|^LU/.test(is)) return 'etf';
+    if (/^FR|^US|^DE|^GB|^NL/.test(is)) return 'action';
+    return 'autre';
+  },
+
+  _parseWithMapping(dataRows, mapping, aiTypes) {
+    const positions = [];
+    const existing  = Storage.getInvestments();
+
+    dataRows.forEach((row, rowIdx) => {
+      if (!row || row.every(c => c === '' || c === null || c === undefined)) return;
+
+      // Si mapping.name est null, prendre la première cellule texte longue (> 3 chars)
+      const nameCol = mapping.name ?? row.findIndex(c => typeof c === 'string' && c.trim().length > 3 && !/^\d/.test(c.trim()));
+      const name = nameCol >= 0 ? String(row[nameCol] ?? '').trim() : '';
+      if (!name || name === '-' || /^\d+$/.test(name)) return;
+
+      const isin     = mapping.isin !== null ? String(row[mapping.isin] ?? '').trim().toUpperCase() : '';
+      const quantity = mapping.quantity !== null ? this._parseNum(row[mapping.quantity]) : null;
+      const buyPrice = mapping.buyPrice !== null ? this._parseNum(row[mapping.buyPrice]) : null;
+      const totVal   = mapping.totalValue !== null ? this._parseNum(row[mapping.totalValue]) : null;
+
+      let currentPrice = null;
+
+      if (!mapping.currentIsTotal && mapping.currentPrice !== null) {
+        currentPrice = this._parseNum(row[mapping.currentPrice]);
+      }
+
+      // If currentPrice still null, derive from totalValue / quantity
+      if ((currentPrice === null || currentPrice <= 0) && totVal && quantity && quantity > 0) {
+        currentPrice = totVal / quantity;
+      }
+
+      // Last resort: if still no quantity/price but we have a totalValue, treat as 1-unit position
+      let finalQty = quantity;
+      if ((!finalQty || finalQty <= 0) && totVal && totVal > 0) {
+        finalQty = 1;
+        currentPrice = totVal;
+      }
+
+      if (!finalQty || finalQty <= 0) return;
+      if (!currentPrice || currentPrice <= 0) return;
+
+      const aiType = aiTypes ? aiTypes[rowIdx] : null;
+      const type = (aiType && Object.keys(Utils.INVESTMENT_TYPES).includes(aiType))
+        ? aiType
+        : this._guessType(name, isin);
+
+      const cleanIsin = isin && isin !== '-' && /^[A-Z]{2}/.test(isin) ? isin : '';
+
+      const matchedExisting = cleanIsin
+        ? existing.find(e => e.ticker === cleanIsin || (e.notes || '').includes(cleanIsin))
+        : existing.find(e => e.name.toLowerCase() === name.toLowerCase());
+
+      positions.push({
+        name,
+        isin:        cleanIsin,
+        quantity:    finalQty,
+        buyPrice:    buyPrice || currentPrice,
+        currentPrice,
+        type,
+        existingId:   matchedExisting?.id   || null,
+        existingName: matchedExisting?.name || null,
+      });
+    });
+
+    return positions;
+  },
+
+  _showPreview(positions, noAI) {
+    window._investPositions = positions;
+
+    const accountOptions = Object.entries(Utils.INVESTMENT_ACCOUNTS)
+      .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
+    const typeOptions = (selected) => Object.entries(Utils.INVESTMENT_TYPES)
+      .map(([v, l]) => `<option value="${v}"${v === selected ? ' selected' : ''}>${l}</option>`).join('');
+
+    const rows = positions.map((p, i) => {
+      const isUpdate = !!p.existingId;
+      const gainPct  = p.buyPrice > 0 ? ((p.currentPrice - p.buyPrice) / p.buyPrice * 100).toFixed(1) : null;
+      const gainCls  = gainPct !== null && parseFloat(gainPct) >= 0 ? 'positive' : 'negative';
+      const qtyFmt   = p.quantity % 1 === 0 ? p.quantity.toLocaleString('fr-FR') : p.quantity.toFixed(4);
+      return `<tr>
+        <td><input type="checkbox" data-inv-idx="${i}" checked></td>
+        <td>
+          <div style="font-weight:600;font-size:12px">${p.name}</div>
+          ${p.isin ? `<div style="font-size:10px;color:var(--text-muted);font-family:monospace">${p.isin}</div>` : ''}
+        </td>
+        <td><select data-inv-type="${i}" class="select-input" style="font-size:11px;padding:3px 5px">${typeOptions(p.type)}</select></td>
+        <td style="text-align:right;font-size:12px">${qtyFmt}</td>
+        <td style="text-align:right;font-size:12px">${p.buyPrice !== p.currentPrice ? Utils.formatCurrency(p.buyPrice) : '—'}</td>
+        <td style="text-align:right;font-size:12px">
+          ${Utils.formatCurrency(p.currentPrice)}
+          ${gainPct !== null ? `<div class="${gainCls}" style="font-size:10px">${parseFloat(gainPct) >= 0 ? '+' : ''}${gainPct}%</div>` : ''}
+        </td>
+        <td style="text-align:right;font-size:12px;font-weight:600">${Utils.formatCurrency(p.quantity * p.currentPrice)}</td>
+        <td><span class="invest-status-badge ${isUpdate ? 'badge-update' : 'badge-new'}">${isUpdate ? '↻ MAJ' : '+ Nouveau'}</span></td>
+      </tr>`;
+    }).join('');
+
+    const totalVal = positions.reduce((s, p) => s + p.quantity * p.currentPrice, 0);
+    const note = noAI
+      ? `<div class="bank-import-note bank-note-warn">💡 <strong>Sans clé Claude :</strong> types détectés automatiquement. <a href="#" onclick="BankImport.openSettings();return false">Configurer l'IA →</a></div>`
+      : `<div class="bank-import-note bank-note-ok">🤖 <strong>Types suggérés par Claude IA.</strong> Vérifiez avant d'importer.</div>`;
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    Modal.open(`Import portefeuille — ${positions.length} position(s)`, `
+      ${note}
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;font-weight:600;white-space:nowrap">Compte :</label>
+          <select id="invest-import-account" class="select-input" style="font-size:13px">${accountOptions}</select>
+        </div>
+        <div style="margin-left:auto;font-size:13px;color:var(--text-muted)">
+          Valorisation totale : <strong style="color:var(--text)">${Utils.formatCurrency(totalVal)}</strong>
+        </div>
+      </div>
+      <div class="bank-preview-wrap">
+        <table class="data-table bank-preview-table">
+          <thead><tr>
+            <th style="width:32px"><input type="checkbox" id="invest-check-all" checked></th>
+            <th>Position</th><th>Type</th>
+            <th class="text-right">Qté / Parts</th>
+            <th class="text-right">PRU</th>
+            <th class="text-right">Cours actuel</th>
+            <th class="text-right">Valorisation</th>
+            <th>Statut</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="form-actions bank-preview-actions">
+        <button class="btn-secondary" onclick="InvestImport._cancelPreview()">Annuler</button>
+        <button class="btn-primary" onclick="InvestImport._confirmImport()">Importer les sélectionnées</button>
+      </div>
+    `);
+
+    document.getElementById('invest-check-all')?.addEventListener('change', (e) => {
+      document.querySelectorAll('[data-inv-idx]').forEach(cb => { cb.checked = e.target.checked; });
+    });
+  },
+
+  _cancelPreview() {
+    window._investPositions = null;
+    document.getElementById('modal')?.classList.remove('modal-wide');
+    Modal.close();
+  },
+
+  _confirmImport() {
+    const positions  = window._investPositions || [];
+    const checkboxes = document.querySelectorAll('[data-inv-idx]');
+    const typeSelects = document.querySelectorAll('[data-inv-type]');
+    const account    = document.getElementById('invest-import-account')?.value || 'autre';
+    const existing   = Storage.getInvestments();
+    let added = 0, updated = 0;
+
+    checkboxes.forEach((cb, i) => {
+      if (!cb.checked) return;
+      const p    = positions[i];
+      const type = typeSelects[i]?.value || p.type;
+      const today = new Date().toISOString().split('T')[0];
+
+      if (p.existingId) {
+        const idx = existing.findIndex(e => e.id === p.existingId);
+        if (idx !== -1) {
+          existing[idx].currentPrice = p.currentPrice;
+          existing[idx].quantity     = p.quantity;
+          if (p.buyPrice !== p.currentPrice) existing[idx].buyPrice = p.buyPrice;
+          existing[idx].type = type;
+          updated++;
+        }
+      } else {
+        existing.push({
+          id: Utils.generateId(),
+          name: p.name,
+          ticker: p.isin || '',
+          type,
+          account,
+          quantity:     p.quantity,
+          buyPrice:     p.buyPrice || p.currentPrice,
+          currentPrice: p.currentPrice,
+          buyDate:      today,
+          notes:        p.isin ? `ISIN: ${p.isin}` : 'Import portefeuille',
+        });
+        added++;
+      }
+    });
+
+    Storage.saveInvestments(existing);
+    window._investPositions = null;
+    document.getElementById('modal')?.classList.remove('modal-wide');
+    Modal.close();
+    navigateTo('portfolio');
+    alert(`Import terminé ✓\n${added} position(s) ajoutée(s), ${updated} mise(s) à jour.`);
   },
 };
 
