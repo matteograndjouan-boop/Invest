@@ -6458,7 +6458,7 @@ const BankImport = {
     const ym = s.match(/^(\d{4})(\d{2})(\d{2})$/);
     if (ym) return `${ym[1]}-${ym[2]}-${ym[3]}`;
     // DD/MM sans année (courant dans les relevés PDF) → année en cours
-    const short = s.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+    const short = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})$/);
     if (short) {
       const y = new Date().getFullYear();
       return `${y}-${short[2].padStart(2,'0')}-${short[1].padStart(2,'0')}`;
@@ -6559,7 +6559,7 @@ const BankImport = {
   },
 
   _showPDFWizard(lines, allCats) {
-    const rDate   = /\b(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/g;
+    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/g;
     const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
 
     const displayLines = lines.filter(l => l.trim().length > 3).slice(0, 80);
@@ -6675,7 +6675,7 @@ const BankImport = {
   _parsePDFTransactions(lines, allCats = [], amtIdx = 0) {
     const transactions = [];
 
-    const rDate   = /\b(\d{2}[\/\-]\d{2}(?:[\/\-]\d{2,4})?)\b/;
+    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
     const rAmount = /(\d{1,3}(?:[\s\u00A0 ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
     const skipPat = /\b(?:solde|total|report|relev[e\u00e9]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
 
