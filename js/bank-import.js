@@ -293,7 +293,7 @@ const BankImport = {
       return;
     }
 
-    const userCats = Storage.getCategories().map(c => c.name);
+    const userCats = Storage.getCategories(); // objets complets avec sous-catégories
     const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, userCats);
@@ -420,7 +420,7 @@ const BankImport = {
         return;
       }
 
-      const userCats = Storage.getCategories().map(c => c.name);
+      const userCats = Storage.getCategories();
       const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
       if (labels.length) {
         const catMap = await GeminiCat.categorize(labels, userCats);
@@ -524,7 +524,7 @@ const BankImport = {
 
       if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
 
-      const userCats = Storage.getCategories().map(c => c.name);
+      const userCats = Storage.getCategories();
       const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
       if (labels.length) {
         const catMap = await GeminiCat.categorize(labels, userCats);
@@ -547,10 +547,36 @@ const BankImport = {
 
   // ── APERÇU ───────────────────────────────────────────────────────────────
 
+  // Construit les <option> pour le select de sous-catégorie d'une catégorie donnée
+  _subcatOpts(catName, selected = '') {
+    const cat  = Storage.getCategories().find(c => c.name === catName);
+    const subs = cat?.subcategories || [];
+    return '<option value="">—</option>' +
+      subs.map(s => `<option value="${s}"${s === selected ? ' selected' : ''}>${s}</option>`).join('');
+  },
+
+  // Mise à jour dynamique des sous-catégories quand l'utilisateur change la catégorie
+  _onCatChange(sel, idx) {
+    const newCat = sel.value;
+    const t = (window._bankTransactions || [])[idx];
+    if (t) GeminiCat.learn(t.description, newCat, '');
+    const subcatSel = document.querySelector(`[data-subcat="${idx}"]`);
+    if (subcatSel) subcatSel.innerHTML = this._subcatOpts(newCat, '');
+  },
+
+  // Mémorise la correction manuelle de sous-catégorie
+  _onSubcatChange(sel, idx) {
+    const t = (window._bankTransactions || [])[idx];
+    if (!t) return;
+    const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
+    GeminiCat.learn(t.description, cat, sel.value);
+  },
+
   _showPreview(transactions, source = 'spreadsheet') {
     window._bankTransactions = transactions;
-    const userCats  = Storage.getCategories().map(c => c.name);
-    const expCats   = userCats.length ? userCats : Utils.EXPENSE_CATEGORIES;
+    const allCats   = Storage.getCategories(); // {name, subcategories[]}[]
+    const expCatNames = allCats.map(c => c.name);
+    const expCats   = expCatNames.length ? expCatNames : Utils.EXPENSE_CATEGORIES;
     const revCats   = Utils.REVENUE_CATEGORIES;
     const hasGemini = !!GeminiCat.getApiKey();
 
@@ -565,14 +591,18 @@ const BankImport = {
       const opts  = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
       const isDup = (t.isRevenue ? revKeys : expKeys).has(dupKey(t));
       if (isDup) dupCount++;
-      const escDesc = t.description.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      // Sous-catégories de la catégorie assignée par Gemini
+      const subcatHtml = t.isRevenue ? '' :
+        `<select data-subcat="${i}" class="select-input bank-cat-sel"
+          onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
         <td>${Utils.formatDate(t.date)}</td>
         <td class="bank-desc">${t.description}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
         <td><select data-cat="${i}" class="select-input bank-cat-sel"
-          onchange="GeminiCat.learn('${escDesc}',this.value,'')">${opts}</select></td>
+          onchange="BankImport._onCatChange(this,${i})">${opts}</select></td>
+        <td>${subcatHtml}</td>
       </tr>`;
     }).join('');
 
@@ -590,7 +620,8 @@ const BankImport = {
         <table class="data-table bank-preview-table">
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="bank-check-all" checked></th>
-            <th>Date</th><th>Description</th><th class="text-right">Montant</th><th>Catégorie</th>
+            <th>Date</th><th>Description</th><th class="text-right">Montant</th>
+            <th>Catégorie</th><th>Sous-catégorie</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -617,22 +648,30 @@ const BankImport = {
     const transactions = window._bankTransactions || [];
     const checkboxes   = document.querySelectorAll('[data-idx]');
     const catSelects   = document.querySelectorAll('[data-cat]');
+    const subcatSelects = document.querySelectorAll('[data-subcat]');
     const expenses     = Storage.getExpenses();
     const revenues     = Storage.getRevenues();
     let impExp = 0, impRev = 0;
 
+    // data-subcat n'existe que pour les dépenses — on indexe par idx
+    const subcatByIdx = {};
+    subcatSelects.forEach(el => { subcatByIdx[el.dataset.subcat] = el.value; });
+
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
-      const t   = transactions[i];
-      const cat = catSelects[i]?.value || t.category;
-      if (!t.isRevenue && cat !== t.category) GeminiCat.learn(t.description, cat, '');
+      const t      = transactions[i];
+      const cat    = catSelects[i]?.value || t.category;
+      const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
+      if (!t.isRevenue && (cat !== t.category || subcat !== t.subcategory)) {
+        GeminiCat.learn(t.description, cat, subcat);
+      }
       if (t.isRevenue) {
         revenues.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
           category: cat, date: t.date, notes: 'Import bancaire' });
         impRev++;
       } else {
         expenses.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
-          category: cat, subcategory: t.subcategory || '', date: t.date, notes: 'Import bancaire' });
+          category: cat, subcategory: subcat, date: t.date, notes: 'Import bancaire' });
         impExp++;
       }
     });

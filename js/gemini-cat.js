@@ -97,22 +97,38 @@ const GeminiCat = {
   // Appel effectif à l'API Gemini.
   // SEULS les libellés (texte du libellé bancaire) sont transmis — rien d'autre.
   async _callGemini(labels, userCategories) {
-    const catList   = userCategories.join(', ');
+    // Construction de la liste catégories + sous-catégories pour le prompt
+    // userCategories peut être string[] ou {name, subcategories[]}[]
+    let catBlock;
+    if (userCategories.length && typeof userCategories[0] === 'object') {
+      catBlock = userCategories.map(c => {
+        const subs = (c.subcategories || []).join(', ');
+        return subs ? `• ${c.name} (sous-catégories : ${subs})` : `• ${c.name}`;
+      }).join('\n');
+    } else {
+      catBlock = userCategories.map(c => `• ${c}`).join('\n');
+    }
+
     // On envoie uniquement les libellés, numérotés, sans aucune autre donnée
     const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
 
     const prompt =
-`Tu es un assistant de catégorisation de transactions bancaires françaises.
-Catégories disponibles : ${catList}
+`Tu catégorises des transactions bancaires françaises.
 
-Associe chaque libellé à la catégorie la plus appropriée.
-Indique une sous-catégorie si elle est évidente (ex : "Courses", "Train", "Loyer").
+Catégories et sous-catégories disponibles :
+${catBlock}
+
+Pour chaque libellé :
+- Choisis LA catégorie la plus appropriée parmi la liste.
+- Choisis LA sous-catégorie la plus précise parmi celles listées pour cette catégorie.
+- Si aucune sous-catégorie ne convient, laisse "s" vide ("").
 
 Libellés :
 ${labelLines}
 
 Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
 {"r":[{"i":1,"c":"catégorie","s":"sous-catégorie ou vide"},{"i":2,"c":"...","s":"..."}]}`;
+
 
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${this._MODEL}:generateContent?key=${this.getApiKey()}`,
