@@ -137,14 +137,11 @@ const GeminiCat = {
 Catégories disponibles et leur signification :
 ${catBlock}
 
-Règles importantes :
-- Identifie l'enseigne ou la marque et classe-la selon son secteur réel.
-- Marques de vêtements/sport (ADIDAS, NIKE, ZARA, H&M, DECATHLON…) → Shopping/Vêtements.
-- Supermarchés (AUCHAN, LECLERC, CARREFOUR, LIDL…) → Alimentation/Courses.
-- Abonnements = services numériques RÉCURRENTS SEULEMENT (Netflix, Spotify, SFR…). Ne jamais mettre une enseigne physique dans Abonnements.
-- Choisis LA catégorie ET LA sous-catégorie les plus précises.
-- Utilise UNIQUEMENT les catégories et sous-catégories listées ci-dessus.
-- Si aucune sous-catégorie ne convient, laisse "s" vide.
+Pour chaque libellé, identifie ce que c'est (enseigne, service, marque…) et choisis
+la catégorie dont la DESCRIPTION correspond le mieux à la nature de la dépense.
+Choisis LA catégorie ET LA sous-catégorie les plus précises.
+Utilise UNIQUEMENT les catégories et sous-catégories listées ci-dessus.
+Si aucune sous-catégorie ne convient, laisse "s" vide.
 
 Libellés :
 ${labelLines}
