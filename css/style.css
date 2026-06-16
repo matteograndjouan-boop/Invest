@@ -1594,20 +1594,36 @@ input:focus:not(:focus-visible) { outline: none; }
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
 .row-dup { opacity: 0.55; }
 
-/* ---- PDF Wizard ---- */
-.pdf-wiz-hint { font-size: 13px; color: var(--text-muted); margin: 0; }
-.pdf-wiz-scroll { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; background: var(--bg); }
-.pdf-wiz-line { padding: 5px 12px; font-family: monospace; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: pre-wrap; word-break: break-all; border-bottom: 1px solid transparent; transition: background 0.1s; }
-.pdf-wiz-line:hover { background: var(--bg-card); color: var(--text); }
-.pdf-wiz-line-sel { background: var(--primary-light) !important; color: var(--primary-dark) !important; font-weight: 600; }
-.pdf-wiz-analysis { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; min-height: 56px; }
-.pdf-tok-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
-.pdf-tok-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
-.pdf-tok-date { background: #dbeafe; color: #1d4ed8; }
-.pdf-tok-desc { background: #dcfce7; color: #166534; }
-.pdf-tok-amt  { background: #fef9c3; color: #854d0e; }
-.pdf-amt-radio { margin-right: 12px; cursor: pointer; }
 .mapping-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+/* ---- PDF Zone Editor (encadrement de colonnes) ---- */
+.pdfz-wrap { display: flex; flex-direction: column; gap: 10px; }
+.pdfz-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pdfz-badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+.pdfz-badge-ok  { background: #dcfce7; color: #166534; }
+.pdfz-badge-new { background: #fef9c3; color: #854d0e; }
+.pdfz-pageinfo { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.pdfz-hint { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+.pdfz-options { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+.pdfz-stage-scroll { overflow: auto; max-height: 60vh; border: 1px solid var(--border); border-radius: 8px; background: #525659; padding: 12px; display: flex; justify-content: center; }
+.pdfz-stage { position: relative; flex-shrink: 0; touch-action: none; }
+.pdfz-stage canvas { display: block; }
+.pdfz-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.pdfz-shade { position: absolute; left: 0; right: 0; background: rgba(0,0,0,0.45); pointer-events: none; }
+.pdfz-line { position: absolute; left: 0; right: 0; height: 10px; margin-top: -5px; cursor: row-resize; display: flex; align-items: center; }
+.pdfz-line::before { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: #f8fafc; }
+.pdfz-line-label { position: absolute; right: 4px; top: -16px; font-size: 10px; background: #1e293b; color: #f8fafc; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.pdfz-band { position: absolute; top: 0; bottom: 0; cursor: move; border-left: 2px solid; border-right: 2px solid; }
+.pdfz-band-date    { background: rgba(37,99,235,0.18); border-color: #2563eb; }
+.pdfz-band-date2   { background: rgba(124,58,237,0.18); border-color: #7c3aed; }
+.pdfz-band-amount  { background: rgba(22,163,74,0.18); border-color: #16a34a; }
+.pdfz-band-debit   { background: rgba(220,38,38,0.18); border-color: #dc2626; }
+.pdfz-band-credit  { background: rgba(22,163,74,0.18); border-color: #16a34a; }
+.pdfz-band-libelle { background: rgba(234,88,12,0.12); border-color: #ea580c; }
+.pdfz-band-label { position: absolute; top: 2px; left: 4px; font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.85); color: #1e293b; padding: 1px 5px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+.pdfz-handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: col-resize; }
+.pdfz-handle-l { left: -6px; }
+.pdfz-handle-r { right: -6px; }
 
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }

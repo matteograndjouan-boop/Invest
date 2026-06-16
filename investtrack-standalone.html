@@ -1601,20 +1601,36 @@ input:focus:not(:focus-visible) { outline: none; }
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
 .row-dup { opacity: 0.55; }
 
-/* ---- PDF Wizard ---- */
-.pdf-wiz-hint { font-size: 13px; color: var(--text-muted); margin: 0; }
-.pdf-wiz-scroll { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 4px 0; background: var(--bg); }
-.pdf-wiz-line { padding: 5px 12px; font-family: monospace; font-size: 12px; color: var(--text-muted); cursor: pointer; white-space: pre-wrap; word-break: break-all; border-bottom: 1px solid transparent; transition: background 0.1s; }
-.pdf-wiz-line:hover { background: var(--bg-card); color: var(--text); }
-.pdf-wiz-line-sel { background: var(--primary-light) !important; color: var(--primary-dark) !important; font-weight: 600; }
-.pdf-wiz-analysis { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; min-height: 56px; }
-.pdf-tok-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
-.pdf-tok-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
-.pdf-tok-date { background: #dbeafe; color: #1d4ed8; }
-.pdf-tok-desc { background: #dcfce7; color: #166534; }
-.pdf-tok-amt  { background: #fef9c3; color: #854d0e; }
-.pdf-amt-radio { margin-right: 12px; cursor: pointer; }
 .mapping-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+/* ---- PDF Zone Editor (encadrement de colonnes) ---- */
+.pdfz-wrap { display: flex; flex-direction: column; gap: 10px; }
+.pdfz-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pdfz-badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+.pdfz-badge-ok  { background: #dcfce7; color: #166534; }
+.pdfz-badge-new { background: #fef9c3; color: #854d0e; }
+.pdfz-pageinfo { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.pdfz-hint { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+.pdfz-options { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+.pdfz-stage-scroll { overflow: auto; max-height: 60vh; border: 1px solid var(--border); border-radius: 8px; background: #525659; padding: 12px; display: flex; justify-content: center; }
+.pdfz-stage { position: relative; flex-shrink: 0; touch-action: none; }
+.pdfz-stage canvas { display: block; }
+.pdfz-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.pdfz-shade { position: absolute; left: 0; right: 0; background: rgba(0,0,0,0.45); pointer-events: none; }
+.pdfz-line { position: absolute; left: 0; right: 0; height: 10px; margin-top: -5px; cursor: row-resize; display: flex; align-items: center; }
+.pdfz-line::before { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: #f8fafc; }
+.pdfz-line-label { position: absolute; right: 4px; top: -16px; font-size: 10px; background: #1e293b; color: #f8fafc; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.pdfz-band { position: absolute; top: 0; bottom: 0; cursor: move; border-left: 2px solid; border-right: 2px solid; }
+.pdfz-band-date    { background: rgba(37,99,235,0.18); border-color: #2563eb; }
+.pdfz-band-date2   { background: rgba(124,58,237,0.18); border-color: #7c3aed; }
+.pdfz-band-amount  { background: rgba(22,163,74,0.18); border-color: #16a34a; }
+.pdfz-band-debit   { background: rgba(220,38,38,0.18); border-color: #dc2626; }
+.pdfz-band-credit  { background: rgba(22,163,74,0.18); border-color: #16a34a; }
+.pdfz-band-libelle { background: rgba(234,88,12,0.12); border-color: #ea580c; }
+.pdfz-band-label { position: absolute; top: 2px; left: 4px; font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.85); color: #1e293b; padding: 1px 5px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+.pdfz-handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: col-resize; }
+.pdfz-handle-l { left: -6px; }
+.pdfz-handle-r { right: -6px; }
 
 /* ---- Performer rows (new design) ---- */
 .performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
@@ -6068,6 +6084,577 @@ Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
 
 </script>
 <script>
+// Module d'extraction PDF assistée par encadrement de zones (100 % local).
+//
+// Principe : l'utilisateur trace/ajuste des cadres sur la page du relevé pour
+// délimiter les colonnes (Date, Montant, Libellé...) et le corps du tableau
+// (hors en-tête/pied de page). L'extraction du texte se fait ensuite
+// entièrement en local via pdf.js. Seul le libellé nettoyé (nom du commerçant)
+// est ensuite transmis à Gemini pour la catégorisation — jamais les montants,
+// dates ni aucune autre donnée du relevé.
+const PdfZones = {
+  _TPL_KEY: 'invest_pdf_zone_templates',
+  _ROW_TOL: 0.0095, // tolérance de regroupement par ligne (fraction de la hauteur de page)
+
+  // ── ENTRÉE PRINCIPALE ─────────────────────────────────────────────────────
+
+  async start(file) {
+    try {
+      if (typeof pdfjsLib === 'undefined') { alert('pdf.js non disponible.'); return; }
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+      Modal.open('Lecture du PDF…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
+          <p style="font-size:15px;font-weight:700">Chargement du relevé…</p>
+          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n'est envoyé sur internet.</p>
+        </div>
+      `);
+
+      const buffer = await file.arrayBuffer();
+      const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const page1  = await pdf.getPage(1);
+      const vp1    = page1.getViewport({ scale: 1 });
+      const content1 = await page1.getTextContent();
+      const items1 = content1.items.filter(it => it.str && it.str.trim());
+
+      if (!items1.length) {
+        Modal.close();
+        alert('📄 Ce PDF semble être un scan (image) sans texte extractible.\n\n' +
+          'L\'extraction par cadrage nécessite un PDF « texte » (export natif de votre banque). ' +
+          'L\'OCR n\'est pas pris en charge pour le moment — essayez plutôt un export CSV/Excel si votre banque le propose.');
+        return;
+      }
+
+      const fracItems1  = items1.map(it => ({ ...this._itemFrac(vp1, it), str: it.str }));
+      const headerLines = this._firstLines(fracItems1, 6);
+      const sig = this._signature(headerLines, vp1);
+      const tpl = this._getTemplates()[sig];
+
+      const zones = tpl ? JSON.parse(JSON.stringify(tpl)) : (this._autoDetect(fracItems1) || this._defaultZones());
+
+      this._state = { file, pdf, zones, sig, recognized: !!tpl, pageNum: 1 };
+      Modal.close();
+      await this._renderEditor();
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur lors de la lecture du PDF : ' + err.message);
+    }
+  },
+
+  // ── GÉOMÉTRIE / CONVERSION DE COORDONNÉES ───────────────────────────────
+
+  // Convertit un point en espace PDF vers une fraction (0–1) de la page,
+  // indépendamment du zoom d'affichage — utilisé pour stocker des zones
+  // réutilisables quel que soit le rendu (et sur toutes les pages du document).
+  _fracXY(viewport, x, y) {
+    const [cx, cy] = viewport.convertToViewportPoint(x, y);
+    return { fx: cx / viewport.width, fy: cy / viewport.height };
+  },
+
+  // Position fractionnelle d'un élément de texte pdf.js (centre horizontal).
+  _itemFrac(viewport, item) {
+    const x0 = item.transform[4], y0 = item.transform[5];
+    const x1 = x0 + (item.width || 0);
+    const p0 = viewport.convertToViewportPoint(x0, y0);
+    const p1 = viewport.convertToViewportPoint(x1, y0);
+    return { fx: ((p0[0] + p1[0]) / 2) / viewport.width, fy: p0[1] / viewport.height };
+  },
+
+  _firstLines(fracItems, n) {
+    const byRow = new Map();
+    for (const it of fracItems) {
+      const key = Math.round(it.fy / this._ROW_TOL);
+      if (!byRow.has(key)) byRow.set(key, []);
+      byRow.get(key).push(it);
+    }
+    const keys = [...byRow.keys()].sort((a, b) => a - b).slice(0, n);
+    return keys.map(k => byRow.get(k).sort((a, b) => a.fx - b.fx).map(i => i.str).join(' '));
+  },
+
+  // ── DÉTECTION AUTOMATIQUE (pré-remplissage des cadres) ──────────────────
+
+  _defaultZones() {
+    return {
+      top: 0.12, bottom: 0.92,
+      date: { x0: 0.04, x1: 0.18 }, date2: null, date2Enabled: false, dateChoice: 'date',
+      amountMode: 'single', amount: { x0: 0.72, x1: 0.92 }, debit: null, credit: null,
+      libelle: { x0: 0.20, x1: 0.70 },
+    };
+  },
+
+  _clusterX(xs, gapThresh) {
+    if (!xs.length) return [];
+    const clusters = [[xs[0]]];
+    for (let i = 1; i < xs.length; i++) {
+      if (xs[i] - xs[i - 1] > gapThresh) clusters.push([]);
+      clusters[clusters.length - 1].push(xs[i]);
+    }
+    return clusters;
+  },
+
+  _padBand(xs, pad = 0.015) {
+    if (!xs || !xs.length) return { x0: 0.7, x1: 0.9 };
+    return { x0: Math.max(0, Math.min(...xs) - pad), x1: Math.min(1, Math.max(...xs) + pad) };
+  },
+
+  // Repère les lignes "transaction" (date + montant) sur la page 1 pour en
+  // déduire la position des colonnes — l'utilisateur n'a plus qu'à ajuster.
+  _autoDetect(fracItems) {
+    const dateRe = /^\d{1,2}[\/\.\-]\d{1,2}(?:[\/\.\-]\d{2,4})?$/;
+    const amtRe  = /^-?\d{1,3}(?:[\s ]\d{3})*,\d{2}-?$/;
+
+    const byRow = new Map();
+    for (const it of fracItems) {
+      const key = Math.round(it.fy / this._ROW_TOL);
+      if (!byRow.has(key)) byRow.set(key, []);
+      byRow.get(key).push(it);
+    }
+    const txnRows = [];
+    for (const rowItems of byRow.values()) {
+      const dates = rowItems.filter(i => dateRe.test(i.str.trim()));
+      const amts  = rowItems.filter(i => amtRe.test(i.str.trim()));
+      if (dates.length && amts.length) txnRows.push({ dates, amts, fy: rowItems[0].fy });
+    }
+    if (txnRows.length < 2) return null;
+
+    const fys    = txnRows.map(r => r.fy);
+    const top    = Math.max(0, Math.min(...fys) - 0.02);
+    const bottom = Math.min(1, Math.max(...fys) + 0.02);
+
+    const dateXs = txnRows.flatMap(r => r.dates.map(d => d.fx)).sort((a, b) => a - b);
+    const dateClusters = this._clusterX(dateXs, 0.05);
+    const dateBand  = this._padBand(dateClusters[0]);
+    const date2Band = dateClusters.length > 1 ? this._padBand(dateClusters[1]) : null;
+
+    const amtXs = txnRows.flatMap(r => r.amts.map(a => a.fx)).sort((a, b) => a - b);
+    const amtClusters = this._clusterX(amtXs, 0.04);
+    const amountMode = amtClusters.length >= 2 ? 'split' : 'single';
+    let amountBand = null, debitBand = null, creditBand = null;
+    if (amountMode === 'split') {
+      debitBand  = this._padBand(amtClusters[0]);
+      creditBand = this._padBand(amtClusters[amtClusters.length - 1]);
+    } else {
+      amountBand = this._padBand(amtClusters[0] || amtXs);
+    }
+
+    const dateEnd  = date2Band ? Math.max(dateBand.x1, date2Band.x1) : dateBand.x1;
+    const amtStart = amountMode === 'split' ? debitBand.x0 : amountBand.x0;
+    const libelleBand = {
+      x0: Math.min(dateEnd + 0.01, amtStart - 0.01),
+      x1: Math.max(amtStart - 0.01, dateEnd + 0.01),
+    };
+
+    return {
+      top, bottom,
+      date: dateBand, date2: date2Band, date2Enabled: !!date2Band, dateChoice: 'date',
+      amountMode, amount: amountBand, debit: debitBand, credit: creditBand,
+      libelle: libelleBand,
+    };
+  },
+
+  // ── GABARIT PAR BANQUE (mémorisation locale) ────────────────────────────
+
+  _getTemplates() {
+    try { return JSON.parse(localStorage.getItem(this._TPL_KEY) || '{}'); } catch { return {}; }
+  },
+  _saveTemplate(sig, zones) {
+    const all = this._getTemplates();
+    all[sig] = zones;
+    try { localStorage.setItem(this._TPL_KEY, JSON.stringify(all)); } catch (e) {}
+  },
+  // Signature = dimensions de page + texte d'en-tête normalisé (chiffres neutralisés
+  // pour que deux relevés de la même banque à des dates différentes matchent).
+  _signature(headerLines, viewport) {
+    const norm = headerLines.join(' ').toLowerCase()
+      .replace(/[0-9]/g, '#').replace(/\s+/g, ' ').trim().slice(0, 200);
+    return `${Math.round(viewport.width)}x${Math.round(viewport.height)}|${norm}`;
+  },
+
+  // ── INTERFACE D'ENCADREMENT ──────────────────────────────────────────────
+
+  async _renderEditor() {
+    const { pdf, pageNum, zones, recognized } = this._state;
+    const page    = await pdf.getPage(pageNum);
+    const vpBase  = page.getViewport({ scale: 1 });
+    const containerW = Math.min(760, Math.max(320, window.innerWidth - 80));
+    const scale   = containerW / vpBase.width;
+    const viewport = page.getViewport({ scale });
+
+    const aiFallbackAvailable = BankImport._getPdfAiEnabled() && !!BankImport.getApiKey();
+
+    document.getElementById('modal')?.classList.add('modal-wide');
+    Modal.open('Encadrement du relevé PDF', this._editorHTML(pdf.numPages, recognized, aiFallbackAvailable));
+
+    const canvas = document.getElementById('pdfz-canvas');
+    canvas.width  = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+    const stage = document.getElementById('pdfz-stage');
+    stage.style.width  = canvas.width + 'px';
+    stage.style.height = canvas.height + 'px';
+
+    document.getElementById('pdfz-pagenum').textContent = String(pageNum);
+    this._refreshOverlay();
+    this._attachDrag();
+    this._attachControls();
+  },
+
+  _editorHTML(numPages, recognized, aiFallbackAvailable) {
+    return `
+      <div class="pdfz-wrap">
+        <div class="pdfz-toolbar">
+          <span class="pdfz-badge ${recognized ? 'pdfz-badge-ok' : 'pdfz-badge-new'}">
+            ${recognized ? '✓ Format reconnu — zones appliquées' : 'Nouveau format — ajustez les cadres si besoin'}
+          </span>
+          ${numPages > 1 ? `
+            <span class="pdfz-pageinfo">Page <span id="pdfz-pagenum">1</span>/${numPages}</span>
+            <button type="button" class="btn-sm" id="pdfz-prev">‹ Page préc.</button>
+            <button type="button" class="btn-sm" id="pdfz-next">Page suiv. ›</button>
+          ` : `<span class="pdfz-pageinfo">Page <span id="pdfz-pagenum">1</span>/1</span>`}
+        </div>
+
+        <p class="pdfz-hint">
+          Ajustez les cadres : <b style="color:#2563eb">Date</b>, <b style="color:#16a34a">Montant</b> /
+          <b style="color:#dc2626">Débit</b> / <b style="color:#16a34a">Crédit</b>, le reste (catch-all) part dans
+          <b style="color:#ea580c">Libellé</b>. Les lignes grisées délimitent le corps du tableau (en-tête et pied
+          de page exclus, donc jamais extraits).
+        </p>
+
+        <div class="pdfz-options">
+          <label class="mapping-radio-lbl">
+            <input type="checkbox" id="pdfz-date2-toggle"> 2ᵉ colonne date (opération / valeur)
+          </label>
+          <span id="pdfz-date2-which" style="display:none">
+            Utiliser :
+            <label class="mapping-radio-lbl"><input type="radio" name="pdfz-which-date" value="1" checked> Date 1</label>
+            <label class="mapping-radio-lbl"><input type="radio" name="pdfz-which-date" value="2"> Date 2</label>
+          </span>
+        </div>
+        <div class="mapping-amount-type">
+          <label class="mapping-radio-lbl"><input type="radio" name="pdfz-amt-mode" value="single" checked> Colonne unique (+/−)</label>
+          <label class="mapping-radio-lbl"><input type="radio" name="pdfz-amt-mode" value="split"> Débit / Crédit séparés</label>
+        </div>
+
+        <div class="pdfz-stage-scroll">
+          <div class="pdfz-stage" id="pdfz-stage">
+            <canvas id="pdfz-canvas"></canvas>
+            <div class="pdfz-overlay" id="pdfz-overlay"></div>
+          </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:14px">
+          <button class="btn-secondary" onclick="PdfZones.cancel()">Annuler</button>
+          ${aiFallbackAvailable ? `<button type="button" class="btn-sm" style="margin-right:auto;color:var(--text-muted);background:transparent;border:1px solid var(--border);padding:6px 12px;border-radius:6px;cursor:pointer" onclick="PdfZones.useAiFallback()">PDF trop complexe ? IA en dernier recours →</button>` : ''}
+          <button class="btn-primary" onclick="PdfZones.confirm()">Valider l'encadrement →</button>
+        </div>
+      </div>
+    `;
+  },
+
+  _overlayHTML(zones) {
+    const pct = v => (Math.max(0, Math.min(1, v)) * 100).toFixed(2) + '%';
+    const bandDiv = (col, label, cls) => zones[col] ? `
+      <div class="pdfz-band pdfz-band-${cls}" style="left:${pct(zones[col].x0)};width:${pct(Math.max(0, zones[col].x1 - zones[col].x0))}" data-drag="${col}-move">
+        <span class="pdfz-band-label">${label}</span>
+        <div class="pdfz-handle pdfz-handle-l" data-drag="${col}-l"></div>
+        <div class="pdfz-handle pdfz-handle-r" data-drag="${col}-r"></div>
+      </div>` : '';
+
+    let html = '';
+    html += `<div class="pdfz-shade" style="top:0;height:${pct(zones.top)}"></div>`;
+    html += `<div class="pdfz-shade" style="top:${pct(zones.bottom)};height:${pct(1 - zones.bottom)}"></div>`;
+    html += `<div class="pdfz-line" style="top:${pct(zones.top)}" data-drag="top"><span class="pdfz-line-label">Haut du tableau</span></div>`;
+    html += `<div class="pdfz-line" style="top:${pct(zones.bottom)}" data-drag="bottom"><span class="pdfz-line-label">Bas du tableau</span></div>`;
+    html += bandDiv('date', 'Date', 'date');
+    if (zones.date2Enabled) html += bandDiv('date2', 'Date 2', 'date2');
+    if (zones.amountMode === 'single') html += bandDiv('amount', 'Montant', 'amount');
+    else { html += bandDiv('debit', 'Débit', 'debit'); html += bandDiv('credit', 'Crédit', 'credit'); }
+    html += bandDiv('libelle', 'Libellé', 'libelle');
+    return html;
+  },
+
+  _refreshOverlay() {
+    const el = document.getElementById('pdfz-overlay');
+    if (el) el.innerHTML = this._overlayHTML(this._state.zones);
+  },
+
+  // ── INTERACTIONS (souris + tactile via Pointer Events) ──────────────────
+
+  _attachDrag() {
+    const stage = document.getElementById('pdfz-stage');
+    if (!stage || stage._pdfzBound) return;
+    stage._pdfzBound = true;
+
+    stage.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest('[data-drag]');
+      if (!handle) return;
+      e.preventDefault();
+      const kind = handle.dataset.drag;
+      const startRect  = stage.getBoundingClientRect();
+      const startZones = JSON.parse(JSON.stringify(this._state.zones));
+      const startX = e.clientX, startY = e.clientY;
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+
+      const onMove = (ev) => {
+        const dxF = (ev.clientX - startX) / startRect.width;
+        const dyF = (ev.clientY - startY) / startRect.height;
+        this._applyDrag(kind, startZones, dxF, dyF);
+        this._refreshOverlay();
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+  },
+
+  _applyDrag(kind, startZones, dxF, dyF) {
+    const z = this._state.zones;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    if (kind === 'top')    { z.top    = clamp(startZones.top    + dyF, 0, startZones.bottom - 0.02); return; }
+    if (kind === 'bottom') { z.bottom = clamp(startZones.bottom + dyF, startZones.top + 0.02, 1);    return; }
+    const m = /^(date2?|amount|debit|credit|libelle)-(l|r|move)$/.exec(kind);
+    if (!m) return;
+    const [, col, mode] = m;
+    const band = startZones[col];
+    if (!band) return;
+    if (mode === 'l')      z[col].x0 = clamp(band.x0 + dxF, 0, band.x1 - 0.01);
+    else if (mode === 'r') z[col].x1 = clamp(band.x1 + dxF, band.x0 + 0.01, 1);
+    else {
+      const w = band.x1 - band.x0;
+      const nx0 = clamp(band.x0 + dxF, 0, 1 - w);
+      z[col].x0 = nx0; z[col].x1 = nx0 + w;
+    }
+  },
+
+  _attachControls() {
+    const z = this._state.zones;
+
+    const date2Toggle = document.getElementById('pdfz-date2-toggle');
+    if (date2Toggle) {
+      date2Toggle.checked = z.date2Enabled;
+      document.getElementById('pdfz-date2-which').style.display = z.date2Enabled ? '' : 'none';
+      date2Toggle.addEventListener('change', e => {
+        z.date2Enabled = e.target.checked;
+        if (z.date2Enabled && !z.date2) {
+          z.date2 = { x0: Math.min(0.95, z.date.x1 + 0.02), x1: Math.min(1, z.date.x1 + 0.14) };
+        }
+        document.getElementById('pdfz-date2-which').style.display = z.date2Enabled ? '' : 'none';
+        this._refreshOverlay();
+      });
+    }
+    document.querySelectorAll('input[name="pdfz-which-date"]').forEach(r => {
+      r.checked = (r.value === '2') === (z.dateChoice === 'date2');
+      r.addEventListener('change', e => { if (e.target.checked) z.dateChoice = e.target.value === '2' ? 'date2' : 'date'; });
+    });
+    document.querySelectorAll('input[name="pdfz-amt-mode"]').forEach(r => {
+      r.checked = r.value === z.amountMode;
+      r.addEventListener('change', e => {
+        if (!e.target.checked) return;
+        z.amountMode = e.target.value;
+        if (z.amountMode === 'split' && !z.debit) {
+          const base = z.amount || { x0: 0.7, x1: 0.9 };
+          const mid  = (base.x0 + base.x1) / 2;
+          z.debit  = { x0: base.x0, x1: mid };
+          z.credit = { x0: mid,    x1: base.x1 };
+        } else if (z.amountMode === 'single' && !z.amount) {
+          z.amount = { x0: z.debit ? z.debit.x0 : 0.72, x1: z.credit ? z.credit.x1 : 0.92 };
+        }
+        this._refreshOverlay();
+      });
+    });
+
+    if (this._state.pdf.numPages > 1) {
+      document.getElementById('pdfz-prev')?.addEventListener('click', () => this._gotoPage(-1));
+      document.getElementById('pdfz-next')?.addEventListener('click', () => this._gotoPage(1));
+    }
+  },
+
+  _gotoPage(delta) {
+    const n = Math.max(1, Math.min(this._state.pdf.numPages, this._state.pageNum + delta));
+    if (n === this._state.pageNum) return;
+    this._state.pageNum = n;
+    this._renderEditor();
+  },
+
+  // ── EXTRACTION LOCALE (toutes les pages, mêmes zones) ───────────────────
+
+  _assignCol(fx, zones) {
+    const within = z => z && fx >= z.x0 && fx <= z.x1;
+    if (within(zones.date)) return 'date';
+    if (zones.date2Enabled && within(zones.date2)) return 'date2';
+    if (zones.amountMode === 'single' && within(zones.amount)) return 'amount';
+    if (zones.amountMode === 'split' && within(zones.debit)) return 'debit';
+    if (zones.amountMode === 'split' && within(zones.credit)) return 'credit';
+    return 'libelle'; // catch-all : tout texte non assigné devient libellé
+  },
+
+  async _extract(pdf, zones) {
+    const allRows = [];
+    let sawAnyText = false;
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page     = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 1 });
+      const content  = await page.getTextContent();
+      const items    = content.items.filter(it => it.str && it.str.trim());
+      if (items.length) sawAnyText = true;
+
+      const byRow = new Map();
+      for (const it of items) {
+        const { fx, fy } = this._itemFrac(viewport, it);
+        if (fy < zones.top - 0.002 || fy > zones.bottom + 0.002) continue;
+        const key = Math.round(fy / this._ROW_TOL);
+        if (!byRow.has(key)) byRow.set(key, []);
+        byRow.get(key).push({ fx, str: it.str });
+      }
+
+      [...byRow.keys()].sort((a, b) => a - b).forEach(key => {
+        const cols = { date: [], date2: [], amount: [], debit: [], credit: [], libelle: [] };
+        byRow.get(key).sort((a, b) => a.fx - b.fx).forEach(w => {
+          cols[this._assignCol(w.fx, zones)].push(w.str);
+        });
+        allRows.push({
+          date:    cols.date.join(' ').trim(),
+          date2:   cols.date2.join(' ').trim(),
+          amount:  cols.amount.join(' ').trim(),
+          debit:   cols.debit.join(' ').trim(),
+          credit:  cols.credit.join(' ').trim(),
+          libelle: cols.libelle.join(' ').trim(),
+        });
+      });
+    }
+
+    if (!sawAnyText) return { scanned: true, transactions: [] };
+
+    // Une ligne avec une date ouvre une transaction ; les lignes suivantes sans
+    // date (ni date2) sont rattachées au libellé de la transaction en cours.
+    const blocks = [];
+    let cur = null;
+    for (const row of allRows) {
+      const hasDate = !!(row.date || row.date2);
+      if (hasDate) {
+        if (cur) blocks.push(cur);
+        const rawDate = (zones.date2Enabled && zones.dateChoice === 'date2')
+          ? (row.date2 || row.date) : (row.date || row.date2);
+        cur = { rawDate, amount: row.amount, debit: row.debit, credit: row.credit, libelle: [row.libelle] };
+      } else if (cur) {
+        if (row.libelle) cur.libelle.push(row.libelle);
+        if (!cur.amount && row.amount) cur.amount = row.amount;
+        if (!cur.debit  && row.debit)  cur.debit  = row.debit;
+        if (!cur.credit && row.credit) cur.credit = row.credit;
+      }
+    }
+    if (cur) blocks.push(cur);
+
+    const allCats = Storage.getCategories();
+    const transactions = [];
+    for (const b of blocks) {
+      const dateStr = BankImport._parseDate((b.rawDate || '').trim());
+      if (!dateStr) continue;
+
+      let amount = null, isRevenue = false;
+      if (zones.amountMode === 'single') {
+        const a = BankImport._parseAmount(b.amount);
+        if (a === null || a === 0) continue;
+        amount = Math.abs(a); isRevenue = a > 0;
+      } else {
+        const d = BankImport._parseAmount(b.debit);
+        const c = BankImport._parseAmount(b.credit);
+        if (d && Math.abs(d) > 0)      { amount = Math.abs(d); isRevenue = false; }
+        else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
+        else continue;
+      }
+
+      // Seul ce texte nettoyé (le commerçant) sera envoyé à Gemini — jamais le montant/la date.
+      const desc = BankImport._cleanDesc(b.libelle.join(' ').replace(/\s+/g, ' ').trim());
+      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
+
+      const guess = isRevenue
+        ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
+        : BankImport._smartGuess(desc, allCats);
+      transactions.push({ date: dateStr, description: desc, amount, isRevenue,
+        category: guess.category, subcategory: guess.subcategory });
+    }
+
+    return { scanned: false, transactions };
+  },
+
+  // ── ACTIONS ───────────────────────────────────────────────────────────────
+
+  async confirm() {
+    const { pdf, zones, sig } = this._state;
+    Modal.open('Extraction…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
+        <p style="font-size:15px;font-weight:700">Extraction locale en cours…</p>
+      </div>
+    `);
+    try {
+      const { scanned, transactions } = await this._extract(pdf, zones);
+      if (scanned) {
+        Modal.close();
+        alert('📄 Ce PDF semble être un scan sans texte extractible — l\'OCR n\'est pas pris en charge pour le moment.');
+        return;
+      }
+      if (!transactions.length) {
+        alert('Aucune transaction détectée avec cet encadrement.\nAjustez les cadres (notamment Haut/Bas du tableau et Montant) et réessayez.');
+        await this._renderEditor();
+        return;
+      }
+      this._saveTemplate(sig, zones);
+      this._state = null;
+      await BankImport.finishPdfExtraction(transactions);
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur lors de l\'extraction : ' + err.message);
+    }
+  },
+
+  cancel() {
+    this._state = null;
+    document.getElementById('modal')?.classList.remove('modal-wide');
+    Modal.close();
+  },
+
+  // Dernier recours, opt-in : envoie le texte complet du relevé à Claude.
+  async useAiFallback() {
+    const file = this._state?.file;
+    this._state = null;
+    if (!file) return;
+    const go = confirm(
+      '⚠️ Envoyer le contenu complet du relevé (montants, dates, données personnelles) à Claude ?\n\n' +
+      'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
+    );
+    if (!go) return;
+    Modal.open('Extraction IA…', `<div style="text-align:center;padding:40px"><p>Lecture du PDF…</p></div>`);
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      let fullText = '';
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page    = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        fullText += content.items.map(i => i.str).join(' ') + '\n';
+      }
+      await BankImport._parsePDFWithAI(fullText);
+    } catch (err) {
+      console.error(err);
+      Modal.close();
+      alert('Erreur : ' + err.message);
+    }
+  },
+};
+
+</script>
+<script>
 const BankImport = {
   getApiKey()      { return localStorage.getItem('claude_api_key') || ''; },
   saveApiKey(key)  { if (key) localStorage.setItem('claude_api_key', key); else localStorage.removeItem('claude_api_key'); },
@@ -6121,10 +6708,12 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">⚡ Claude Anthropic — Détection colonnes <span class="settings-badge-optional">Optionnel</span></div>
+          <div class="settings-block-title">⚡ Claude Anthropic — Dernier recours PDF <span class="settings-badge-optional">Optionnel</span></div>
           <p class="settings-desc">
-            Améliore la détection des colonnes pour les formats atypiques.
-            Sans cette clé la détection fonctionne par règles (couvre la plupart des banques).
+            Pour les relevés PDF, la méthode principale est l'encadrement local des colonnes
+            (100 % privé). Si un relevé est trop atypique pour être encadré, un bouton
+            « dernier recours » apparaît dans l'écran d'encadrement pour envoyer le texte
+            complet du relevé à Claude — uniquement si vous l'activez ci-dessous.
           </p>
           <div class="form-group" style="margin-top:14px">
             <label class="settings-label">Clé API Anthropic</label>
@@ -6135,16 +6724,15 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">📄 Import PDF — IA pour PDF difficiles <span class="settings-badge-optional">Désactivé par défaut</span></div>
+          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
           <p class="settings-desc">
-            Pour les PDF que la lecture locale n'arrive pas à parser.<br><br>
-            ⚠️ <strong>Attention :</strong> si activée, cette option envoie le contenu complet du
-            relevé (montants, dates, données personnelles) à l'IA.
-            Contrairement à la catégorisation, ce mode ne se limite pas aux libellés.
+            ⚠️ <strong>Attention :</strong> si activée, cette option permet d'envoyer le contenu
+            complet du relevé (montants, dates, données personnelles) à l'IA.
+            Contrairement à la catégorisation Gemini, ce mode ne se limite pas aux libellés.
           </p>
           <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
             <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
-            Activer l'IA pour les PDF difficiles (opt-in, envoie les données complètes)
+            Activer l'option IA en dernier recours pour les PDF (opt-in, envoie les données complètes)
           </label>
         </div>
 
@@ -6507,326 +7095,35 @@ const BankImport = {
 
   // ── PDF ───────────────────────────────────────────────────────────────────
 
+  // Méthode principale : l'utilisateur encadre lui-même les colonnes sur le
+  // relevé affiché (voir js/pdf-zones.js) — extraction et nettoyage 100 % locaux.
   async _handlePDF(file) {
-    try {
-      Modal.open('Lecture du PDF…', `
-        <div style="text-align:center;padding:52px 20px">
-          <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
-          <p style="font-size:15px;font-weight:700">Extraction du texte en cours…</p>
-          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n’est envoyé sur internet.</p>
-        </div>
-      `);
-
-      if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non disponible');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-
-      const buffer = await file.arrayBuffer();
-      const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
-      const rowData = []; // [{text, amtXs:[]}] — amtXs = x-positions of amount-like items
-
-      // Regex to identify individual PDF items that look like amounts (comma decimal)
-      const amtItemRe = /\d+[,]\d{2}/;
-
-      for (let p = 1; p <= pdf.numPages; p++) {
-        const page    = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        const byY = new Map();
-        for (const item of content.items) {
-          if (!item.str?.trim()) continue;
-          const y = Math.round(item.transform[5] / 8) * 8;
-          if (!byY.has(y)) byY.set(y, []);
-          byY.get(y).push({ x: item.transform[4], str: item.str });
-        }
-        [...byY.entries()]
-          .sort((a, b) => b[0] - a[0])
-          .forEach(([, items]) => {
-            const sorted = items.sort((a, b) => a.x - b.x);
-            const text   = sorted.map(i => i.str).join(' ');
-            const amtXs  = sorted
-              .filter(i => amtItemRe.test(i.str.trim()))
-              .map(i => i.x);
-            rowData.push({ text, amtXs });
-          });
-      }
-
-      Modal.close();
-      const allCats = Storage.getCategories();
-
-      // Auto-parse with x-position tracking (no wizard needed for most PDFs)
-      const transactions = this._parsePDFRows(rowData, allCats);
-
-      if (!transactions.length) {
-        // Fallback: show wizard so user can pick an example line
-        this._showPDFWizard(rowData.map(r => r.text), allCats);
-        return;
-      }
-
-      const labels = transactions.map(t => t.description);
-      if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
-      }
-
-      document.getElementById('modal')?.classList.add('modal-wide');
-      this._showPreview(transactions, 'pdf');
-    } catch (err) {
-      console.error(err);
-      Modal.close();
-      alert('Erreur lors de la lecture du PDF : ' + err.message);
-    }
+    if (typeof pdfjsLib === 'undefined') { alert('pdf.js non disponible.'); return; }
+    await PdfZones.start(file);
   },
 
-  // Parse PDF rows using x-position clustering for debit/credit detection.
-  // rowData: [{text, amtXs:[]}] from _handlePDF
-  _parsePDFRows(rowData, allCats = []) {
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
-    const rAmount = /(\d{1,3}(?:[\s  ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte|taeg|taux\s+nominal|trimestriel|usure|autorisation\s+de)\b/i;
-
-    // Build blocks: each date-line opens a block; non-date lines accumulate
-    const blocks = [];
-    let cur = null;
-    for (const row of rowData) {
-      const line = row.text.trim();
-      if (!line || skipPat.test(line)) continue;
-      const dm = line.match(rDate);
-      if (dm) {
-        if (cur) blocks.push(cur);
-        cur = { date: dm[1], parts: [line], amtXs: [...row.amtXs] };
-      } else if (cur) {
-        cur.parts.push(line);
-        cur.amtXs.push(...row.amtXs);
-      }
-    }
-    if (cur) blocks.push(cur);
-
-    // First pass: parse transactions, track leftmost amount x-position per block
-    const rawTxns = [];
-    for (const block of blocks) {
-      const dateStr = this._parseDate(block.date);
-      if (!dateStr) continue;
-
-      const fullText = block.parts.join(' ');
-      let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
-
-      const amtMatches = [...work.matchAll(rAmount)];
-      if (!amtMatches.length) continue;
-
-      const amount = this._parseAmount(amtMatches[0][1]);
-      if (!amount || Math.abs(amount) < 0.01) continue;
-
-      // Le nom du commerçant peut apparaître avant OU après le montant selon la banque
-      // (ex: "53,00 SNCF INTERNET") — on retire tous les montants plutôt que de
-      // ne garder que le texte précédant le premier, pour ne pas perdre le libellé.
-      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
-      // Filter false positives: require ≥3 alphabetic characters in description
-      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
-
-      // Leftmost amount x = transaction amount column (rightmost = balance column)
-      const txnAmtX = block.amtXs.length ? Math.min(...block.amtXs) : null;
-
-      const guess = this._smartGuess(desc, allCats);
-      rawTxns.push({ date: dateStr, description: desc,
-        amount: Math.abs(amount), isRevenue: false,
-        category: guess.category, subcategory: guess.subcategory,
-        _amtX: txnAmtX });
-    }
-
-    // Second pass: cluster amount x-positions to detect separate debit/credit columns
-    // If the PDF has distinct debit & credit columns, the x-positions will form 2+ clusters.
-    const validXs = rawTxns.map(t => t._amtX).filter(x => x !== null).sort((a, b) => a - b);
-    let creditMinX = Infinity;
-    if (validXs.length >= 4) {
-      // Find the largest gap in x-distribution (= column boundary)
-      let maxGap = 0, splitAt = -1;
-      for (let i = 1; i < validXs.length; i++) {
-        const gap = validXs[i] - validXs[i - 1];
-        if (gap > maxGap) { maxGap = gap; splitAt = validXs[i]; }
-      }
-      // Split only if gap is large AND both clusters have ≥2 members (avoids outlier inversion)
-      const leftCount  = validXs.filter(x => x < splitAt).length;
-      const rightCount = validXs.filter(x => x >= splitAt).length;
-      if (maxGap > 40 && leftCount >= 2 && rightCount >= 2) creditMinX = splitAt;
-    }
-
-    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const revCatName = (allCats.find(c => n(c.name).includes('revenu')) || {}).name || '';
-
-    rawTxns.forEach(t => {
-      if (t._amtX !== null && t._amtX >= creditMinX) t.isRevenue = true;
-      if (revCatName && t.category === revCatName) t.isRevenue = true;
-      // La catégorie devinée plus haut suppose une dépense — pour un crédit,
-      // on la remplace par une vraie sous-catégorie de "Revenus".
-      if (t.isRevenue) { t.category = this._revenueCat(allCats).name; t.subcategory = this._defaultRevenueCat(allCats); }
-      delete t._amtX;
-    });
-
-    return rawTxns;
-  },
-
-  _showPDFWizard(lines, allCats) {
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/g;
-    const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-
-    const displayLines = lines.filter(l => l.trim().length > 3).slice(0, 80);
-
-    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    const renderAnalysis = (line) => {
-      const dates   = [...line.matchAll(rDate)].map(m => m[1]);
-      const amounts = [...line.matchAll(rAmount)].map(m => m[1]);
-      if (!dates.length) return `<p class="pdf-wiz-hint">⚠️ Aucune date détectée dans cette ligne — choisissez une ligne de transaction.</p>`;
-      if (!amounts.length) return `<p class="pdf-wiz-hint">⚠️ Aucun montant détecté — choisissez une ligne de transaction.</p>`;
-
-      // Description = texte sans dates et avant le 1er montant
-      let work = line;
-      dates.forEach(d => { work = work.replace(d, ' '); });
-      const firstAmtIdx = work.search(rAmount);
-      const desc = (firstAmtIdx > 0 ? work.slice(0, firstAmtIdx) : work).trim().replace(/\s+/g,' ');
-
-      let html = `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-date">📅 Date</span>${esc(dates[0])}</div>`;
-      html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-desc">✏️ Libellé</span>${esc(desc) || '<em style="color:var(--text-muted)">non détecté</em>'}</div>`;
-
-      if (amounts.length === 1) {
-        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montant</span>${esc(amounts[0])}</div>`;
-      } else {
-        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montants</span>`;
-        html += `<span style="color:var(--text-muted);font-size:12px">Plusieurs montants détectés — lequel est le montant de l'opération ?</span><br>`;
-        amounts.forEach((a, i) => {
-          html += `<label class="pdf-amt-radio"><input type="radio" name="pdfAmt" value="${i}" ${i===0?'checked':''}> ${esc(a)}</label> `;
-        });
-        html += `</div>`;
-      }
-      return html;
-    };
-
-    const linesHtml = displayLines.map((line, i) =>
-      `<div class="pdf-wiz-line" data-idx="${i}">${esc(line)}</div>`
-    ).join('');
-
-    Modal.open('Relevé PDF — Sélectionnez une ligne exemple', `
-      <div class="mapping-wizard">
-        <p class="pdf-wiz-hint">Cliquez sur une ligne qui représente une opération bancaire (avec date et montant).</p>
-        <div class="pdf-wiz-scroll" id="pdf-wiz-list">${linesHtml}</div>
-        <div class="pdf-wiz-analysis" id="pdf-wiz-analysis">
-          <span style="color:var(--text-muted);font-size:13px">← Cliquez sur une ligne ci-dessus</span>
-        </div>
-        <div class="mapping-footer">
-          <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button class="btn-primary" id="pdf-wiz-btn" disabled onclick="BankImport._confirmPDFWizard()">Importer →</button>
-        </div>
+  // Catégorisation Gemini (libellés uniquement) puis aperçu — point d'entrée
+  // commun appelé après extraction par PdfZones ou par le mode IA de secours.
+  async finishPdfExtraction(transactions) {
+    Modal.open('Catégorisation…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">🤖</div>
+        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
+        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
       </div>
     `);
-    document.getElementById('modal')?.classList.add('modal-wide');
-
-    this._pdfWizState = { lines, allCats, displayLines };
-
-    document.getElementById('pdf-wiz-list').addEventListener('click', e => {
-      const el = e.target.closest('.pdf-wiz-line');
-      if (!el) return;
-      document.querySelectorAll('.pdf-wiz-line').forEach(l => l.classList.remove('pdf-wiz-line-sel'));
-      el.classList.add('pdf-wiz-line-sel');
-      const idx = parseInt(el.dataset.idx);
-      this._pdfWizState.selectedLine = displayLines[idx];
-      document.getElementById('pdf-wiz-analysis').innerHTML = renderAnalysis(displayLines[idx]);
-      document.getElementById('pdf-wiz-btn').disabled = false;
-    });
-  },
-
-  async _confirmPDFWizard() {
-    const { lines, allCats, selectedLine } = this._pdfWizState || {};
-    if (!selectedLine) return;
-
-    const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const amounts = [...selectedLine.matchAll(rAmount)].map(m => m[1]);
-    const radio   = document.querySelector('input[name="pdfAmt"]:checked');
-    const amtIdx  = radio ? parseInt(radio.value) : 0;
-
-    Modal.open('Import PDF…', `<div style="text-align:center;padding:40px"><p>Analyse en cours…</p></div>`);
-
-    const transactions = this._parsePDFTransactions(lines, allCats, amtIdx);
-
-    if (!transactions.length) {
-      Modal.close();
-      const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
-      if (canUseAI) {
-        const go = confirm(
-          '⚠️ Aucune transaction détectée avec ce paramétrage.\n\n' +
-          'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
-          'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
-        );
-        if (go) await this._parsePDFWithAI(lines.join('\n'));
-      } else {
-        alert('📄 Aucune transaction détectée.\n\nEssayez de cliquer sur une autre ligne, ou activez « IA pour PDF difficiles » dans les Paramètres.');
-      }
-      return;
-    }
-
-    const labels = transactions.map(t => t.description);
+    const allCats = Storage.getCategories();
+    const labels  = transactions.map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, allCats);
       transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
     }
-
     document.getElementById('modal')?.classList.add('modal-wide');
     this._showPreview(transactions, 'pdf');
   },
 
-  _parsePDFTransactions(lines, allCats = [], amtIdx = 0) {
-    const transactions = [];
-
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
-    const rAmount = /(\d{1,3}(?:[\s\u00A0 ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const skipPat = /\b(?:solde|total|report|relev[e\u00e9]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
-
-    const blocks = [];
-    let cur = null;
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line || skipPat.test(line)) continue;
-      const dm = line.match(rDate);
-      if (dm) {
-        if (cur) blocks.push(cur);
-        cur = { date: dm[1], parts: [line] };
-      } else if (cur) {
-        cur.parts.push(line);
-      }
-    }
-    if (cur) blocks.push(cur);
-
-    for (const block of blocks) {
-      const dateStr = this._parseDate(block.date);
-      if (!dateStr) continue;
-
-      const fullText = block.parts.join(' ');
-      let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
-
-      const amtMatches = [...work.matchAll(rAmount)];
-      if (!amtMatches.length) continue;
-
-      const idx    = amtIdx < 0 ? amtMatches.length + amtIdx : amtIdx;
-      const chosen = amtMatches[Math.min(idx, amtMatches.length - 1)];
-      const amount = this._parseAmount(chosen[1]);
-      if (amount === null || Math.abs(amount) < 0.01) continue;
-
-      // Le commerçant peut apparaître avant OU après le montant — on retire tous
-      // les montants plutôt que de garder que le texte précédant le premier.
-      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
-      if (!desc || desc.length < 2) continue;
-
-      const isRevenue = amount > 0;
-      const guess = isRevenue
-        ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
-        : this._smartGuess(desc, allCats);
-      transactions.push({ date: dateStr, description: desc,
-        amount: Math.abs(amount), isRevenue,
-        category: guess.category, subcategory: guess.subcategory });
-    }
-
-    return transactions;
-  },
-
+  // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
+  // du relevé à Claude lorsque l'encadrement de zones n'est pas exploitable.
   async _parsePDFWithAI(fullText) {
     const apiKey = this.getApiKey();
     if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
@@ -6880,22 +7177,7 @@ const BankImport = {
 
       if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
 
-      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
-      if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => {
-          if (!t.isRevenue && catMap[t.description]) {
-            const { category, subcategory } = catMap[t.description];
-            const matched = this._matchCat(category, allCats);
-            if (matched) {
-              t.category = matched.name;
-              t.subcategory = this._matchSubcat(matched, subcategory);
-            }
-          }
-        });
-      }
-      document.getElementById('modal')?.classList.add('modal-wide');
-      this._showPreview(transactions, 'pdf');
+      await this.finishPdfExtraction(transactions);
     } catch (err) {
       console.error(err);
       Modal.close();

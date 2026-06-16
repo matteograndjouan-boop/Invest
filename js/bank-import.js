@@ -51,10 +51,12 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">⚡ Claude Anthropic — Détection colonnes <span class="settings-badge-optional">Optionnel</span></div>
+          <div class="settings-block-title">⚡ Claude Anthropic — Dernier recours PDF <span class="settings-badge-optional">Optionnel</span></div>
           <p class="settings-desc">
-            Améliore la détection des colonnes pour les formats atypiques.
-            Sans cette clé la détection fonctionne par règles (couvre la plupart des banques).
+            Pour les relevés PDF, la méthode principale est l'encadrement local des colonnes
+            (100 % privé). Si un relevé est trop atypique pour être encadré, un bouton
+            « dernier recours » apparaît dans l'écran d'encadrement pour envoyer le texte
+            complet du relevé à Claude — uniquement si vous l'activez ci-dessous.
           </p>
           <div class="form-group" style="margin-top:14px">
             <label class="settings-label">Clé API Anthropic</label>
@@ -65,16 +67,15 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">📄 Import PDF — IA pour PDF difficiles <span class="settings-badge-optional">Désactivé par défaut</span></div>
+          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
           <p class="settings-desc">
-            Pour les PDF que la lecture locale n'arrive pas à parser.<br><br>
-            ⚠️ <strong>Attention :</strong> si activée, cette option envoie le contenu complet du
-            relevé (montants, dates, données personnelles) à l'IA.
-            Contrairement à la catégorisation, ce mode ne se limite pas aux libellés.
+            ⚠️ <strong>Attention :</strong> si activée, cette option permet d'envoyer le contenu
+            complet du relevé (montants, dates, données personnelles) à l'IA.
+            Contrairement à la catégorisation Gemini, ce mode ne se limite pas aux libellés.
           </p>
           <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
             <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
-            Activer l'IA pour les PDF difficiles (opt-in, envoie les données complètes)
+            Activer l'option IA en dernier recours pour les PDF (opt-in, envoie les données complètes)
           </label>
         </div>
 
@@ -437,326 +438,35 @@ const BankImport = {
 
   // ── PDF ───────────────────────────────────────────────────────────────────
 
+  // Méthode principale : l'utilisateur encadre lui-même les colonnes sur le
+  // relevé affiché (voir js/pdf-zones.js) — extraction et nettoyage 100 % locaux.
   async _handlePDF(file) {
-    try {
-      Modal.open('Lecture du PDF…', `
-        <div style="text-align:center;padding:52px 20px">
-          <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
-          <p style="font-size:15px;font-weight:700">Extraction du texte en cours…</p>
-          <p style="color:var(--text-muted);font-size:13px">Traitement 100 % local — rien n’est envoyé sur internet.</p>
-        </div>
-      `);
-
-      if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non disponible');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-
-      const buffer = await file.arrayBuffer();
-      const pdf    = await pdfjsLib.getDocument({ data: buffer }).promise;
-      const rowData = []; // [{text, amtXs:[]}] — amtXs = x-positions of amount-like items
-
-      // Regex to identify individual PDF items that look like amounts (comma decimal)
-      const amtItemRe = /\d+[,]\d{2}/;
-
-      for (let p = 1; p <= pdf.numPages; p++) {
-        const page    = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        const byY = new Map();
-        for (const item of content.items) {
-          if (!item.str?.trim()) continue;
-          const y = Math.round(item.transform[5] / 8) * 8;
-          if (!byY.has(y)) byY.set(y, []);
-          byY.get(y).push({ x: item.transform[4], str: item.str });
-        }
-        [...byY.entries()]
-          .sort((a, b) => b[0] - a[0])
-          .forEach(([, items]) => {
-            const sorted = items.sort((a, b) => a.x - b.x);
-            const text   = sorted.map(i => i.str).join(' ');
-            const amtXs  = sorted
-              .filter(i => amtItemRe.test(i.str.trim()))
-              .map(i => i.x);
-            rowData.push({ text, amtXs });
-          });
-      }
-
-      Modal.close();
-      const allCats = Storage.getCategories();
-
-      // Auto-parse with x-position tracking (no wizard needed for most PDFs)
-      const transactions = this._parsePDFRows(rowData, allCats);
-
-      if (!transactions.length) {
-        // Fallback: show wizard so user can pick an example line
-        this._showPDFWizard(rowData.map(r => r.text), allCats);
-        return;
-      }
-
-      const labels = transactions.map(t => t.description);
-      if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
-      }
-
-      document.getElementById('modal')?.classList.add('modal-wide');
-      this._showPreview(transactions, 'pdf');
-    } catch (err) {
-      console.error(err);
-      Modal.close();
-      alert('Erreur lors de la lecture du PDF : ' + err.message);
-    }
+    if (typeof pdfjsLib === 'undefined') { alert('pdf.js non disponible.'); return; }
+    await PdfZones.start(file);
   },
 
-  // Parse PDF rows using x-position clustering for debit/credit detection.
-  // rowData: [{text, amtXs:[]}] from _handlePDF
-  _parsePDFRows(rowData, allCats = []) {
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
-    const rAmount = /(\d{1,3}(?:[\s  ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const skipPat = /\b(?:solde|total|report|relev[eé]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte|taeg|taux\s+nominal|trimestriel|usure|autorisation\s+de)\b/i;
-
-    // Build blocks: each date-line opens a block; non-date lines accumulate
-    const blocks = [];
-    let cur = null;
-    for (const row of rowData) {
-      const line = row.text.trim();
-      if (!line || skipPat.test(line)) continue;
-      const dm = line.match(rDate);
-      if (dm) {
-        if (cur) blocks.push(cur);
-        cur = { date: dm[1], parts: [line], amtXs: [...row.amtXs] };
-      } else if (cur) {
-        cur.parts.push(line);
-        cur.amtXs.push(...row.amtXs);
-      }
-    }
-    if (cur) blocks.push(cur);
-
-    // First pass: parse transactions, track leftmost amount x-position per block
-    const rawTxns = [];
-    for (const block of blocks) {
-      const dateStr = this._parseDate(block.date);
-      if (!dateStr) continue;
-
-      const fullText = block.parts.join(' ');
-      let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
-
-      const amtMatches = [...work.matchAll(rAmount)];
-      if (!amtMatches.length) continue;
-
-      const amount = this._parseAmount(amtMatches[0][1]);
-      if (!amount || Math.abs(amount) < 0.01) continue;
-
-      // Le nom du commerçant peut apparaître avant OU après le montant selon la banque
-      // (ex: "53,00 SNCF INTERNET") — on retire tous les montants plutôt que de
-      // ne garder que le texte précédant le premier, pour ne pas perdre le libellé.
-      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
-      // Filter false positives: require ≥3 alphabetic characters in description
-      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
-
-      // Leftmost amount x = transaction amount column (rightmost = balance column)
-      const txnAmtX = block.amtXs.length ? Math.min(...block.amtXs) : null;
-
-      const guess = this._smartGuess(desc, allCats);
-      rawTxns.push({ date: dateStr, description: desc,
-        amount: Math.abs(amount), isRevenue: false,
-        category: guess.category, subcategory: guess.subcategory,
-        _amtX: txnAmtX });
-    }
-
-    // Second pass: cluster amount x-positions to detect separate debit/credit columns
-    // If the PDF has distinct debit & credit columns, the x-positions will form 2+ clusters.
-    const validXs = rawTxns.map(t => t._amtX).filter(x => x !== null).sort((a, b) => a - b);
-    let creditMinX = Infinity;
-    if (validXs.length >= 4) {
-      // Find the largest gap in x-distribution (= column boundary)
-      let maxGap = 0, splitAt = -1;
-      for (let i = 1; i < validXs.length; i++) {
-        const gap = validXs[i] - validXs[i - 1];
-        if (gap > maxGap) { maxGap = gap; splitAt = validXs[i]; }
-      }
-      // Split only if gap is large AND both clusters have ≥2 members (avoids outlier inversion)
-      const leftCount  = validXs.filter(x => x < splitAt).length;
-      const rightCount = validXs.filter(x => x >= splitAt).length;
-      if (maxGap > 40 && leftCount >= 2 && rightCount >= 2) creditMinX = splitAt;
-    }
-
-    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const revCatName = (allCats.find(c => n(c.name).includes('revenu')) || {}).name || '';
-
-    rawTxns.forEach(t => {
-      if (t._amtX !== null && t._amtX >= creditMinX) t.isRevenue = true;
-      if (revCatName && t.category === revCatName) t.isRevenue = true;
-      // La catégorie devinée plus haut suppose une dépense — pour un crédit,
-      // on la remplace par une vraie sous-catégorie de "Revenus".
-      if (t.isRevenue) { t.category = this._revenueCat(allCats).name; t.subcategory = this._defaultRevenueCat(allCats); }
-      delete t._amtX;
-    });
-
-    return rawTxns;
-  },
-
-  _showPDFWizard(lines, allCats) {
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/g;
-    const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-
-    const displayLines = lines.filter(l => l.trim().length > 3).slice(0, 80);
-
-    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    const renderAnalysis = (line) => {
-      const dates   = [...line.matchAll(rDate)].map(m => m[1]);
-      const amounts = [...line.matchAll(rAmount)].map(m => m[1]);
-      if (!dates.length) return `<p class="pdf-wiz-hint">⚠️ Aucune date détectée dans cette ligne — choisissez une ligne de transaction.</p>`;
-      if (!amounts.length) return `<p class="pdf-wiz-hint">⚠️ Aucun montant détecté — choisissez une ligne de transaction.</p>`;
-
-      // Description = texte sans dates et avant le 1er montant
-      let work = line;
-      dates.forEach(d => { work = work.replace(d, ' '); });
-      const firstAmtIdx = work.search(rAmount);
-      const desc = (firstAmtIdx > 0 ? work.slice(0, firstAmtIdx) : work).trim().replace(/\s+/g,' ');
-
-      let html = `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-date">📅 Date</span>${esc(dates[0])}</div>`;
-      html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-desc">✏️ Libellé</span>${esc(desc) || '<em style="color:var(--text-muted)">non détecté</em>'}</div>`;
-
-      if (amounts.length === 1) {
-        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montant</span>${esc(amounts[0])}</div>`;
-      } else {
-        html += `<div class="pdf-tok-row"><span class="pdf-tok-badge pdf-tok-amt">💰 Montants</span>`;
-        html += `<span style="color:var(--text-muted);font-size:12px">Plusieurs montants détectés — lequel est le montant de l'opération ?</span><br>`;
-        amounts.forEach((a, i) => {
-          html += `<label class="pdf-amt-radio"><input type="radio" name="pdfAmt" value="${i}" ${i===0?'checked':''}> ${esc(a)}</label> `;
-        });
-        html += `</div>`;
-      }
-      return html;
-    };
-
-    const linesHtml = displayLines.map((line, i) =>
-      `<div class="pdf-wiz-line" data-idx="${i}">${esc(line)}</div>`
-    ).join('');
-
-    Modal.open('Relevé PDF — Sélectionnez une ligne exemple', `
-      <div class="mapping-wizard">
-        <p class="pdf-wiz-hint">Cliquez sur une ligne qui représente une opération bancaire (avec date et montant).</p>
-        <div class="pdf-wiz-scroll" id="pdf-wiz-list">${linesHtml}</div>
-        <div class="pdf-wiz-analysis" id="pdf-wiz-analysis">
-          <span style="color:var(--text-muted);font-size:13px">← Cliquez sur une ligne ci-dessus</span>
-        </div>
-        <div class="mapping-footer">
-          <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
-          <button class="btn-primary" id="pdf-wiz-btn" disabled onclick="BankImport._confirmPDFWizard()">Importer →</button>
-        </div>
+  // Catégorisation Gemini (libellés uniquement) puis aperçu — point d'entrée
+  // commun appelé après extraction par PdfZones ou par le mode IA de secours.
+  async finishPdfExtraction(transactions) {
+    Modal.open('Catégorisation…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">🤖</div>
+        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
+        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
       </div>
     `);
-    document.getElementById('modal')?.classList.add('modal-wide');
-
-    this._pdfWizState = { lines, allCats, displayLines };
-
-    document.getElementById('pdf-wiz-list').addEventListener('click', e => {
-      const el = e.target.closest('.pdf-wiz-line');
-      if (!el) return;
-      document.querySelectorAll('.pdf-wiz-line').forEach(l => l.classList.remove('pdf-wiz-line-sel'));
-      el.classList.add('pdf-wiz-line-sel');
-      const idx = parseInt(el.dataset.idx);
-      this._pdfWizState.selectedLine = displayLines[idx];
-      document.getElementById('pdf-wiz-analysis').innerHTML = renderAnalysis(displayLines[idx]);
-      document.getElementById('pdf-wiz-btn').disabled = false;
-    });
-  },
-
-  async _confirmPDFWizard() {
-    const { lines, allCats, selectedLine } = this._pdfWizState || {};
-    if (!selectedLine) return;
-
-    const rAmount = /(\d{1,3}(?:[\s ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const amounts = [...selectedLine.matchAll(rAmount)].map(m => m[1]);
-    const radio   = document.querySelector('input[name="pdfAmt"]:checked');
-    const amtIdx  = radio ? parseInt(radio.value) : 0;
-
-    Modal.open('Import PDF…', `<div style="text-align:center;padding:40px"><p>Analyse en cours…</p></div>`);
-
-    const transactions = this._parsePDFTransactions(lines, allCats, amtIdx);
-
-    if (!transactions.length) {
-      Modal.close();
-      const canUseAI = this._getPdfAiEnabled() && this.getApiKey();
-      if (canUseAI) {
-        const go = confirm(
-          '⚠️ Aucune transaction détectée avec ce paramétrage.\n\n' +
-          'Envoyer le contenu complet du relevé (montants, dates et données personnelles) à Claude ?\n\n' +
-          'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
-        );
-        if (go) await this._parsePDFWithAI(lines.join('\n'));
-      } else {
-        alert('📄 Aucune transaction détectée.\n\nEssayez de cliquer sur une autre ligne, ou activez « IA pour PDF difficiles » dans les Paramètres.');
-      }
-      return;
-    }
-
-    const labels = transactions.map(t => t.description);
+    const allCats = Storage.getCategories();
+    const labels  = transactions.map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, allCats);
       transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
     }
-
     document.getElementById('modal')?.classList.add('modal-wide');
     this._showPreview(transactions, 'pdf');
   },
 
-  _parsePDFTransactions(lines, allCats = [], amtIdx = 0) {
-    const transactions = [];
-
-    const rDate   = /\b(\d{2}[\/\-\.]\d{2}(?:[\/\-\.]\d{2,4})?)\b/;
-    const rAmount = /(\d{1,3}(?:[\s\u00A0 ]\d{3})*[,]\d{2}|\d+[,]\d{2})/g;
-    const skipPat = /\b(?:solde|total|report|relev[e\u00e9]|iban|bic|page\s*\d|titulaire|adresse|agence|votre\s+compte)\b/i;
-
-    const blocks = [];
-    let cur = null;
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line || skipPat.test(line)) continue;
-      const dm = line.match(rDate);
-      if (dm) {
-        if (cur) blocks.push(cur);
-        cur = { date: dm[1], parts: [line] };
-      } else if (cur) {
-        cur.parts.push(line);
-      }
-    }
-    if (cur) blocks.push(cur);
-
-    for (const block of blocks) {
-      const dateStr = this._parseDate(block.date);
-      if (!dateStr) continue;
-
-      const fullText = block.parts.join(' ');
-      let work = fullText.replace(new RegExp(rDate.source, 'g'), ' ').replace(/\s{2,}/g, ' ').trim();
-
-      const amtMatches = [...work.matchAll(rAmount)];
-      if (!amtMatches.length) continue;
-
-      const idx    = amtIdx < 0 ? amtMatches.length + amtIdx : amtIdx;
-      const chosen = amtMatches[Math.min(idx, amtMatches.length - 1)];
-      const amount = this._parseAmount(chosen[1]);
-      if (amount === null || Math.abs(amount) < 0.01) continue;
-
-      // Le commerçant peut apparaître avant OU après le montant — on retire tous
-      // les montants plutôt que de garder que le texte précédant le premier.
-      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
-      if (!desc || desc.length < 2) continue;
-
-      const isRevenue = amount > 0;
-      const guess = isRevenue
-        ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
-        : this._smartGuess(desc, allCats);
-      transactions.push({ date: dateStr, description: desc,
-        amount: Math.abs(amount), isRevenue,
-        category: guess.category, subcategory: guess.subcategory });
-    }
-
-    return transactions;
-  },
-
+  // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
+  // du relevé à Claude lorsque l'encadrement de zones n'est pas exploitable.
   async _parsePDFWithAI(fullText) {
     const apiKey = this.getApiKey();
     if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
@@ -810,22 +520,7 @@ const BankImport = {
 
       if (!transactions.length) { Modal.close(); alert('L\'IA n\'a pas trouvé de transactions.'); return; }
 
-      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
-      if (labels.length) {
-        const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => {
-          if (!t.isRevenue && catMap[t.description]) {
-            const { category, subcategory } = catMap[t.description];
-            const matched = this._matchCat(category, allCats);
-            if (matched) {
-              t.category = matched.name;
-              t.subcategory = this._matchSubcat(matched, subcategory);
-            }
-          }
-        });
-      }
-      document.getElementById('modal')?.classList.add('modal-wide');
-      this._showPreview(transactions, 'pdf');
+      await this.finishPdfExtraction(transactions);
     } catch (err) {
       console.error(err);
       Modal.close();
