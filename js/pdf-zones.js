@@ -558,14 +558,15 @@ const PdfZones = {
         else continue;
       }
 
-      // Seul ce texte nettoyé (le commerçant) sera envoyé à Gemini — jamais le montant/la date.
-      const desc = BankImport._cleanDesc(b.libelle.join(' ').replace(/\s+/g, ' ').trim());
-      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
+      // Libellé brut : la réduction au commerçant (étape 2) est faite ensuite dans
+      // BankImport.finishPdfExtraction (après extraction, avant catégorisation).
+      // On conserve même les libellés pauvres : ils seront marqués « à catégoriser ».
+      const rawLabel = b.libelle.join(' ').replace(/\s+/g, ' ').trim();
 
       const guess = isRevenue
         ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
-        : BankImport._smartGuess(desc, allCats);
-      transactions.push({ date: dateStr, description: desc, amount, isRevenue,
+        : BankImport._smartGuess(rawLabel, allCats);
+      transactions.push({ date: dateStr, description: rawLabel, amount, isRevenue,
         category: guess.category, subcategory: guess.subcategory });
     }
 

@@ -1599,6 +1599,7 @@ input:focus:not(:focus-visible) { outline: none; }
 .mapping-sub-lbl { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
 .mapping-save-lbl { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 10px 12px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+.review-badge { background: #dbeafe; color: #1e40af; } /* « à catégoriser » : libellé sans commerçant exploitable */
 .row-dup { opacity: 0.55; }
 
 .mapping-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
@@ -6644,14 +6645,15 @@ const PdfZones = {
         else continue;
       }
 
-      // Seul ce texte nettoyé (le commerçant) sera envoyé à Gemini — jamais le montant/la date.
-      const desc = BankImport._cleanDesc(b.libelle.join(' ').replace(/\s+/g, ' ').trim());
-      if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
+      // Libellé brut : la réduction au commerçant (étape 2) est faite ensuite dans
+      // BankImport.finishPdfExtraction (après extraction, avant catégorisation).
+      // On conserve même les libellés pauvres : ils seront marqués « à catégoriser ».
+      const rawLabel = b.libelle.join(' ').replace(/\s+/g, ' ').trim();
 
       const guess = isRevenue
         ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
-        : BankImport._smartGuess(desc, allCats);
-      transactions.push({ date: dateStr, description: desc, amount, isRevenue,
+        : BankImport._smartGuess(rawLabel, allCats);
+      transactions.push({ date: dateStr, description: rawLabel, amount, isRevenue,
         category: guess.category, subcategory: guess.subcategory });
     }
 
@@ -7179,6 +7181,23 @@ const BankImport = {
   // Catégorisation Gemini (libellés uniquement) puis aperçu — point d'entrée
   // commun appelé après extraction par PdfZones ou par le mode IA de secours.
   async finishPdfExtraction(transactions) {
+    const allCats = Storage.getCategories();
+
+    // ÉTAPE 2 (100 % locale) : réduire chaque libellé au commerçant/émetteur,
+    // conserver le libellé brut, et marquer les transactions sans nom exploitable.
+    transactions.forEach(t => {
+      const raw = t.descriptionRaw || t.description || '';
+      const m   = this._merchantName(raw);
+      t.descriptionRaw = raw;
+      t.description    = m.name || 'Opération';
+      t.needsReview    = m.needsReview;
+      // Re-deviner la catégorie sur le libellé NETTOYÉ (meilleur signal que le brut).
+      if (!t.isRevenue) {
+        const g = this._smartGuess(t.description, allCats);
+        t.category = g.category; t.subcategory = g.subcategory;
+      }
+    });
+
     Modal.open('Catégorisation…', `
       <div style="text-align:center;padding:52px 20px">
         <div style="font-size:52px;margin-bottom:20px">🤖</div>
@@ -7186,11 +7205,11 @@ const BankImport = {
         <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
       </div>
     `);
-    const allCats = Storage.getCategories();
-    const labels  = transactions.map(t => t.description);
+    // On n'envoie à Gemini que les libellés exploitables (les « à catégoriser » sont laissés à l'utilisateur).
+    const labels = transactions.filter(t => !t.needsReview).map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
+      transactions.forEach(t => { if (!t.needsReview) this._applyCatResult(t, catMap, allCats); });
     }
     document.getElementById('modal')?.classList.add('modal-wide');
     this._showPreview(transactions, 'pdf');
@@ -7297,6 +7316,88 @@ const BankImport = {
 
     s = s.replace(/\s{2,}/g, ' ').trim();
     return s || (raw || '').trim();
+  },
+
+  // ── ÉTAPE 2 : RÉDUCTION AU COMMERÇANT / ÉMETTEUR (100 % LOCAL) ────────────
+  //
+  // Complète _cleanDesc : décode les conventions bancaires (balises SEPA,
+  // préfixes carte/virement/prélèvement) puis retire dates, heures, codes de
+  // référence et villes pour réduire le libellé au seul nom exploitable.
+  // S'applique APRÈS extraction et AVANT catégorisation — aucune donnée envoyée.
+  // Renvoie { name, needsReview } : si rien d'exploitable ne subsiste, name
+  // reprend le libellé brut et needsReview=true (« à catégoriser à la main »).
+
+  // Grandes villes FR pour le retrait de la ville en fin de libellé. Volontairement
+  // SANS petites communes ambiguës (ex. « Cernay », qui est ici un nom de commerçant).
+  _CITIES: ['PARIS','MARSEILLE','LYON','TOULOUSE','NICE','NANTES','MONTPELLIER',
+    'STRASBOURG','BORDEAUX','LILLE','RENNES','REIMS','TOULON','GRENOBLE','DIJON',
+    'ANGERS','NIMES','VILLEURBANNE','LE MANS','BREST','TOURS','AMIENS','LIMOGES',
+    'ANNECY','PERPIGNAN','METZ','BESANCON','ORLEANS','ROUEN','MULHOUSE','CAEN',
+    'NANCY','AVIGNON','CERGY','VERSAILLES','NANTERRE','COURBEVOIE',
+    'CLERMONT-FERRAND','AIX-EN-PROVENCE','SAINT-ETIENNE','LE HAVRE'],
+
+  // Un token ressemble-t-il à un code de référence (et non à un nom) ?
+  _isCodeToken(t) {
+    const hasDigit = /\d/.test(t), hasAlpha = /[A-Za-z]/.test(t);
+    if (hasDigit && hasAlpha && t.length >= 6) return true; // I0000003633686, 7047GN54
+    if (hasDigit && hasAlpha && /^\d/.test(t)) return true; // commence par un chiffre
+    if (/^\d{4,}$/.test(t)) return true;                    // longue suite de chiffres
+    return false;
+  },
+
+  // Retire la ville en fin de libellé si — et seulement si — un nom subsiste avant
+  // (sinon on ne viderait pas la ligne). Gère l'arrondissement (« PARIS 10 »).
+  _stripTrailingCity(s) {
+    const alt = this._CITIES.map(c => c.replace(/-/g, '\\-').replace(/ /g, '\\s+')).join('|');
+    const m = s.match(new RegExp('^(.*?\\S)\\s+(?:' + alt + ')(?:\\s+\\d{1,3})?\\s*$', 'i'));
+    return m ? m[1].trim() : null;
+  },
+
+  _merchantName(raw) {
+    const original = (raw || '').replace(/\s+/g, ' ').trim();
+    let s = original;
+
+    // 1. Balises SEPA : /DE (ou /POUR, /BENEF) introduit le nom → garder la suite ;
+    //    couper ensuite au 1er /TAG technique restant (/MOTIF, /REF, /ID, /ECH…).
+    const intro = s.match(/\/\s*(?:DE|POUR|BENEF(?:ICIAIRE)?)\b\s*/i);
+    if (intro) s = s.slice(intro.index + intro[0].length);
+    s = s.split(/\/\s*[A-Z]{2,}\b/i)[0];
+    s = s.replace(/\//g, ' ');
+
+    // 2. Préfixes de type d'opération en tête → retirés (le sens reçu/émis/carte
+    //    est déjà porté par le signe du montant, inutile de le garder dans le nom).
+    const OP = /^(?:VIR(?:EMENT)?(?:\s+SEPA)?(?:\s+(?:RECU|EMIS|INST(?:ANTANE)?|PERMANENT))?|PR[EÉ]?LV(?:\s+SEPA)?|PR[EÉ]L[EÈ]VEMENTS?(?:\s+SEPA)?|FACTURES?\(?S?\)?\s+(?:DE\s+)?CARTE|PAIEMENTS?(?:\s+PAR)?(?:\s+(?:CB|CARTE))?|CARTE|CB|RETRAITS?(?:\s+(?:DAB|GAB))?|DAB|GAB)\b[\s:.\-]*/i;
+    let prev;
+    do { prev = s; s = s.replace(OP, ''); } while (s !== prev && s);
+
+    // 3. Nettoyage générique : dates (21.04 / 29/04/26), heures (12H33), mois-année (AVR 2026).
+    s = s
+      .replace(/\b\d{1,2}[\/.\-]\d{1,2}(?:[\/.\-]\d{2,4})?\b/g, ' ')
+      .replace(/\b\d{1,2}\s*H\s*\d{0,2}\b/gi, ' ')
+      .replace(/\b(?:JANV?|FEVR?|MARS|AVR|MAI|JUIN|JUIL|AOUT|SEPT?|OCT|NOV|DEC)\.?\s*\d{2,4}\b/gi, ' ');
+    // codes de référence (I0000003633686, 7047GN54…), token par token
+    s = s.split(/\s+/).filter(t => t && !this._isCodeToken(t)).join(' ');
+
+    // 4. Mots techniques résiduels autour du vrai nom.
+    s = s.replace(/\b(?:GESTION|FACTURES?|PAIEMENTS?|VIREMENTS?|PRELEVEMENTS?|SEPA|RECU|EMIS|MOTIF|REF(?:DO)?|RUM|MDT|ECH|IBAN|BIC|MENSUEL(?:LE)?|ABONNEMENT|COTISATION|AUTORISATION|TICKET|BP)\b/gi, ' ')
+         .replace(/\s{2,}/g, ' ').trim();
+
+    // 5. Ville en fin (si un nom subsiste avant — sinon on ne vide pas la ligne).
+    const noCity = this._stripTrailingCity(s);
+    if (noCity) s = noCity;
+
+    s = s.replace(/^[\s,\-]+|[\s,\-]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+
+    // 6. Repli : rien d'exploitable → garder le libellé brut, à catégoriser à la main.
+    const hasLetters = /[A-Za-zÀ-ÿ]/.test(s);
+    if (!hasLetters || s.replace(/\s+/g, '').length < 2) return { name: original, needsReview: true };
+    return { name: s, needsReview: false };
+  },
+
+  // Échappement HTML minimal (libellés de relevé injectés dans l'aperçu).
+  _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   },
 
   // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
@@ -7494,7 +7595,7 @@ const BankImport = {
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
         <td>${Utils.formatDate(t.date)}</td>
-        <td class="bank-desc">${t.description}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
+        <td class="bank-desc" title="${this._esc(t.descriptionRaw || t.description)}">${this._esc(t.description)}${t.needsReview ? ' <span class="dup-badge review-badge">à catégoriser</span>' : ''}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
         <td><select data-cat="${i}" class="select-input bank-cat-sel"
           onchange="BankImport._onCatChange(this,${i})">${opts}</select></td>
@@ -7560,15 +7661,14 @@ const BankImport = {
       if (cat !== t.category || subcat !== t.subcategory) {
         GeminiCat.learn(t.description, cat, subcat);
       }
-      if (t.isRevenue) {
-        revenues.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
-          category: cat, subcategory: subcat, date: t.date, notes: 'Import bancaire' });
-        impRev++;
-      } else {
-        expenses.push({ id: Utils.generateId(), description: t.description, amount: t.amount,
-          category: cat, subcategory: subcat, date: t.date, notes: 'Import bancaire' });
-        impExp++;
-      }
+      // Le libellé brut est conservé (descriptionRaw) pour la vue détaillée ;
+      // description = nom nettoyé du commerçant (affichage principal + clé Gemini).
+      const rec = { id: Utils.generateId(), description: t.description,
+        descriptionRaw: t.descriptionRaw || t.description, amount: t.amount,
+        category: cat, subcategory: subcat, date: t.date, needsReview: !!t.needsReview,
+        notes: t.needsReview ? 'Import bancaire — à catégoriser' : 'Import bancaire' };
+      if (t.isRevenue) { revenues.push(rec); impRev++; }
+      else { expenses.push(rec); impExp++; }
     });
 
     Storage.saveExpenses(expenses);

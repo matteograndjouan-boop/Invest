@@ -56,7 +56,7 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 | `js/patrimony.js` | Onglet Patrimoine (actifs/passifs manuels + valorisation du portefeuille). |
 | `js/invest-import.js` | Import de positions de portefeuille depuis un export courtier (CSV/Excel). |
 | `js/gemini-cat.js` | `GeminiCat` — catégorisation via l'API Gemini. **N'envoie jamais que le libellé**, avec cache local (`invest_gemini_cache`) et apprentissage des corrections manuelles (`learn()`). |
-| `js/bank-import.js` | `BankImport` — pipeline d'import de relevé bancaire (CSV/Excel + PDF) : mapping de colonnes, nettoyage des libellés (`_cleanDesc`), devinette locale de catégorie (`_smartGuess`), détection de doublons, aperçu/validation avant import. |
+| `js/bank-import.js` | `BankImport` — pipeline d'import de relevé bancaire (CSV/Excel + PDF) : mapping de colonnes, nettoyage des libellés en 2 étapes (`_cleanDesc` puis `_merchantName` : décodage SEPA/carte + retrait dates/codes/villes → réduction au commerçant, 100 % local), devinette locale de catégorie (`_smartGuess`), détection de doublons, aperçu/validation avant import. Conserve le libellé brut (`descriptionRaw`) et marque `needsReview` quand aucun nom n'est exploitable. |
 | `js/pdf-zones.js` | `PdfZones` — méthode principale d'extraction des relevés PDF : l'utilisateur encadre les colonnes (Date, Date 2 optionnelle, Montant unique ou Débit/Crédit, Libellé) sur la page rendue par pdf.js ; extraction 100 % locale, gabarit mémorisé par banque. |
 | `css/style.css` | Toutes les feuilles de style (un seul fichier, pas de préprocesseur). |
 
