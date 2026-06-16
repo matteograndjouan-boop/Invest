@@ -6411,8 +6411,11 @@ const BankImport = {
       transactions.forEach(t => {
         if (!t.isRevenue && catMap[t.description]) {
           const { category, subcategory } = catMap[t.description];
-          if (category) t.category = category;
-          if (subcategory) t.subcategory = subcategory;
+          const matched = this._matchCat(category, allCats);
+          if (matched) {
+            t.category = matched.name;
+            t.subcategory = this._matchSubcat(matched, subcategory);
+          }
         }
       });
     }
@@ -6574,8 +6577,11 @@ const BankImport = {
         transactions.forEach(t => {
           if (!t.isRevenue && catMap[t.description]) {
             const { category, subcategory } = catMap[t.description];
-            if (category) t.category = category;
-            if (subcategory) t.subcategory = subcategory;
+            const matched = this._matchCat(category, allCats);
+            if (matched) {
+              t.category = matched.name;
+              t.subcategory = this._matchSubcat(matched, subcategory);
+            }
           }
         });
       }
@@ -6775,8 +6781,11 @@ const BankImport = {
       transactions.forEach(t => {
         if (!t.isRevenue && catMap[t.description]) {
           const { category, subcategory } = catMap[t.description];
-          if (category) t.category = category;
-          if (subcategory) t.subcategory = subcategory;
+          const matched = this._matchCat(category, allCats);
+          if (matched) {
+            t.category = matched.name;
+            t.subcategory = this._matchSubcat(matched, subcategory);
+          }
         }
       });
     }
@@ -6890,8 +6899,11 @@ const BankImport = {
         transactions.forEach(t => {
           if (!t.isRevenue && catMap[t.description]) {
             const { category, subcategory } = catMap[t.description];
-            if (category) t.category = category;
-            if (subcategory) t.subcategory = subcategory;
+            const matched = this._matchCat(category, allCats);
+            if (matched) {
+              t.category = matched.name;
+              t.subcategory = this._matchSubcat(matched, subcategory);
+            }
           }
         });
       }
@@ -7016,6 +7028,21 @@ const BankImport = {
   },
 
   // ── APERÇU ───────────────────────────────────────────────────────────────
+
+  // Fait correspondre un nom de catégorie renvoyé par Gemini (qui peut différer
+  // en casse/accents du nom exact stocké) à la catégorie réelle de l'utilisateur.
+  // Sans ça, un nom non reconnu par le <select> fait retomber l'affichage sur
+  // la 1ère option de la liste (ex: "Abonnements"), faussant tout l'aperçu.
+  _matchCat(name, allCats) {
+    if (!name) return null;
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    return allCats.find(c => n(c.name) === n(name)) || null;
+  },
+  _matchSubcat(cat, subName) {
+    if (!cat || !subName) return '';
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    return (cat.subcategories || []).find(s => n(s) === n(subName)) || '';
+  },
 
   // Construit les <option> pour le select de sous-catégorie d'une catégorie donnée
   _subcatOpts(catName, selected = '') {
