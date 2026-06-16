@@ -6132,9 +6132,8 @@ const PdfZones = {
       const sig = this._signature(headerLines, vp1);
       const tpl = this._getTemplates()[sig];
 
-      const zones = tpl ? JSON.parse(JSON.stringify(tpl)) : (this._autoDetect(fracItems1) || this._defaultZones());
-
-      this._state = { file, pdf, zones, sig, recognized: !!tpl, pageNum: 1 };
+      this._state = { file, pdf, sig, recognized: !!tpl, pageNum: 1, mode: null, zonesByPage: {} };
+      await this._buildAllZones(tpl, fracItems1);
       Modal.close();
       await this._renderEditor();
     } catch (err) {
@@ -6255,6 +6254,79 @@ const PdfZones = {
     };
   },
 
+  // ── ZONES PAR PAGE ───────────────────────────────────────────────────────
+
+  _curZones() { return this._state.zonesByPage[this._state.pageNum]; },
+
+  async _pageFracItems(pageNum) {
+    const page     = await this._state.pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1 });
+    const content  = await page.getTextContent();
+    return content.items
+      .filter(it => it.str && it.str.trim())
+      .map(it => ({ ...this._itemFrac(viewport, it), str: it.str }));
+  },
+
+  // Construit une géométrie de cadres propre à CHAQUE page : sur un relevé, le
+  // tableau n'est pas au même endroit selon les pages (en-tête volumineux en
+  // page 1, etc.). Les options sémantiques (montant unique/split, 2ᵉ date, date
+  // retenue) restent GLOBALES et cohérentes sur tout le document — sinon
+  // l'extraction mélangerait des conventions différentes d'une page à l'autre.
+  async _buildAllZones(tpl, fracItems1) {
+    const { pdf } = this._state;
+    const tplPage1 = tpl ? (tpl.page1 || tpl) : null; // compat gabarits legacy (objet unique)
+    const tplRest  = tpl ? (tpl.rest  || null) : null;
+
+    const z1 = tplPage1
+      ? JSON.parse(JSON.stringify(tplPage1))
+      : (this._autoDetect(fracItems1) || this._defaultZones());
+
+    // Le mode global est défini par la page 1, puis imposé aux autres pages.
+    this._state.mode = {
+      amountMode:   z1.amountMode || 'single',
+      date2Enabled: !!z1.date2Enabled,
+      dateChoice:   z1.dateChoice || 'date',
+    };
+    this._coerceMode(z1, this._state.mode);
+    this._state.zonesByPage[1] = z1;
+
+    for (let p = 2; p <= pdf.numPages; p++) {
+      let zp;
+      if (tplRest) {
+        zp = JSON.parse(JSON.stringify(tplRest));
+      } else {
+        const frac = await this._pageFracItems(p);
+        zp = this._autoDetect(frac) || JSON.parse(JSON.stringify(z1));
+      }
+      this._coerceMode(zp, this._state.mode);
+      this._state.zonesByPage[p] = zp;
+    }
+  },
+
+  // Aligne les drapeaux de mode d'une page sur le mode global et garantit que
+  // les bandes nécessaires existent : une page mal détectée pourrait n'avoir ni
+  // Débit/Crédit ni Date 2 alors que le mode global les requiert.
+  _coerceMode(z, mode) {
+    z.amountMode   = mode.amountMode;
+    z.date2Enabled = mode.date2Enabled;
+    z.dateChoice   = mode.dateChoice;
+
+    if (mode.amountMode === 'split') {
+      if (!z.debit || !z.credit) {
+        const base = z.amount || { x0: 0.70, x1: 0.92 };
+        const mid  = (base.x0 + base.x1) / 2;
+        z.debit  = z.debit  || { x0: base.x0, x1: mid };
+        z.credit = z.credit || { x0: mid,    x1: base.x1 };
+      }
+    } else if (!z.amount) {
+      z.amount = { x0: z.debit ? z.debit.x0 : 0.72, x1: z.credit ? z.credit.x1 : 0.92 };
+    }
+
+    if (mode.date2Enabled && !z.date2) {
+      z.date2 = { x0: Math.min(0.95, z.date.x1 + 0.02), x1: Math.min(1, z.date.x1 + 0.14) };
+    }
+  },
+
   // ── GABARIT PAR BANQUE (mémorisation locale) ────────────────────────────
 
   _getTemplates() {
@@ -6276,7 +6348,7 @@ const PdfZones = {
   // ── INTERFACE D'ENCADREMENT ──────────────────────────────────────────────
 
   async _renderEditor() {
-    const { pdf, pageNum, zones, recognized } = this._state;
+    const { pdf, pageNum, recognized } = this._state;
     const page    = await pdf.getPage(pageNum);
     const vpBase  = page.getViewport({ scale: 1 });
     const containerW = Math.min(760, Math.max(320, window.innerWidth - 80));
@@ -6379,7 +6451,7 @@ const PdfZones = {
 
   _refreshOverlay() {
     const el = document.getElementById('pdfz-overlay');
-    if (el) el.innerHTML = this._overlayHTML(this._state.zones);
+    if (el) el.innerHTML = this._overlayHTML(this._curZones());
   },
 
   // ── INTERACTIONS (souris + tactile via Pointer Events) ──────────────────
@@ -6395,7 +6467,7 @@ const PdfZones = {
       e.preventDefault();
       const kind = handle.dataset.drag;
       const startRect  = stage.getBoundingClientRect();
-      const startZones = JSON.parse(JSON.stringify(this._state.zones));
+      const startZones = JSON.parse(JSON.stringify(this._curZones()));
       const startX = e.clientX, startY = e.clientY;
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
 
@@ -6415,7 +6487,7 @@ const PdfZones = {
   },
 
   _applyDrag(kind, startZones, dxF, dyF) {
-    const z = this._state.zones;
+    const z = this._curZones();
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     if (kind === 'top')    { z.top    = clamp(startZones.top    + dyF, 0, startZones.bottom - 0.02); return; }
     if (kind === 'bottom') { z.bottom = clamp(startZones.bottom + dyF, startZones.top + 0.02, 1);    return; }
@@ -6434,39 +6506,37 @@ const PdfZones = {
   },
 
   _attachControls() {
-    const z = this._state.zones;
+    const mode = this._state.mode;
+    // Un changement de mode est global : on le réimpose à toutes les pages
+    // (création des bandes manquantes), puis on rafraîchit la page courante.
+    const applyMode = () => {
+      Object.values(this._state.zonesByPage).forEach(z => this._coerceMode(z, mode));
+      this._refreshOverlay();
+    };
 
     const date2Toggle = document.getElementById('pdfz-date2-toggle');
     if (date2Toggle) {
-      date2Toggle.checked = z.date2Enabled;
-      document.getElementById('pdfz-date2-which').style.display = z.date2Enabled ? '' : 'none';
+      date2Toggle.checked = mode.date2Enabled;
+      document.getElementById('pdfz-date2-which').style.display = mode.date2Enabled ? '' : 'none';
       date2Toggle.addEventListener('change', e => {
-        z.date2Enabled = e.target.checked;
-        if (z.date2Enabled && !z.date2) {
-          z.date2 = { x0: Math.min(0.95, z.date.x1 + 0.02), x1: Math.min(1, z.date.x1 + 0.14) };
-        }
-        document.getElementById('pdfz-date2-which').style.display = z.date2Enabled ? '' : 'none';
-        this._refreshOverlay();
+        mode.date2Enabled = e.target.checked;
+        document.getElementById('pdfz-date2-which').style.display = mode.date2Enabled ? '' : 'none';
+        applyMode();
       });
     }
     document.querySelectorAll('input[name="pdfz-which-date"]').forEach(r => {
-      r.checked = (r.value === '2') === (z.dateChoice === 'date2');
-      r.addEventListener('change', e => { if (e.target.checked) z.dateChoice = e.target.value === '2' ? 'date2' : 'date'; });
-    });
-    document.querySelectorAll('input[name="pdfz-amt-mode"]').forEach(r => {
-      r.checked = r.value === z.amountMode;
+      r.checked = (r.value === '2') === (mode.dateChoice === 'date2');
       r.addEventListener('change', e => {
         if (!e.target.checked) return;
-        z.amountMode = e.target.value;
-        if (z.amountMode === 'split' && !z.debit) {
-          const base = z.amount || { x0: 0.7, x1: 0.9 };
-          const mid  = (base.x0 + base.x1) / 2;
-          z.debit  = { x0: base.x0, x1: mid };
-          z.credit = { x0: mid,    x1: base.x1 };
-        } else if (z.amountMode === 'single' && !z.amount) {
-          z.amount = { x0: z.debit ? z.debit.x0 : 0.72, x1: z.credit ? z.credit.x1 : 0.92 };
-        }
-        this._refreshOverlay();
+        mode.dateChoice = e.target.value === '2' ? 'date2' : 'date';
+      });
+    });
+    document.querySelectorAll('input[name="pdfz-amt-mode"]').forEach(r => {
+      r.checked = r.value === mode.amountMode;
+      r.addEventListener('change', e => {
+        if (!e.target.checked) return;
+        mode.amountMode = e.target.value;
+        applyMode();
       });
     });
 
@@ -6495,11 +6565,13 @@ const PdfZones = {
     return 'libelle'; // catch-all : tout texte non assigné devient libellé
   },
 
-  async _extract(pdf, zones) {
+  async _extract() {
+    const { pdf, zonesByPage, mode } = this._state;
     const allRows = [];
     let sawAnyText = false;
 
     for (let p = 1; p <= pdf.numPages; p++) {
+      const zones    = zonesByPage[p];
       const page     = await pdf.getPage(p);
       const viewport = page.getViewport({ scale: 1 });
       const content  = await page.getTextContent();
@@ -6541,7 +6613,7 @@ const PdfZones = {
       const hasDate = !!(row.date || row.date2);
       if (hasDate) {
         if (cur) blocks.push(cur);
-        const rawDate = (zones.date2Enabled && zones.dateChoice === 'date2')
+        const rawDate = (mode.date2Enabled && mode.dateChoice === 'date2')
           ? (row.date2 || row.date) : (row.date || row.date2);
         cur = { rawDate, amount: row.amount, debit: row.debit, credit: row.credit, libelle: [row.libelle] };
       } else if (cur) {
@@ -6560,7 +6632,7 @@ const PdfZones = {
       if (!dateStr) continue;
 
       let amount = null, isRevenue = false;
-      if (zones.amountMode === 'single') {
+      if (mode.amountMode === 'single') {
         const a = BankImport._parseAmount(b.amount);
         if (a === null || a === 0) continue;
         amount = Math.abs(a); isRevenue = a > 0;
@@ -6589,7 +6661,7 @@ const PdfZones = {
   // ── ACTIONS ───────────────────────────────────────────────────────────────
 
   async confirm() {
-    const { pdf, zones, sig } = this._state;
+    const { sig, zonesByPage } = this._state;
     Modal.open('Extraction…', `
       <div style="text-align:center;padding:52px 20px">
         <div style="font-size:52px;margin-bottom:20px">\u{1F4C4}</div>
@@ -6597,7 +6669,7 @@ const PdfZones = {
       </div>
     `);
     try {
-      const { scanned, transactions } = await this._extract(pdf, zones);
+      const { scanned, transactions } = await this._extract();
       if (scanned) {
         Modal.close();
         alert('📄 Ce PDF semble être un scan sans texte extractible — l\'OCR n\'est pas pris en charge pour le moment.');
@@ -6608,7 +6680,9 @@ const PdfZones = {
         await this._renderEditor();
         return;
       }
-      this._saveTemplate(sig, zones);
+      // Gabarit : page 1 (souvent spécifique) + un représentant des pages
+      // suivantes (mise en page uniforme) — robuste à un nombre de pages variable.
+      this._saveTemplate(sig, { page1: zonesByPage[1], rest: zonesByPage[2] || zonesByPage[1] });
       this._state = null;
       await BankImport.finishPdfExtraction(transactions);
     } catch (err) {
