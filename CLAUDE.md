@@ -1,0 +1,97 @@
+# InvestTrack
+
+## Objectif
+
+Application de suivi financier personnel (patrimoine, investissements, dépenses/revenus,
+budgets) **100 % front-end, 100 % locale** : aucun backend, aucune base de données.
+Toutes les données vivent dans le `localStorage` du navigateur de l'utilisateur.
+
+Le seul appel réseau « métier » de l'app est l'envoi du **libellé nettoyé** d'une
+transaction (jamais le montant, la date, le solde, le numéro de compte ou toute autre
+donnée personnelle) à l'API Google Gemini pour suggérer une catégorie. Un mode Claude
+(Anthropic) existe en dernier recours, opt-in, pour les PDF trop atypiques — il envoie
+alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
+
+## Architecture
+
+- **Pas de build tool, pas de bundler.** `index.html` + `css/style.css` + `js/*.js`
+  chargés via `<script src="js/...">` dans l'ordre indiqué en bas de `index.html`.
+  Toutes les données vivent dans des objets globaux (`Storage`, `Utils`, `Modal`,
+  `BankImport`, etc.) — pas de modules ES, pas d'imports.
+- **`build.py`** génère `investtrack-standalone.html` : il inline `css/style.css` et
+  tous les `js/*.js` référencés dans `index.html` (dans l'ordre des balises
+  `<script src="js/...">`) directement dans le HTML. C'est ce fichier standalone qui
+  est destiné à être déposé/partagé tel quel (un seul fichier, aucune dépendance
+  locale). **Toujours lancer `python3 build.py` après une modif de JS/CSS/HTML.**
+  Important : tout nouveau fichier JS doit être ajouté comme
+  `<script src="js/nouveau.js"></script>` dans `index.html` pour être repris par le
+  build (le script scanne ces balises, dans l'ordre).
+- **Déploiement** : GitHub Pages servi depuis la branche `gh-pages`. C'est la branche
+  de développement principale du projet (pas de branche `main` séparée à ce stade).
+- **Dépendances CDN** (pas de npm) : Chart.js, SheetJS (`xlsx`), `pdfjs-dist@3.11.174`.
+- **Persistance** : `localStorage` uniquement, via l'objet `Storage` (`js/storage.js`)
+  — clés `invest_investments`, `invest_expenses`, `invest_budgets`, `invest_patrimony`,
+  `invest_revenues`, `invest_categories_v2`, `invest_budgets_v2`, `invest_date_mode`.
+  Catégories par défaut : Abonnements, Alimentation, Divers, Epargne, Logement, Loisir,
+  Revenus, Santé, Shopping, Transport (chacune avec ses sous-catégories).
+
+### Fichiers principaux
+
+| Fichier | Rôle |
+|---|---|
+| `index.html` | Squelette de page, nav latérale, une `<section>` par onglet, modal générique, ordre des `<script>`. |
+| `build.py` | Génère `investtrack-standalone.html` (CSS + JS inlinés). |
+| `js/storage.js` | Accès `localStorage` (get/save par domaine), catégories par défaut. |
+| `js/utils.js` | Helpers partagés (formatage date/devise, génération d'ID, picker mois/année, listes de catégories legacy). |
+| `js/app.js` | `Modal` (ouverture/fermeture modale générique), `Dashboard`, routing (`navigateTo`), init globale. |
+| `js/charts.js` | Wrapper Chart.js (`Charts.create/destroy` par id de canvas, configs des graphiques). |
+| `js/period-filter.js` | Filtre de période global (mois/trimestre/semestre/année/plage libre), dropdown, `onChange` listeners. |
+| `js/investments.js` | Onglet Portefeuille (positions, allocation, performeurs). |
+| `js/expenses.js`, `js/revenues.js` | Onglets Dépenses / Revenus (tableaux, filtres, CRUD manuel). |
+| `js/flux.js` | Onglet Flux (vue cash-flow, cross-filtering façon Power BI sur les catégories). |
+| `js/comparisons.js` | Comparaison entre deux périodes. |
+| `js/budget.js` | Budgets par thème, suivi de consommation. |
+| `js/categories.js` | CRUD des catégories/sous-catégories (drag & drop pour réordonner). |
+| `js/data-entry.js` | Onglet « Données » : table unifiée dépenses+revenus, recherche, sélection multiple, édition en masse. |
+| `js/patrimony.js` | Onglet Patrimoine (actifs/passifs manuels + valorisation du portefeuille). |
+| `js/invest-import.js` | Import de positions de portefeuille depuis un export courtier (CSV/Excel). |
+| `js/gemini-cat.js` | `GeminiCat` — catégorisation via l'API Gemini. **N'envoie jamais que le libellé**, avec cache local (`invest_gemini_cache`) et apprentissage des corrections manuelles (`learn()`). |
+| `js/bank-import.js` | `BankImport` — pipeline d'import de relevé bancaire (CSV/Excel + PDF) : mapping de colonnes, nettoyage des libellés (`_cleanDesc`), devinette locale de catégorie (`_smartGuess`), détection de doublons, aperçu/validation avant import. |
+| `js/pdf-zones.js` | `PdfZones` — méthode principale d'extraction des relevés PDF : l'utilisateur encadre les colonnes (Date, Date 2 optionnelle, Montant unique ou Débit/Crédit, Libellé) sur la page rendue par pdf.js ; extraction 100 % locale, gabarit mémorisé par banque. |
+| `css/style.css` | Toutes les feuilles de style (un seul fichier, pas de préprocesseur). |
+
+## Fonctionnalités déjà implémentées
+
+- **Dashboard** : vue d'ensemble (solde du mois, épargne, tendances).
+- **Portefeuille** : positions, allocation, valorisation, import de positions courtier.
+- **Flux** : cash-flow par catégorie avec cross-filtering, filtre de période global partagé entre onglets.
+- **Comparaisons** : deux périodes côte à côte.
+- **Budgets** : par thème, suivi de consommation.
+- **Dépenses / Revenus / Données** : CRUD manuel, recherche, filtres, sélection multiple, édition en masse, tri.
+- **Catégories** : CRUD complet avec sous-catégories, réordonnancement par drag & drop.
+- **Patrimoine** : actifs/passifs manuels + valorisation auto du portefeuille.
+- **Import bancaire (CSV/Excel)** : détection automatique de la ligne d'en-tête, mapping de colonnes (assisté + mémorisable par profil de banque), gestion date unique ou Jour/Mois/Année séparés, montant signé ou Débit/Crédit séparés, détection de doublons (date+libellé+montant).
+- **Import bancaire (PDF) — méthode principale** : encadrement de zones par l'utilisateur (`js/pdf-zones.js`), pré-rempli automatiquement par détection de clusters x (dates/montants), mémorisation du gabarit par banque (signature = en-tête + dimensions de page), badge « Format reconnu », extraction multi-pages, détection des PDF scannés (pas d'OCR, message explicite).
+- **Import bancaire (PDF) — dernier recours** : envoi du texte complet du relevé à Claude (Anthropic), opt-in explicite + confirmation, accessible depuis l'écran d'encadrement quand l'extraction locale échoue.
+- **Catégorisation automatique** : Gemini (libellé uniquement) avec cache local et apprentissage des corrections ; fallback local par mots-clés (`guessCategory` dans `app.js`/`_smartGuess` dans `bank-import.js`) si pas de clé API ou erreur réseau.
+- **Confidentialité par construction** : seul le libellé nettoyé part vers Gemini ; toute autre donnée (montant, date, solde, IBAN, titulaire...) reste strictement locale, sauf opt-in explicite pour le mode Claude de dernier recours.
+
+## Conventions de code
+
+- **Vanilla JS, objets globaux** (`const Module = { ... }`), pas de classes ES, pas de framework, pas de build step pour le JS lui-même (seul `build.py` inline les fichiers).
+- **Style des modules** : chaque fichier `js/xxx.js` expose un seul objet global en `PascalCase` (`Storage`, `BankImport`, `PdfZones`, `GeminiCat`...) avec des méthodes publiques sans préfixe et des méthodes privées préfixées par `_` (ex. `_cleanDesc`, `_matchCat`, `_renderEditor`).
+- **Commentaires en français**, concis, uniquement quand le pourquoi n'est pas évident (contrainte cachée, contournement, comportement surprenant) — pas de commentaires qui répètent ce que le code dit déjà.
+- **Pas de dépendances ajoutées sans nécessité** : tout passe par CDN (`<script src="https://...">`), jamais de `npm install`/`package.json`.
+- **Confidentialité non négociable** : toute nouvelle fonctionnalité qui touche à l'IA doit respecter la règle « seul le libellé part vers Gemini » ; tout envoi de données plus large (comme le mode Claude PDF) doit rester strictement opt-in avec confirmation explicite affichée à l'utilisateur.
+- **Pièges connus à éviter** :
+  - Un `<select>` dont aucune `<option>` n'a `selected` retombe silencieusement sur la première option — toujours normaliser/matcher (voir `_matchCat`/`_matchSubcat` dans `bank-import.js`) avant de construire les options, sous peine de catégorisation silencieusement fausse.
+  - Toute donnée financière sensible (montant, date, IBAN...) ne doit jamais transiter par une requête réseau, même indirectement via un libellé mal nettoyé.
+- **Après toute modification de `index.html`, `css/style.css` ou `js/*.js`** : relancer `python3 build.py` pour régénérer `investtrack-standalone.html` (sinon les deux fichiers divergent).
+
+## Ce qui reste à faire / pistes connues
+
+- **Tests manuels PDF zones non faits** : `js/pdf-zones.js` (encadrement, drag souris/tactile, extraction multi-pages) n'a jamais été testé dans un vrai navigateur sur un relevé réel — à valider en priorité avant de considérer la fonctionnalité comme fiable (golden path + relevés à 2 colonnes de date, Débit/Crédit séparés, multi-pages, PDF scanné).
+- **OCR non géré** : les PDF scannés (sans couche texte) sont détectés et signalés à l'utilisateur, mais aucun traitement OCR n'est implémenté — hors périmètre pour l'instant si le besoin se confirme.
+- **Modèle de données Revenus dupliqué** : `js/utils.js` (`Utils.REVENUE_CATEGORIES` : Salaire/Freelance/Remboursement/Loyer perçu/Autre) reste utilisé par l'ancienne page `js/revenues.js`, séparément de la vraie catégorie « Revenus » de `Storage.getCategories()` utilisée par le pipeline d'import bancaire (`_revenueCat`/`_revenueSubcats` dans `bank-import.js`). Une unification propre (faire pointer `revenues.js` sur les vraies catégories/sous-catégories) clarifierait le modèle.
+- **Pas de README** séparé — ce fichier `CLAUDE.md` fait office de point d'entrée technique ; à scinder si le projet grossit encore (ex. un `README.md` côté utilisateur + ce `CLAUDE.md` côté développement).
+- **Pas de tests automatisés** (unitaires ou e2e) sur le projet — à évaluer si la complexité de l'extraction PDF/catégorisation justifie d'en ajouter.
