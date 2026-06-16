@@ -319,15 +319,7 @@ const BankImport = {
   },
 
   async _runImportPipeline(rows, headerIdx, mapping) {
-    Modal.open('Catégorisation…', `
-      <div style="text-align:center;padding:52px 20px">
-        <div style="font-size:52px;margin-bottom:20px">🤖</div>
-        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
-        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
-      </div>
-    `);
-
-    const allCats  = Storage.getCategories();
+    const allCats      = Storage.getCategories();
     const transactions = this._parseWithMapping(rows, headerIdx, mapping, allCats);
     if (!transactions.length) {
       document.getElementById('modal')?.classList.remove('modal-wide');
@@ -335,15 +327,8 @@ const BankImport = {
       alert('Aucune transaction valide détectée.\nVérifiez les correspondances de colonnes.');
       return;
     }
-
-    const labels   = transactions.map(t => t.description);
-    if (labels.length) {
-      const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
-    }
-
-    document.getElementById('modal')?.classList.add('modal-wide');
-    this._showPreview(transactions);
+    this._cleanLabels(transactions, allCats);          // étape 2, même module que le PDF
+    await this._categorizeAndPreview(transactions, allCats, 'spreadsheet');
   },
 
   // Reconstitue une date ISO depuis des colonnes Jour, Mois, Année séparées.
@@ -449,37 +434,8 @@ const BankImport = {
   // commun appelé après extraction par PdfZones ou par le mode IA de secours.
   async finishPdfExtraction(transactions) {
     const allCats = Storage.getCategories();
-
-    // ÉTAPE 2 (100 % locale) : réduire chaque libellé au commerçant/émetteur,
-    // conserver le libellé brut, et marquer les transactions sans nom exploitable.
-    transactions.forEach(t => {
-      const raw = t.descriptionRaw || t.description || '';
-      const m   = this._merchantName(raw);
-      t.descriptionRaw = raw;
-      t.description    = m.name || 'Opération';
-      t.needsReview    = m.needsReview;
-      // Re-deviner la catégorie sur le libellé NETTOYÉ (meilleur signal que le brut).
-      if (!t.isRevenue) {
-        const g = this._smartGuess(t.description, allCats);
-        t.category = g.category; t.subcategory = g.subcategory;
-      }
-    });
-
-    Modal.open('Catégorisation…', `
-      <div style="text-align:center;padding:52px 20px">
-        <div style="font-size:52px;margin-bottom:20px">🤖</div>
-        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
-        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
-      </div>
-    `);
-    // On n'envoie à Gemini que les libellés exploitables (les « à catégoriser » sont laissés à l'utilisateur).
-    const labels = transactions.filter(t => !t.needsReview).map(t => t.description);
-    if (labels.length) {
-      const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => { if (!t.needsReview) this._applyCatResult(t, catMap, allCats); });
-    }
-    document.getElementById('modal')?.classList.add('modal-wide');
-    this._showPreview(transactions, 'pdf');
+    this._cleanLabels(transactions, allCats);          // étape 2 (réduction au commerçant)
+    await this._categorizeAndPreview(transactions, allCats, 'pdf');
   },
 
   // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
@@ -665,6 +621,46 @@ const BankImport = {
   _esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+
+  // Étape 2 (réduction au commerçant) appliquée EN PLACE à un lot de transactions.
+  // Module unique partagé par l'import PDF (finishPdfExtraction) ET l'import
+  // tableur (_runImportPipeline) — aucune duplication de la logique de nettoyage.
+  _cleanLabels(transactions, allCats) {
+    transactions.forEach(t => {
+      const raw = t.descriptionRaw || t.description || '';
+      const m   = this._merchantName(raw);
+      t.descriptionRaw = raw;
+      t.description    = m.name || 'Opération';
+      t.needsReview    = m.needsReview;
+      // (Re)devine la catégorie sur le libellé NETTOYÉ — sauf si elle a déjà été
+      // résolue depuis une colonne « Catégorie » du fichier (import tableur).
+      if (!t.isRevenue && !t._catResolved) {
+        const g = this._smartGuess(t.description, allCats);
+        t.category = g.category; t.subcategory = g.subcategory;
+      }
+    });
+  },
+
+  // Catégorisation Gemini (libellés exploitables uniquement) puis aperçu.
+  // Partagé PDF/tableur. Les libellés « à catégoriser » et les catégories déjà
+  // résolues (fichier / correspondance) ne sont pas envoyés à Gemini.
+  async _categorizeAndPreview(transactions, allCats, source) {
+    Modal.open('Catégorisation…', `
+      <div style="text-align:center;padding:52px 20px">
+        <div style="font-size:52px;margin-bottom:20px">🤖</div>
+        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
+        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
+      </div>
+    `);
+    const pending = t => !t.needsReview && !t._catResolved;
+    const labels  = transactions.filter(pending).map(t => t.description);
+    if (labels.length) {
+      const catMap = await GeminiCat.categorize(labels, allCats);
+      transactions.forEach(t => { if (pending(t)) this._applyCatResult(t, catMap, allCats); });
+    }
+    document.getElementById('modal')?.classList.add('modal-wide');
+    this._showPreview(transactions, source);
   },
 
   // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
