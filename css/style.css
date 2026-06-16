@@ -1599,6 +1599,15 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .dup-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
 .review-badge { background: #dbeafe; color: #1e40af; } /* « à catégoriser » : libellé sans commerçant exploitable */
 .row-dup { opacity: 0.55; }
+/* Origine de la catégorie dans l'aperçu d'import (🟢 fichier · 🟡 approchée · 🔵 IA · ⚪ à catégoriser) */
+.cat-origin { margin-right: 5px; font-size: 12px; cursor: help; vertical-align: middle; }
+.bank-cat-cell { white-space: nowrap; }
+/* Réglages : correspondances « catégorie fichier → catégorie app » */
+.catmap-rows { display: flex; flex-direction: column; gap: 6px; }
+.catmap-row { display: flex; align-items: center; gap: 8px; }
+.catmap-from { font-weight: 600; font-size: 13px; min-width: 110px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catmap-arrow { color: var(--text-muted); }
+.catmap-sel { flex: 1; min-width: 120px; }
 
 .mapping-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
 

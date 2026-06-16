@@ -79,6 +79,17 @@ const BankImport = {
           </label>
         </div>
 
+        <div class="settings-block" style="margin-top:14px">
+          <div class="settings-block-title">🏷️ Correspondances de catégories (import) <span class="settings-badge-optional">Mémorisées</span></div>
+          <p class="settings-desc">
+            Quand un fichier importé a une colonne « Catégorie », ses valeurs sont reliées à vos
+            catégories (exact, sinon via Gemini sur le seul nom de catégorie). Ces correspondances
+            sont mémorisées localement et réutilisées <strong>sans nouvel appel IA</strong>.
+            Corrigez ou supprimez-les ici.
+          </p>
+          <div id="catmap-list" style="margin-top:10px">${this._catMapListHTML()}</div>
+        </div>
+
       </div>
       <div class="form-actions" style="margin-top:20px;flex-wrap:wrap;gap:8px">
         <button class="btn-sm" style="color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;margin-right:auto"
@@ -102,6 +113,40 @@ const BankImport = {
     this.saveApiKey((document.getElementById('settings-claude-key')?.value || '').trim());
     this._setPdfAiEnabled(document.getElementById('settings-pdf-ai')?.checked || false);
     Modal.close(); this._refreshSettingsIndicator();
+  },
+
+  // Liste éditable des correspondances « catégorie du fichier » → catégorie de l'app.
+  _catMapListHTML() {
+    const cache = GeminiCat.getCatMapCache();
+    const keys  = Object.keys(cache);
+    if (!keys.length) {
+      return '<p style="font-size:12px;color:var(--text-muted);margin:0">Aucune correspondance mémorisée pour l\'instant — elles apparaîtront après un import avec colonne « Catégorie ».</p>';
+    }
+    const appCats = Storage.getCategories().map(c => c.name);
+    const rows = keys.map((k, idx) => {
+      const e = cache[k];
+      const opts = appCats.map(c => `<option value="${this._esc(c)}"${c === e.category ? ' selected' : ''}>${this._esc(c)}</option>`).join('');
+      return `<div class="catmap-row">
+        <span class="catmap-from" title="${this._esc(e.original || k)}">${this._esc(e.original || k)}</span>
+        <span class="catmap-arrow">→</span>
+        <select class="select-input catmap-sel" onchange="BankImport._catMapAction(${idx},'set',this.value)">${opts}</select>
+        <button class="btn-icon-sm" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">🗑</button>
+      </div>`;
+    }).join('');
+    return `<div class="catmap-rows">${rows}</div>
+      <button class="btn-sm" style="margin-top:8px;color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:4px 10px;border-radius:6px;cursor:pointer"
+        onclick="if(confirm('Oublier toutes les correspondances de catégories mémorisées ?')){GeminiCat.clearCatMapCache();const l=document.getElementById('catmap-list');if(l)l.innerHTML=BankImport._catMapListHTML();}">Tout oublier</button>`;
+  },
+
+  _catMapAction(idx, action, value) {
+    const cache = GeminiCat.getCatMapCache();
+    const key = Object.keys(cache)[idx];
+    if (!key) return;
+    if (action === 'del') delete cache[key];
+    else if (action === 'set') cache[key] = { ...cache[key], category: value };
+    GeminiCat._saveCatMapCache(cache);
+    const list = document.getElementById('catmap-list');
+    if (list) list.innerHTML = this._catMapListHTML();
   },
 
   openFilePicker() { document.getElementById('bank-import-file')?.click(); },
@@ -179,6 +224,11 @@ const BankImport = {
     const dateMonth = date === null ? (exact('mois','month','mm','m') ?? find('mois','month'))  : null;
     const dateYear  = date === null ? (exact('annee','an','year','yyyy','aaaa') ?? find('annee','an ','year','aaaa')) : null;
 
+    // Sous-catégorie détectée avant la catégorie (sinon "catégorie" matcherait
+    // aussi "sous-catégorie" par inclusion).
+    const subcategory = find('sous-categorie','sous categorie','souscategorie','sous-cat','subcategory','sub-category','sous-rubrique');
+    const category    = findExcept(subcategory, 'categorie','category','rubrique','poste','famille');
+
     return {
       date,
       dateEffective,
@@ -189,6 +239,8 @@ const BankImport = {
       amount:      find('montant','amount','somme'),
       debit:       find('debit','sortie','depense','retrait','imputation'),
       credit:      find('credit','entree','revenu','depot','versement'),
+      category,
+      subcategory,
     };
   },
 
@@ -295,6 +347,14 @@ const BankImport = {
               </div>
             </div>
           </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">🏷️ Catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
+            <select id="map-category" class="select-input">${colOpts(mapping.category, true)}</select>
+          </div>
+          <div class="mapping-field-row">
+            <label class="mapping-field-label">🏷️ Sous-catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
+            <select id="map-subcategory" class="select-input">${colOpts(mapping.subcategory, true)}</select>
+          </div>
         </div>
 
         <label class="mapping-save-lbl">
@@ -325,6 +385,8 @@ const BankImport = {
       amount:      !isAmtSplit  ? pi(document.getElementById('map-amount')?.value)      : null,
       debit:       isAmtSplit   ? pi(document.getElementById('map-debit')?.value)       : null,
       credit:      isAmtSplit   ? pi(document.getElementById('map-credit')?.value)      : null,
+      category:    pi(document.getElementById('map-category')?.value),
+      subcategory: pi(document.getElementById('map-subcategory')?.value),
     };
     if (document.getElementById('map-save-profile')?.checked && profileKey) {
       this._saveProfile(profileKey, mapping);
@@ -342,7 +404,73 @@ const BankImport = {
       return;
     }
     this._cleanLabels(transactions, allCats);          // étape 2, même module que le PDF
+    // Étape #3 : catégories du fichier non trouvées en exact → cache local puis Gemini.
+    if (transactions.some(t => t.fileCat && !t._catResolved && !t.isRevenue)) {
+      Modal.open('Correspondance des catégories…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">🏷️</div>
+          <p style="font-size:15px;font-weight:700">Correspondance des catégories…</p>
+        </div>
+      `);
+      await this._resolveFuzzyCategories(transactions, allCats);
+    }
     await this._categorizeAndPreview(transactions, allCats, 'spreadsheet');
+  },
+
+  // Étape #3 — résout les catégories du fichier non trouvées en exact : cache local
+  // d'abord, puis Gemini (NOM de catégorie uniquement, jamais montant/date/libellé).
+  // Sans clé ou en cas d'échec, les transactions restantes retombent sur la
+  // catégorisation habituelle par libellé (étape suivante).
+  async _resolveFuzzyCategories(transactions, allCats) {
+    const pending = transactions.filter(t => t.fileCat && !t._catResolved && !t.isRevenue);
+    if (!pending.length) return;
+
+    const cache = GeminiCat.getCatMapCache();
+    const toAsk = [];
+    pending.forEach(t => {
+      const cached = cache[GeminiCat._normCat(t.fileCat)];
+      if (cached && this._matchCat(cached.category, allCats)) {
+        this._applyFileCat(t, cached.category, cached.subcategory, allCats);
+      } else if (!toAsk.includes(t.fileCat)) {
+        toAsk.push(t.fileCat);
+      }
+    });
+
+    if (toAsk.length && GeminiCat.getApiKey()) {
+      const map = await GeminiCat.matchCategories(toAsk, allCats); // { fileCat: appCatName }
+      pending.forEach(t => {
+        if (t._catResolved) return;
+        const appCat = map[t.fileCat];
+        if (appCat && this._matchCat(appCat, allCats)) this._applyFileCat(t, appCat, '', allCats);
+      });
+    }
+  },
+
+  // Applique une correspondance (cache/Gemini) : catégorie de l'app + sous-catégorie
+  // exacte si le fichier en fournit une. Marque l'origine « fuzzy » pour l'aperçu.
+  _applyFileCat(t, catName, subName, allCats) {
+    const cat = this._matchCat(catName, allCats);
+    if (!cat) return; // garde-fou : nom inconnu → on ne résout pas (fallback libellé)
+    t.category = cat.name;
+    let sub = '';
+    if (t.fileSubcat) sub = this._matchSubcat(cat, t.fileSubcat) || '';
+    if (!sub && subName) sub = this._matchSubcat(cat, subName) || '';
+    t.subcategory     = sub;
+    t.catOrigin       = 'fuzzy';
+    t._catResolved    = true;
+    t.fileCatOriginal = t.fileCat;
+  },
+
+  // Pastille d'origine de la catégorie (aperçu) : 🟢 fichier · 🟡 approchée · 🔵 IA · ⚪ à catégoriser.
+  _catOriginBadge(t) {
+    const map = {
+      file:  ['🟢', 'Catégorie du fichier (correspondance exacte)'],
+      fuzzy: ['🟡', 'Correspondance approchée' + (t.fileCatOriginal ? ' — fichier : ' + t.fileCatOriginal : '')],
+      ai:    ['🔵', 'Catégorisé par IA / mots-clés'],
+      none:  ['⚪', 'À catégoriser'],
+    };
+    const [icon, label] = map[t.catOrigin] || map.ai;
+    return `<span class="cat-origin" title="${this._esc(label)}">${icon}</span>`;
   },
 
   // Reconstitue une date ISO depuis des colonnes Jour, Mois, Année séparées.
@@ -435,9 +563,28 @@ const BankImport = {
       const guess = isRevenue
         ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
         : this._smartGuess(desc, allCats);
+
+      // Catégorie/sous-catégorie issues du fichier (étape #3) — dépenses uniquement
+      // (un revenu est toujours rattaché à la catégorie « Revenus »).
+      const fileCat    = mapping.category    != null ? String(row[mapping.category]    || '').trim() : '';
+      const fileSubcat = mapping.subcategory != null ? String(row[mapping.subcategory] || '').trim() : '';
+      let category = guess.category, subcategory = guess.subcategory, catOrigin, catResolved = false;
+      if (fileCat && !isRevenue) {
+        const exact = this._matchCat(fileCat, allCats); // correspondance exacte (insensible casse/accents/espaces)
+        if (exact) {
+          category    = exact.name;
+          subcategory = fileSubcat ? (this._matchSubcat(exact, fileSubcat) || '') : '';
+          catOrigin = 'file'; catResolved = true;
+        }
+      }
+
       transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
-        category: guess.category, subcategory: guess.subcategory,
-        ...(effectiveDate && { effectiveDate }) });
+        category, subcategory,
+        ...(effectiveDate && { effectiveDate }),
+        ...(fileCat && !isRevenue && { fileCat }),
+        ...(fileSubcat && !isRevenue && { fileSubcat }),
+        ...(catOrigin && { catOrigin }),
+        ...(catResolved && { _catResolved: true }) });
     }
     return transactions;
   },
@@ -838,21 +985,35 @@ const BankImport = {
   _onCatChange(sel, idx) {
     const newCat = sel.value;
     const t = (window._bankTransactions || [])[idx];
-    if (t) GeminiCat.learn(t.description, newCat, '');
+    if (t) {
+      GeminiCat.learn(t.description, newCat, '');
+      t.category = newCat;
+      // Correction manuelle d'une catégorie issue du fichier → mémoriser + pastille verte.
+      if (t.fileCat) {
+        GeminiCat.learnCatMatch(t.fileCat, newCat, '');
+        t.catOrigin = 'file';
+        const ob = document.querySelector(`[data-origin="${idx}"]`);
+        if (ob) ob.innerHTML = this._catOriginBadge(t);
+      }
+    }
     const subcatSel = document.querySelector(`[data-subcat="${idx}"]`);
     if (subcatSel) subcatSel.innerHTML = this._subcatOpts(newCat, '');
   },
 
-  // Mémorise la correction manuelle de sous-catégorie
+  // Mémorise la correction manuelle de sous-catégorie (cache libellé + cache correspondance).
   _onSubcatChange(sel, idx) {
     const t = (window._bankTransactions || [])[idx];
     if (!t) return;
     const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
     GeminiCat.learn(t.description, cat, sel.value);
+    if (t.fileCat) GeminiCat.learnCatMatch(t.fileCat, cat, sel.value);
   },
 
   _showPreview(transactions, source = 'spreadsheet') {
     window._bankTransactions = transactions;
+    // Origine de catégorie par défaut (les chemins sans colonne « Catégorie » :
+    // PDF, ou tableur catégorisé par libellé) → 🔵 IA, ou ⚪ si à catégoriser.
+    transactions.forEach(t => { if (!t.catOrigin) t.catOrigin = t.needsReview ? 'none' : 'ai'; });
     const allCats   = Storage.getCategories(); // {name, subcategories[]}[]
     const expCatNames = allCats.map(c => c.name);
     const expCats   = expCatNames.length ? expCatNames : Utils.EXPENSE_CATEGORIES;
@@ -882,7 +1043,7 @@ const BankImport = {
         <td><input type="month" class="bank-eff-input" data-eff="${i}" value="${t.effectiveDate || ''}" title="Période réellement concernée (optionnel)" style="font-size:12px;padding:2px 4px"></td>
         <td class="bank-desc" title="${this._esc(t.descriptionRaw || t.description)}">${this._esc(t.description)}${t.needsReview ? ' <span class="dup-badge review-badge">à catégoriser</span>' : ''}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
-        <td><select data-cat="${i}" class="select-input bank-cat-sel"
+        <td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span><select data-cat="${i}" class="select-input bank-cat-sel"
           onchange="BankImport._onCatChange(this,${i})">${opts}</select></td>
         <td>${subcatHtml}</td>
       </tr>`;
