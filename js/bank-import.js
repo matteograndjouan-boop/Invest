@@ -335,19 +335,10 @@ const BankImport = {
       return;
     }
 
-    const labels   = transactions.filter(t => !t.isRevenue).map(t => t.description);
+    const labels   = transactions.map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => {
-        if (!t.isRevenue && catMap[t.description]) {
-          const { category, subcategory } = catMap[t.description];
-          const matched = this._matchCat(category, allCats);
-          if (matched) {
-            t.category = matched.name;
-            t.subcategory = this._matchSubcat(matched, subcategory);
-          }
-        }
-      });
+      transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
     }
 
     document.getElementById('modal')?.classList.add('modal-wide');
@@ -412,8 +403,6 @@ const BankImport = {
 
   _parseWithMapping(rows, headerIdx, mapping, allCats = []) {
     const transactions = [];
-    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    const revCatName = allCats.find(c => n(c.name).includes('revenu'))?.name || 'Revenus';
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
@@ -437,7 +426,9 @@ const BankImport = {
         else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
       }
       if (!amount || amount <= 0) continue;
-      const guess = isRevenue ? { category: revCatName, subcategory: '' } : this._smartGuess(desc, allCats);
+      const guess = isRevenue
+        ? { category: this._defaultRevenueCat(allCats), subcategory: '' }
+        : this._smartGuess(desc, allCats);
       transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
         category: guess.category, subcategory: guess.subcategory });
     }
@@ -501,19 +492,10 @@ const BankImport = {
         return;
       }
 
-      const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+      const labels = transactions.map(t => t.description);
       if (labels.length) {
         const catMap = await GeminiCat.categorize(labels, allCats);
-        transactions.forEach(t => {
-          if (!t.isRevenue && catMap[t.description]) {
-            const { category, subcategory } = catMap[t.description];
-            const matched = this._matchCat(category, allCats);
-            if (matched) {
-              t.category = matched.name;
-              t.subcategory = this._matchSubcat(matched, subcategory);
-            }
-          }
-        });
+        transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
       }
 
       document.getElementById('modal')?.classList.add('modal-wide');
@@ -564,7 +546,10 @@ const BankImport = {
       const amount = this._parseAmount(amtMatches[0][1]);
       if (!amount || Math.abs(amount) < 0.01) continue;
 
-      let desc = this._cleanDesc(work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' '));
+      // Le nom du commerçant peut apparaître avant OU après le montant selon la banque
+      // (ex: "53,00 SNCF INTERNET") — on retire tous les montants plutôt que de
+      // ne garder que le texte précédant le premier, pour ne pas perdre le libellé.
+      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
       // Filter false positives: require ≥3 alphabetic characters in description
       if (!desc || (desc.match(/[a-zA-ZÀ-ɏ]/g) || []).length < 3) continue;
 
@@ -601,6 +586,9 @@ const BankImport = {
     rawTxns.forEach(t => {
       if (t._amtX !== null && t._amtX >= creditMinX) t.isRevenue = true;
       if (revCatName && t.category === revCatName) t.isRevenue = true;
+      // La catégorie devinée plus haut suppose une dépense — pour un crédit,
+      // on la remplace par une vraie sous-catégorie de "Revenus".
+      if (t.isRevenue) { t.category = this._defaultRevenueCat(allCats); t.subcategory = ''; }
       delete t._amtX;
     });
 
@@ -705,19 +693,10 @@ const BankImport = {
       return;
     }
 
-    const labels = transactions.filter(t => !t.isRevenue).map(t => t.description);
+    const labels = transactions.map(t => t.description);
     if (labels.length) {
       const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => {
-        if (!t.isRevenue && catMap[t.description]) {
-          const { category, subcategory } = catMap[t.description];
-          const matched = this._matchCat(category, allCats);
-          if (matched) {
-            t.category = matched.name;
-            t.subcategory = this._matchSubcat(matched, subcategory);
-          }
-        }
-      });
+      transactions.forEach(t => this._applyCatResult(t, catMap, allCats));
     }
 
     document.getElementById('modal')?.classList.add('modal-wide');
@@ -761,12 +740,17 @@ const BankImport = {
       const amount = this._parseAmount(chosen[1]);
       if (amount === null || Math.abs(amount) < 0.01) continue;
 
-      let desc = this._cleanDesc(work.slice(0, work.search(rAmount)).trim().replace(/\s+/g, ' '));
+      // Le commerçant peut apparaître avant OU après le montant — on retire tous
+      // les montants plutôt que de garder que le texte précédant le premier.
+      let desc = this._cleanDesc(work.replace(rAmount, ' ').replace(/\s+/g, ' ').trim());
       if (!desc || desc.length < 2) continue;
 
-      const guess = this._smartGuess(desc, allCats);
+      const isRevenue = amount > 0;
+      const guess = isRevenue
+        ? { category: this._defaultRevenueCat(allCats), subcategory: '' }
+        : this._smartGuess(desc, allCats);
       transactions.push({ date: dateStr, description: desc,
-        amount: Math.abs(amount), isRevenue: amount > 0,
+        amount: Math.abs(amount), isRevenue,
         category: guess.category, subcategory: guess.subcategory });
     }
 
@@ -813,10 +797,13 @@ const BankImport = {
       const parsed     = JSON.parse(match[0]);
       const transactions = (parsed.t || [])
         .map(t => {
-          const desc  = String(t.desc || '').trim();
-          const guess = this._smartGuess(desc, allCats);
+          const desc      = String(t.desc || '').trim();
+          const isRevenue = t.amount > 0;
+          const guess = isRevenue
+            ? { category: this._defaultRevenueCat(allCats), subcategory: '' }
+            : this._smartGuess(desc, allCats);
           return { date: t.date, description: desc,
-            amount: Math.abs(t.amount), isRevenue: t.amount > 0,
+            amount: Math.abs(t.amount), isRevenue,
             category: guess.category, subcategory: guess.subcategory };
         })
         .filter(t => t.date && t.description && t.amount > 0);
@@ -971,7 +958,47 @@ const BankImport = {
   _matchSubcat(cat, subName) {
     if (!cat || !subName) return '';
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
-    return (cat.subcategories || []).find(s => n(s) === n(subName)) || '';
+    const subs = cat.subcategories || [];
+    return subs.find(s => n(s) === n(subName))
+        || subs.find(s => n(s).includes(n(subName)) || n(subName).includes(n(s)))
+        || '';
+  },
+
+  // Sous-catégories réelles de la catégorie "Revenus" de l'utilisateur (remplace
+  // l'ancienne liste générique Salaire/Freelance/... qui ne correspondait jamais
+  // à ses propres sous-catégories et faussait le select d'aperçu).
+  _revenueSubcats(allCats) {
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const cat = allCats.find(c => n(c.name).includes('revenu'));
+    return (cat?.subcategories?.length) ? cat.subcategories : Utils.REVENUE_CATEGORIES;
+  },
+  _defaultRevenueCat(allCats) {
+    const subs = this._revenueSubcats(allCats);
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return subs.find(s => n(s) === 'autre') || subs[subs.length - 1] || 'Autre';
+  },
+
+  // Applique le résultat Gemini (catégorie + sous-catégorie) à une transaction.
+  // Pour un revenu, le modèle de données n'a qu'un champ "category" — on y met
+  // directement la sous-catégorie réelle de "Revenus" (ex: "Famille"), jamais
+  // le nom générique renvoyé par Gemini qui ne correspond à aucune des siennes.
+  _applyCatResult(t, catMap, allCats) {
+    const result = catMap[t.description];
+    if (!result) return;
+    const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (t.isRevenue) {
+      const subs = this._revenueSubcats(allCats);
+      const want = n(result.subcategory || '');
+      const matchedSub = subs.find(s => n(s) === want)
+        || subs.find(s => want && (n(s).includes(want) || want.includes(n(s))));
+      if (matchedSub) t.category = matchedSub;
+    } else {
+      const matched = this._matchCat(result.category, allCats);
+      if (matched) {
+        t.category = matched.name;
+        t.subcategory = this._matchSubcat(matched, result.subcategory);
+      }
+    }
   },
 
   // Construit les <option> pour le select de sous-catégorie d'une catégorie donnée
@@ -1004,7 +1031,7 @@ const BankImport = {
     const allCats   = Storage.getCategories(); // {name, subcategories[]}[]
     const expCatNames = allCats.map(c => c.name);
     const expCats   = expCatNames.length ? expCatNames : Utils.EXPENSE_CATEGORIES;
-    const revCats   = Utils.REVENUE_CATEGORIES;
+    const revCats   = this._revenueSubcats(allCats);
     const hasGemini = !!GeminiCat.getApiKey();
 
     // Détection des doublons
