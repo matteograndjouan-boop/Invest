@@ -24,12 +24,19 @@ const Comparisons = {
     const selB = document.getElementById('comp-period-b');
     if (selA) { selA.value = this.periodA; selA.addEventListener('change', (e) => { this.periodA = e.target.value; this.render(); }); }
     if (selB) { selB.value = this.periodB; selB.addEventListener('change', (e) => { this.periodB = e.target.value; this.render(); }); }
+
+    // Re-render quand le toggle Date comptable/effective change (filtre global).
+    PeriodFilter.onChange(() => {
+      if (!document.getElementById('section-comparisons')?.classList.contains('hidden')) this.render();
+    });
   },
 
   render() {
     const expenses = Storage.getExpenses();
-    const expA = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodA);
-    const expB = expenses.filter(e => Utils.getExpenseMonth(e) === this.periodB);
+    // Respecte le mode date comptable/effective (getExpenseDate → mois filtrant).
+    const expMonth = e => Utils.getExpenseDate(e).substring(0, 7);
+    const expA = expenses.filter(e => expMonth(e) === this.periodA);
+    const expB = expenses.filter(e => expMonth(e) === this.periodB);
 
     // Update period name labels
     const nameA = document.getElementById('comp-period-name-a');

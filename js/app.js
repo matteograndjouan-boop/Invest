@@ -334,9 +334,12 @@ function navigateTo(sectionId) {
     el.classList.toggle('hidden', el.id !== `section-${htmlSectionId}`);
   });
 
-  // Period filter is only relevant in flux and budget
+  // Barre de période (avec le toggle Date comptable/effective) : Flux, Budget
+  // et Comparaisons. data-view permet au CSS de n'y montrer que le toggle sur
+  // Comparaisons (qui a ses propres sélecteurs de mois A/B).
+  document.body.setAttribute('data-view', sectionId);
   const pfContainer = document.getElementById('period-filter-container');
-  if (pfContainer) pfContainer.style.display = ['flux', 'budget'].includes(sectionId) ? '' : 'none';
+  if (pfContainer) pfContainer.style.display = ['flux', 'budget', 'comparisons'].includes(sectionId) ? '' : 'none';
 
   // Render the appropriate section
   switch (sectionId) {

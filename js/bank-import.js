@@ -165,7 +165,15 @@ const BankImport = {
     // Correspondance exacte (pour éviter que "jour" matche "bonjour")
     const exact = (...terms) => { const i = h.findIndex(c => terms.some(t => c === t)); return i >= 0 ? i : null; };
 
-    const date     = find('date treso','date compta','date ope','date val','date transaction','date');
+    // Date effective (= période réellement concernée : date valeur, période…), distincte
+    // de la date comptable. Détectée en premier pour ne pas être confondue avec la date.
+    const dateEffRaw = find('date valeur','date val','date effective','date effet','date periode','periode concernee','periode','mois concerne','mois reel','date application');
+    const findExcept = (except, ...terms) => { const i = h.findIndex((c, idx) => idx !== except && terms.some(t => c.includes(t))); return i >= 0 ? i : null; };
+    let date = findExcept(dateEffRaw, 'date treso','date compta','date comptable','date operation','date ope','date transaction','date mouvement','date');
+    let dateEffective = (dateEffRaw !== null && dateEffRaw !== date) ? dateEffRaw : null;
+    // Une seule date « effective » et pas de date comptable → on la promeut en date principale.
+    if (date === null && dateEffective !== null) { date = dateEffective; dateEffective = null; }
+
     // Ne chercher les composants que si aucune colonne date unifiée n'est trouvée
     const dateDay   = date === null ? (exact('jour','day','jj','j')   ?? find('jour','day'))   : null;
     const dateMonth = date === null ? (exact('mois','month','mm','m') ?? find('mois','month'))  : null;
@@ -173,11 +181,12 @@ const BankImport = {
 
     return {
       date,
+      dateEffective,
       dateDay,
       dateMonth,
       dateYear,
       description: find('libelle','description','commentaire','label','intitule','operation','nature','motif','objet','details'),
-      amount:      find('montant','amount','valeur','somme'),
+      amount:      find('montant','amount','somme'),
       debit:       find('debit','sortie','depense','retrait','imputation'),
       credit:      find('credit','entree','revenu','depot','versement'),
     };
@@ -257,6 +266,10 @@ const BankImport = {
             </div>
           </div>
           <div class="mapping-field-row">
+            <label class="mapping-field-label">📆 Date effective <small style="font-weight:400;color:var(--text-muted)">(optionnel)</small></label>
+            <select id="map-date-effective" class="select-input">${colOpts(mapping.dateEffective, true)}</select>
+          </div>
+          <div class="mapping-field-row">
             <label class="mapping-field-label">📝 Libellé</label>
             <select id="map-desc" class="select-input">${colOpts(mapping.description, true)}</select>
           </div>
@@ -304,6 +317,7 @@ const BankImport = {
     const pi = v => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
     const mapping = {
       date:        !isDateSplit ? pi(document.getElementById('map-date')?.value)        : null,
+      dateEffective: pi(document.getElementById('map-date-effective')?.value),
       dateDay:     isDateSplit  ? pi(document.getElementById('map-date-day')?.value)    : null,
       dateMonth:   isDateSplit  ? pi(document.getElementById('map-date-month')?.value)  : null,
       dateYear:    isDateSplit  ? pi(document.getElementById('map-date-year')?.value)   : null,
@@ -400,6 +414,12 @@ const BankImport = {
             mapping.dateYear  !== null ? row[mapping.dateYear]  : null
           );
       if (!date) continue;
+      // Date effective (période réellement concernée) → granularité mois (YYYY-MM), modèle de l'app.
+      let effectiveDate = '';
+      if (mapping.dateEffective !== null && mapping.dateEffective !== undefined) {
+        const ed = this._parseDate(row[mapping.dateEffective]);
+        if (ed) effectiveDate = ed.substring(0, 7);
+      }
       const desc = mapping.description !== null ? String(row[mapping.description] || '').trim() : '';
       let amount = null, isRevenue = false;
       if (mapping.amount !== null) {
@@ -416,7 +436,8 @@ const BankImport = {
         ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
         : this._smartGuess(desc, allCats);
       transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
-        category: guess.category, subcategory: guess.subcategory });
+        category: guess.category, subcategory: guess.subcategory,
+        ...(effectiveDate && { effectiveDate }) });
     }
     return transactions;
   },
@@ -858,6 +879,7 @@ const BankImport = {
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
         <td>${Utils.formatDate(t.date)}</td>
+        <td><input type="month" class="bank-eff-input" data-eff="${i}" value="${t.effectiveDate || ''}" title="Période réellement concernée (optionnel)" style="font-size:12px;padding:2px 4px"></td>
         <td class="bank-desc" title="${this._esc(t.descriptionRaw || t.description)}">${this._esc(t.description)}${t.needsReview ? ' <span class="dup-badge review-badge">à catégoriser</span>' : ''}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
         <td><select data-cat="${i}" class="select-input bank-cat-sel"
@@ -880,7 +902,7 @@ const BankImport = {
         <table class="data-table bank-preview-table">
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="bank-check-all" checked></th>
-            <th>Date</th><th>Description</th><th class="text-right">Montant</th>
+            <th>Date</th><th>Mois effectif</th><th>Description</th><th class="text-right">Montant</th>
             <th>Catégorie</th><th>Sous-catégorie</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -915,12 +937,15 @@ const BankImport = {
 
     const subcatByIdx = {};
     subcatSelects.forEach(el => { subcatByIdx[el.dataset.subcat] = el.value; });
+    const effByIdx = {};
+    document.querySelectorAll('[data-eff]').forEach(el => { effByIdx[el.dataset.eff] = el.value; });
 
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
       const t      = transactions[i];
       const cat    = catSelects[i]?.value || t.category;
       const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
+      const eff    = (effByIdx[i] || t.effectiveDate || '').trim();
       if (cat !== t.category || subcat !== t.subcategory) {
         GeminiCat.learn(t.description, cat, subcat);
       }
@@ -929,6 +954,7 @@ const BankImport = {
       const rec = { id: Utils.generateId(), description: t.description,
         descriptionRaw: t.descriptionRaw || t.description, amount: t.amount,
         category: cat, subcategory: subcat, date: t.date, needsReview: !!t.needsReview,
+        ...(eff && { effectiveDate: eff }),
         notes: t.needsReview ? 'Import bancaire — à catégoriser' : 'Import bancaire' };
       if (t.isRevenue) { revenues.push(rec); impRev++; }
       else { expenses.push(rec); impExp++; }

@@ -92,7 +92,7 @@ const Flux = {
     const end = `${pm}-${String(last).padStart(2, '0')}`;
     return {
       expenses: Storage.getExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
-      revenues: Storage.getRevenues().filter(r => r.date >= start && r.date <= end),
+      revenues: Storage.getRevenues().filter(r => Utils.getExpenseDate(r) >= start && Utils.getExpenseDate(r) <= end),
     };
   },
 
@@ -117,7 +117,7 @@ const Flux = {
     const allRevenues = Storage.getRevenues();
 
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
-    const revenues = allRevenues.filter(r => r.date >= start && r.date <= end);
+    const revenues = allRevenues.filter(r => Utils.getExpenseDate(r) >= start && Utils.getExpenseDate(r) <= end);
 
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
 
@@ -182,7 +182,7 @@ const Flux = {
     const revByMonth = months.map(m => {
       const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
       const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-      return allRevenues.filter(r => r.date >= s && r.date <= e).reduce((sum, r) => sum + r.amount, 0);
+      return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
     });
 
     const depByMonth = months.map(m => {

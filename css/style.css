@@ -1194,6 +1194,11 @@ input:focus:not(:focus-visible) { outline: none; }
 .date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+/* Sur Comparaisons, la barre ne sert qu'au toggle Date (les mois A/B ont leurs propres sélecteurs). */
+body[data-view="comparisons"] .period-filter-label,
+body[data-view="comparisons"] .period-type-btns,
+body[data-view="comparisons"] .period-nav { display: none; }
+body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 0; border-left: none; }
 
 /* ---- KPI Trends ---- */
 .kpi-trend { font-size: 0.72rem; margin-top: 0.2rem; min-height: 1.1rem; line-height: 1.3; }
