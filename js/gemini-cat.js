@@ -24,16 +24,11 @@ const GeminiCat = {
     catch (e) { console.warn('[GeminiCat] Erreur cache:', e); }
   },
 
-  // Normalise un libellé pour la clé de cache :
-  // supprime les dates et codes de référence qui varient à chaque transaction
-  // pour que "CB CARREFOUR 01/06" et "CB CARREFOUR 15/07" matchent la même entrée
+  // Clé de cache = libellé DÉJÀ nettoyé en amont (BankImport._cleanLabel : dates et
+  // numéros de carte retirés), simplement mis en minuscules et espaces normalisés.
+  // On ne re-décode rien ici — le nettoyage est fait une seule fois, avant l'appel.
   _normalize(label) {
-    return String(label).toUpperCase()
-      .replace(/\b\d{2}[\/\-]\d{2}([\/\-]\d{2,4})?\b/g, '') // dates JJ/MM ou JJ/MM/AAAA
-      .replace(/\b[A-Z0-9*]{8,}\b/g, '')                      // codes de référence longs
-      .replace(/\b\d+\b/g, '')                                 // autres chiffres isolés
-      .replace(/\s+/g, ' ')
-      .trim();
+    return String(label || '').toLowerCase().replace(/\s+/g, ' ').trim();
   },
 
   // Apprend une correction manuelle et l'enregistre dans le cache.
@@ -102,53 +97,30 @@ const GeminiCat = {
   // Appel effectif à l'API Gemini.
   // SEULS les libellés (texte du libellé bancaire) sont transmis — rien d'autre.
   async _callGemini(labels, userCategories) {
-    // Descriptions sémantiques pour aider Gemini à comprendre chaque catégorie
-    const _HINTS = {
-      alimentation: 'courses alimentaires, supermarchés, épiceries, restaurants, boulangeries, traiteurs',
-      transport: 'déplacements : train, TGV, SNCF, bus, métro, tram, taxi, VTC, trottinette',
-      shopping: 'achats physiques : vêtements, chaussures, sport, mode, électronique, maison, mobilier',
-      abonnements: 'services NUMÉRIQUES récurrents uniquement : streaming, forfait mobile/internet',
-      logement: 'loyer, charges, énergie, eau, gaz, travaux, habitat',
-      loisir: 'culture, cinéma, sport, spectacles, musées, jeux vidéo, divertissement',
-      sante: 'médicaments, médecins, pharmacie, soins, mutuelles, assurance maladie',
-      epargne: 'virements d\'épargne, placements, investissements, livret',
-      divers: 'autres dépenses non classées, frais bancaires, colis',
-      revenus: 'salaires, revenus, remboursements, aides',
-    };
-    const normHint = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-
-    let catBlock;
-    if (userCategories.length && typeof userCategories[0] === 'object') {
-      catBlock = userCategories.map(c => {
-        const hint = _HINTS[normHint(c.name)] || '';
-        const subs = (c.subcategories || []).join(', ');
-        const hintStr = hint ? ` — ${hint}` : '';
-        const subStr  = subs ? ` → ${subs}` : '';
-        return `• ${c.name}${hintStr}${subStr}`;
-      }).join('\n');
-    } else {
-      catBlock = userCategories.map(c => `• ${c}`).join('\n');
-    }
+    // Liste des catégories (et sous-catégories) de l'app — SANS table de synonymes
+    // ni descriptions codées en dur : Gemini comprend les libellés bruts tout seul.
+    const catBlock = (userCategories.length && typeof userCategories[0] === 'object')
+      ? userCategories.map(c => {
+          const subs = (c.subcategories || []).join(', ');
+          return subs ? `• ${c.name} (sous-catégories : ${subs})` : `• ${c.name}`;
+        }).join('\n')
+      : userCategories.map(c => `• ${c}`).join('\n');
 
     const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
 
     const prompt =
-`Tu catégorises des transactions bancaires françaises.
-
-Catégories disponibles et leur signification :
+`Voici une liste de libellés de transactions bancaires françaises.
+Pour chacun, retourne LA catégorie et LA sous-catégorie les plus adaptées,
+choisies UNIQUEMENT parmi cette liste :
 ${catBlock}
 
-Pour chaque libellé, identifie ce que c'est (enseigne, service, marque…) et choisis
-la catégorie dont la DESCRIPTION correspond le mieux à la nature de la dépense.
-Choisis LA catégorie ET LA sous-catégorie les plus précises.
-Utilise UNIQUEMENT les catégories et sous-catégories listées ci-dessus.
 Si aucune sous-catégorie ne convient, laisse "s" vide.
 
 Libellés :
 ${labelLines}
 
 Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
-{"r":[{"i":1,"c":"catégorie","s":"sous-catégorie ou vide"},{"i":2,"c":"...","s":"..."}]}`;
+{"r":[{"i":1,"c":"catégorie","s":"sous-catégorie ou vide"}]}`;
 
 
     const resp = await fetch(

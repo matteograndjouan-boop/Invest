@@ -56,7 +56,7 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 | `js/patrimony.js` | Onglet Patrimoine (actifs/passifs manuels + valorisation du portefeuille). |
 | `js/invest-import.js` | Import de positions de portefeuille depuis un export courtier (CSV/Excel). |
 | `js/gemini-cat.js` | `GeminiCat` — catégorisation via l'API Gemini. **N'envoie jamais que le libellé**, avec cache local (`invest_gemini_cache`) et apprentissage des corrections manuelles (`learn()`). |
-| `js/bank-import.js` | `BankImport` — pipeline d'import de relevé bancaire (CSV/Excel + PDF) : mapping de colonnes, nettoyage des libellés en 2 étapes (`_cleanDesc` puis `_merchantName` : décodage SEPA/carte + retrait dates/codes/villes → réduction au commerçant, 100 % local), devinette locale de catégorie (`_smartGuess`), détection de doublons, aperçu/validation avant import. Conserve le libellé brut (`descriptionRaw`) et marque `needsReview` quand aucun nom n'est exploitable. |
+| `js/bank-import.js` | `BankImport` — pipeline d'import de relevé bancaire (CSV/Excel + PDF) : mapping de colonnes, **nettoyage minimal local** des libellés (`_cleanLabel` : retire uniquement dates + numéros de carte, garde le reste — VIR SEPA, /DE, commerçants… que Gemini comprend), appliqué par `_cleanLabels` (module unique partagé PDF/tableur) puis catégorisation Gemini batch + cache ; fallback local par mots-clés (`_smartGuess`) sans clé. Détection de doublons, aperçu/validation. Conserve le libellé brut (`descriptionRaw`) ; `needsReview` seulement si plus aucune lettre après nettoyage. |
 | `js/pdf-zones.js` | `PdfZones` — méthode principale d'extraction des relevés PDF : l'utilisateur encadre les colonnes (Date, Date 2 optionnelle, Montant unique ou Débit/Crédit, Libellé) sur la page rendue par pdf.js ; extraction 100 % locale, gabarit mémorisé par banque. |
 | `css/style.css` | Toutes les feuilles de style (un seul fichier, pas de préprocesseur). |
 
@@ -81,7 +81,7 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 ## Conventions de code
 
 - **Vanilla JS, objets globaux** (`const Module = { ... }`), pas de classes ES, pas de framework, pas de build step pour le JS lui-même (seul `build.py` inline les fichiers).
-- **Style des modules** : chaque fichier `js/xxx.js` expose un seul objet global en `PascalCase` (`Storage`, `BankImport`, `PdfZones`, `GeminiCat`...) avec des méthodes publiques sans préfixe et des méthodes privées préfixées par `_` (ex. `_cleanDesc`, `_matchCat`, `_renderEditor`).
+- **Style des modules** : chaque fichier `js/xxx.js` expose un seul objet global en `PascalCase` (`Storage`, `BankImport`, `PdfZones`, `GeminiCat`...) avec des méthodes publiques sans préfixe et des méthodes privées préfixées par `_` (ex. `_cleanLabel`, `_matchCat`, `_renderEditor`).
 - **Commentaires en français**, concis, uniquement quand le pourquoi n'est pas évident (contrainte cachée, contournement, comportement surprenant) — pas de commentaires qui répètent ce que le code dit déjà.
 - **Pas de dépendances ajoutées sans nécessité** : tout passe par CDN (`<script src="https://...">`), jamais de `npm install`/`package.json`.
 - **Confidentialité non négociable** : toute nouvelle fonctionnalité qui touche à l'IA doit respecter la règle « seul le libellé part vers Gemini » ; tout envoi de données plus large (comme le mode Claude PDF) doit rester strictement opt-in avec confirmation explicite affichée à l'utilisateur.
