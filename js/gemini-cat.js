@@ -37,12 +37,13 @@ const GeminiCat = {
     const key = this._normalize(rawLabel);
     if (!key) return;
     const cache = this._getCache();
-    cache[key] = { category, subcategory: subcategory || '' };
+    cache[key] = { ...cache[key], category, subcategory: subcategory || '' }; // conserve le nom mis en forme s'il existe
     this._saveCache(cache);
   },
 
-  // Point d'entrée principal : catégorise un tableau de libellés.
-  // Retourne un objet { "libellé": { category, subcategory } }
+  // Point d'entrée principal : catégorise ET met en forme un tableau de libellés nettoyés.
+  // Retourne un objet { "libellé": { name, category, subcategory } } — name = nom du
+  // commerçant/fournisseur mis en forme par Gemini (vide si pas d'IA).
   // 1. Vérifie le cache → 2. Appelle Gemini pour les inconnus → 3. Fallback mots-clés
   async categorize(labels, userCategories) {
     const cache   = this._getCache();
@@ -68,7 +69,7 @@ const GeminiCat = {
         const geminiResult = await this._callGemini(toFetch, userCategories);
         const updatedCache = this._getCache();
         for (const label of toFetch) {
-          const cat = geminiResult[label] || { category: guessCategory(label), subcategory: '' };
+          const cat = geminiResult[label] || { name: '', category: guessCategory(label), subcategory: '' };
           result[label] = cat;
           const key = this._normalize(label);
           if (key) updatedCache[key] = cat;
@@ -77,13 +78,13 @@ const GeminiCat = {
       } catch (err) {
         console.warn('[GeminiCat] Fallback mots-clés (' + err.message + ')');
         for (const label of toFetch) {
-          result[label] = { category: guessCategory(label), subcategory: '' };
+          result[label] = { name: '', category: guessCategory(label), subcategory: '' };
         }
       }
     } else {
       // Pas de clé API → fallback silencieux sur la détection par mots-clés
       for (const label of toFetch) {
-        result[label] = { category: guessCategory(label), subcategory: '' };
+        result[label] = { name: '', category: guessCategory(label), subcategory: '' };
       }
     }
 
@@ -109,18 +110,20 @@ const GeminiCat = {
     const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
 
     const prompt =
-`Voici une liste de libellés de transactions bancaires françaises.
-Pour chacun, retourne LA catégorie et LA sous-catégorie les plus adaptées,
-choisies UNIQUEMENT parmi cette liste :
-${catBlock}
+`Voici une liste de libellés de transactions bancaires françaises (déjà nettoyés).
+Pour chacun, donne :
+- "n" : le nom du commerçant / fournisseur SEUL, lisible et mis en forme (ex. "SNCF", "Carrefour", "Opmobility", "Netflix") — sans dates, codes ni mentions techniques ;
+- "c" : LA catégorie la plus adaptée, choisie UNIQUEMENT dans la liste ci-dessous ;
+- "s" : LA sous-catégorie (même liste), ou "" si aucune ne convient.
 
-Si aucune sous-catégorie ne convient, laisse "s" vide.
+Catégories disponibles :
+${catBlock}
 
 Libellés :
 ${labelLines}
 
 Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
-{"r":[{"i":1,"c":"catégorie","s":"sous-catégorie ou vide"}]}`;
+{"r":[{"i":1,"n":"nom commerçant","c":"catégorie","s":"sous-catégorie ou vide"}]}`;
 
 
     const resp = await fetch(
@@ -149,7 +152,7 @@ Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
     const results = {};
     (parsed.r || []).forEach(item => {
       const label = labels[item.i - 1];
-      if (label) results[label] = { category: item.c || '', subcategory: item.s || '' };
+      if (label) results[label] = { name: item.n || '', category: item.c || '', subcategory: item.s || '' };
     });
     return results;
   },

@@ -403,18 +403,10 @@ const BankImport = {
       alert('Aucune transaction valide détectée.\nVérifiez les correspondances de colonnes.');
       return;
     }
-    this._cleanLabels(transactions, allCats);          // nettoyage minimal (dates/cartes), même module que le PDF
-    // Étape #3 : catégories du fichier non trouvées en exact → cache local puis Gemini.
-    if (transactions.some(t => t.fileCat && !t._catResolved && !t.isRevenue)) {
-      Modal.open('Correspondance des catégories…', `
-        <div style="text-align:center;padding:52px 20px">
-          <div style="font-size:52px;margin-bottom:20px">🏷️</div>
-          <p style="font-size:15px;font-weight:700">Correspondance des catégories…</p>
-        </div>
-      `);
-      await this._resolveFuzzyCategories(transactions, allCats);
-    }
-    await this._categorizeAndPreview(transactions, allCats, 'spreadsheet');
+    this._cleanLabels(transactions, allCats);          // nettoyage minimal local (dates/cartes)
+    // La correspondance Gemini des catégories du fichier (#3) et la catégorisation par
+    // libellé sont reportées à l'étape IA (fenêtre 3), après validation de la fenêtre 2.
+    this._showPreview(transactions, 'spreadsheet', 'local'); // fenêtre 2 : revue locale, AUCUN envoi
   },
 
   // Étape #3 — résout les catégories du fichier non trouvées en exact : cache local
@@ -602,8 +594,8 @@ const BankImport = {
   // commun appelé après extraction par PdfZones ou par le mode IA de secours.
   async finishPdfExtraction(transactions) {
     const allCats = Storage.getCategories();
-    this._cleanLabels(transactions, allCats);          // nettoyage minimal (dates/cartes), partagé PDF/tableur
-    await this._categorizeAndPreview(transactions, allCats, 'pdf');
+    this._cleanLabels(transactions, allCats);          // nettoyage minimal local (dates/cartes)
+    this._showPreview(transactions, 'pdf', 'local');   // fenêtre 2 : revue locale, AUCUN envoi
   },
 
   // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
@@ -717,38 +709,61 @@ const BankImport = {
       const raw     = t.descriptionRaw || t.description || '';
       const cleaned = this._cleanLabel(raw);
       t.descriptionRaw = raw;
-      // Si le nettoyage vide tout (libellé = uniquement dates/numéros), garder le brut.
-      t.description = cleaned || raw.trim() || 'Opération';
+      // descriptionClean = libellé minimal : affiché en fenêtre 2, sert de clé de cache
+      // et c'est CE texte (et lui seul) qui part à Gemini. t.description en part, puis sera
+      // remplacé par le nom mis en forme renvoyé par Gemini en fenêtre 3.
+      t.descriptionClean = cleaned || raw.trim() || 'Opération';
+      t.description      = t.descriptionClean;
       // « À catégoriser » seulement si vraiment aucune lettre exploitable ne subsiste.
-      t.needsReview = !/[a-zA-ZÀ-ÿ]/.test(t.description);
-      // Fallback mots-clés (_smartGuess) — remplacé par Gemini si une clé est
-      // configurée. Pas touché si la catégorie vient déjà du fichier (#3).
+      t.needsReview = !/[a-zA-ZÀ-ÿ]/.test(t.descriptionClean);
+      // Catégorie provisoire par mots-clés (_smartGuess) — affinée par Gemini en fenêtre 3.
+      // Pas touché si la catégorie vient déjà du fichier (#3, correspondance exacte).
       if (!t.isRevenue && !t._catResolved) {
-        const g = this._smartGuess(t.description, allCats);
+        const g = this._smartGuess(t.descriptionClean, allCats);
         t.category = g.category; t.subcategory = g.subcategory;
       }
     });
   },
 
-  // Catégorisation Gemini (libellés exploitables uniquement) puis aperçu.
-  // Partagé PDF/tableur. Les libellés « à catégoriser » et les catégories déjà
-  // résolues (fichier / correspondance) ne sont pas envoyés à Gemini.
-  async _categorizeAndPreview(transactions, allCats, source) {
-    Modal.open('Catégorisation…', `
-      <div style="text-align:center;padding:52px 20px">
-        <div style="font-size:52px;margin-bottom:20px">🤖</div>
-        <p style="font-size:15px;font-weight:700;margin-bottom:8px">Catégorisation Gemini…</p>
-        <p style="color:var(--text-muted);font-size:13px">Seuls les libellés sont analysés — vos données restent locales.</p>
-      </div>
-    `);
-    const pending = t => !t.needsReview && !t._catResolved;
-    const labels  = transactions.filter(pending).map(t => t.description);
-    if (labels.length) {
-      const catMap = await GeminiCat.categorize(labels, allCats);
-      transactions.forEach(t => { if (pending(t)) this._applyCatResult(t, catMap, allCats); });
+  // ── FENÊTRE 3 : ÉTAPE IA (déclenchée à la validation de la fenêtre 2) ──────
+  //
+  // Seuls les libellés NETTOYÉS (descriptionClean) des lignes cochées partent à
+  // Gemini, qui les met en forme (nom du commerçant) et les catégorise. Les
+  // libellés « à catégoriser » et les catégories déjà résolues par le fichier
+  // ne sont pas envoyés.
+  async _runAiStep(source) {
+    const all = window._bankTransactions || [];
+    // Reprend les mois effectifs saisis + la sélection des lignes en fenêtre 2.
+    document.querySelectorAll('[data-eff]').forEach(el => {
+      const t = all[+el.dataset.eff]; if (t) t.effectiveDate = el.value || t.effectiveDate || '';
+    });
+    const checked = [];
+    document.querySelectorAll('[data-idx]').forEach(cb => { if (cb.checked) checked.push(+cb.dataset.idx); });
+    const txns = checked.length ? checked.map(i => all[i]) : all.slice();
+    window._bankTransactions = txns;
+
+    const allCats = Storage.getCategories();
+    if (GeminiCat.getApiKey()) {
+      Modal.open('Catégorisation IA…', `
+        <div style="text-align:center;padding:52px 20px">
+          <div style="font-size:52px;margin-bottom:20px">🤖</div>
+          <p style="font-size:15px;font-weight:700;margin-bottom:8px">Mise en forme &amp; catégorisation…</p>
+          <p style="color:var(--text-muted);font-size:13px">Seuls les libellés nettoyés sont envoyés — jamais montants, dates ni données personnelles.</p>
+        </div>
+      `);
+      // #3 — correspondance Gemini des catégories du fichier (nom de catégorie uniquement).
+      if (txns.some(t => t.fileCat && !t._catResolved && !t.isRevenue)) {
+        await this._resolveFuzzyCategories(txns, allCats);
+      }
+      // Mise en forme du libellé + catégorisation, sur les libellés NETTOYÉS uniquement.
+      const pending = t => !t.needsReview && !t._catResolved;
+      const labels  = txns.filter(pending).map(t => t.descriptionClean);
+      if (labels.length) {
+        const catMap = await GeminiCat.categorize(labels, allCats);
+        txns.forEach(t => { if (pending(t)) this._applyCatResult(t, catMap, allCats); });
+      }
     }
-    document.getElementById('modal')?.classList.add('modal-wide');
-    this._showPreview(transactions, source);
+    this._showPreview(txns, source, 'ai');   // fenêtre 3
   },
 
   // ── DÉTECTION LOCALE PAR MOTS-CLÉS ───────────────────────────────────────
@@ -877,8 +892,12 @@ const BankImport = {
   // Pour un revenu, la catégorie reste toujours "Revenus" (visible dans l'aperçu) —
   // seule la sous-catégorie est choisie parmi celles que l'utilisateur a définies.
   _applyCatResult(t, catMap, allCats) {
-    const result = catMap[t.description];
+    // Le cache/Gemini est indexé par le libellé NETTOYÉ (descriptionClean).
+    const result = catMap[t.descriptionClean || t.description];
     if (!result) return;
+    // Nom du commerçant mis en forme par Gemini → devient le libellé affiché/importé
+    // (sinon on garde le libellé nettoyé). Le nettoyé reste la clé de cache (descriptionClean).
+    if (result.name) t.description = result.name;
     if (t.isRevenue) {
       const revCat = this._revenueCat(allCats);
       t.category = revCat.name;
@@ -906,7 +925,7 @@ const BankImport = {
     const newCat = sel.value;
     const t = (window._bankTransactions || [])[idx];
     if (t) {
-      GeminiCat.learn(t.description, newCat, '');
+      GeminiCat.learn(t.descriptionClean || t.description, newCat, '');
       t.category = newCat;
       // Correction manuelle d'une catégorie issue du fichier → mémoriser + pastille verte.
       if (t.fileCat) {
@@ -925,73 +944,88 @@ const BankImport = {
     const t = (window._bankTransactions || [])[idx];
     if (!t) return;
     const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
-    GeminiCat.learn(t.description, cat, sel.value);
+    GeminiCat.learn(t.descriptionClean || t.description, cat, sel.value);
     if (t.fileCat) GeminiCat.learnCatMatch(t.fileCat, cat, sel.value);
   },
 
-  _showPreview(transactions, source = 'spreadsheet') {
+  // Aperçu en 2 fenêtres :
+  //  • stage 'local' (fenêtre 2) : revue 100 % locale (date, mois effectif, montant,
+  //    libellé nettoyé) + sélection des lignes. AUCUN envoi. Bouton → étape IA.
+  //  • stage 'ai' (fenêtre 3) : commerçant mis en forme + catégories (éditables) → import.
+  _showPreview(transactions, source = 'spreadsheet', stage = 'ai') {
     window._bankTransactions = transactions;
-    // Origine de catégorie par défaut (les chemins sans colonne « Catégorie » :
-    // PDF, ou tableur catégorisé par libellé) → 🔵 IA, ou ⚪ si à catégoriser.
-    transactions.forEach(t => { if (!t.catOrigin) t.catOrigin = t.needsReview ? 'none' : 'ai'; });
+    const isLocal   = stage === 'local';
     const allCats   = Storage.getCategories(); // {name, subcategories[]}[]
     const expCatNames = allCats.map(c => c.name);
     const expCats   = expCatNames.length ? expCatNames : Utils.EXPENSE_CATEGORIES;
     const revCatName = this._revenueCat(allCats).name;
     const hasGemini = !!GeminiCat.getApiKey();
 
-    // Détection des doublons
+    // Origine de catégorie par défaut (fenêtre IA uniquement).
+    if (!isLocal) transactions.forEach(t => { if (!t.catOrigin) t.catOrigin = t.needsReview ? 'none' : 'ai'; });
+
+    // Détection des doublons (date + libellé affiché + montant)
     const expKeys = new Set(Storage.getExpenses().map(e => `${e.date}|${e.description}|${e.amount}`));
     const revKeys = new Set(Storage.getRevenues().map(r => `${r.date}|${r.description}|${r.amount}`));
     const dupKey  = t => `${t.date}|${t.description}|${t.amount}`;
 
     let dupCount = 0;
     const rows = transactions.map((t, i) => {
-      // Pour un revenu, la catégorie est toujours "Revenus" — seule option affichée,
-      // pour que l'utilisateur la voie sans pouvoir la confondre avec une dépense.
-      const cats  = t.isRevenue ? [revCatName] : expCats;
-      const opts  = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
       const isDup = (t.isRevenue ? revKeys : expKeys).has(dupKey(t));
       if (isDup) dupCount++;
-      // Sous-catégories de la catégorie assignée (affichées aussi pour les revenus)
-      const subcatHtml =
-        `<select data-subcat="${i}" class="select-input bank-cat-sel"
-          onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
+      // Libellé affiché : nettoyé en fenêtre 2, commerçant mis en forme en fenêtre 3.
+      const label    = isLocal ? t.descriptionClean : t.description;
+      const titleTxt = this._esc(isLocal ? (t.descriptionRaw || label)
+                                         : (t.descriptionClean || t.descriptionRaw || label));
+      const descCell = `<td class="bank-desc" title="${titleTxt}">${this._esc(label)}${t.needsReview ? ' <span class="dup-badge review-badge">à catégoriser</span>' : ''}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>`;
+
+      let catCells = '';
+      if (!isLocal) {
+        const cats = t.isRevenue ? [revCatName] : expCats;
+        const opts = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
+        const subcatHtml = `<select data-subcat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
+        catCells = `<td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span><select data-cat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onCatChange(this,${i})">${opts}</select></td><td>${subcatHtml}</td>`;
+      }
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
         <td>${Utils.formatDate(t.date)}</td>
         <td><input type="month" class="bank-eff-input" data-eff="${i}" value="${t.effectiveDate || ''}" title="Période réellement concernée (optionnel)" style="font-size:12px;padding:2px 4px"></td>
-        <td class="bank-desc" title="${this._esc(t.descriptionRaw || t.description)}">${this._esc(t.description)}${t.needsReview ? ' <span class="dup-badge review-badge">à catégoriser</span>' : ''}${isDup ? ' <span class="dup-badge">⚠ doublon</span>' : ''}</td>
+        ${descCell}
         <td class="text-right"><strong class="${t.isRevenue ? 'positive' : 'negative'}">${t.isRevenue ? '+' : '−'}${Utils.formatCurrency(t.amount)}</strong></td>
-        <td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span><select data-cat="${i}" class="select-input bank-cat-sel"
-          onchange="BankImport._onCatChange(this,${i})">${opts}</select></td>
-        <td>${subcatHtml}</td>
+        ${catCells}
       </tr>`;
     }).join('');
 
-    const geminiNote = hasGemini
-      ? `<div class="bank-import-note bank-note-ok">🤖 <strong>Catégorisation Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés sont envoyés — jamais les montants, dates ni données personnelles.</span></div>`
-      : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés. <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`;
+    const note = isLocal
+      ? `<div class="bank-import-note bank-note-ok">🔒 <strong>Détection 100 % locale</strong> — rien n'a encore été envoyé. ${hasGemini ? 'En validant, seuls les <strong>libellés nettoyés</strong> (sans montant, date ni n° de carte) seront envoyés à Gemini pour la mise en forme du commerçant et la catégorisation.' : 'Configurez Gemini pour la mise en forme IA, ou continuez avec les catégories par mots-clés.'}</div>`
+      : (hasGemini
+          ? `<div class="bank-import-note bank-note-ok">🤖 <strong>Commerçants mis en forme &amp; catégorisés par Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés nettoyés ont été envoyés.</span></div>`
+          : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés (pas de clé Gemini). <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`);
     const dupNote = dupCount
       ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>${dupCount} doublon(s) détecté(s)</strong> et décochés — cochez-les pour forcer l'import.</div>`
       : '';
 
+    const footer = isLocal
+      ? `<button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
+         <button class="btn-primary" onclick="BankImport._runAiStep('${source}')">${hasGemini ? 'Valider → mise en forme IA' : 'Valider → catégories'} →</button>`
+      : `<button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
+         <button class="btn-primary" onclick="BankImport._confirmImport()">Importer les sélectionnées</button>`;
+
     document.getElementById('modal')?.classList.add('modal-wide');
-    Modal.open(`Relevé${source === 'pdf' ? ' PDF' : ''} — ${transactions.length} opération(s)`, `
-      ${geminiNote}${dupNote}
+    Modal.open(`Relevé${source === 'pdf' ? ' PDF' : ''} — ${transactions.length} opération(s) · ${isLocal ? 'vérification locale' : 'catégorisation'}`, `
+      ${note}${dupNote}
       <div class="bank-preview-wrap">
         <table class="data-table bank-preview-table">
           <thead><tr>
             <th style="width:36px"><input type="checkbox" id="bank-check-all" checked></th>
-            <th>Date</th><th>Mois effectif</th><th>Description</th><th class="text-right">Montant</th>
-            <th>Catégorie</th><th>Sous-catégorie</th>
+            <th>Date</th><th>Mois effectif</th><th>${isLocal ? 'Libellé nettoyé' : 'Commerçant'}</th><th class="text-right">Montant</th>
+            ${isLocal ? '' : '<th>Catégorie</th><th>Sous-catégorie</th>'}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
       <div class="form-actions bank-preview-actions">
-        <button class="btn-secondary" onclick="BankImport._cancelPreview()">Annuler</button>
-        <button class="btn-primary" onclick="BankImport._confirmImport()">Importer les sélectionnées</button>
+        ${footer}
       </div>
     `);
 
@@ -1028,7 +1062,7 @@ const BankImport = {
       const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
       const eff    = (effByIdx[i] || t.effectiveDate || '').trim();
       if (cat !== t.category || subcat !== t.subcategory) {
-        GeminiCat.learn(t.description, cat, subcat);
+        GeminiCat.learn(t.descriptionClean || t.description, cat, subcat);
       }
       // Le libellé brut est conservé (descriptionRaw) pour la vue détaillée ;
       // description = nom nettoyé du commerçant (affichage principal + clé Gemini).
