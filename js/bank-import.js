@@ -675,6 +675,9 @@ const BankImport = {
     // — Heures (avant les dates) : 12H33 / 14:22 / 09H05 —
     s = s.replace(/\b\d{1,2}\s*[H:]\s*\d{2}\b/gi, ' ');
 
+    // — Marqueur « DU <date> » (du JJMMAA / AAMMJJ, ex. « DU 270426 ») — la date est SENSIBLE —
+    s = s.replace(/\bDU\s+\d{4,}\b/gi, ' ');
+
     // — Dates numériques (ISO, JJ/MM[/AA], JJ-MM, JJ.MM) —
     s = s.replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' ');
     s = s.replace(/\b\d{1,2}[\/.\-]\d{1,2}(?:[\/.\-]\d{2,4})?\b/g, ' ');
@@ -688,11 +691,33 @@ const BankImport = {
     s = s.replace(/\b\d{2,6}[X*]{4,}\d{2,6}\b/gi, ' ');          // 4974XXXXXXXX8930
     s = s.replace(/\b(?:CB|CARTE)\s*(?:N[O°º]?|#|:)?\s*[\dX*]{2,}\b/gi, ' '); // CB/CARTE + chiffres ou étoiles
 
-    // — Tout groupe de 4 chiffres isolé : années (2024/2025/2026) et 4 derniers de carte —
-    s = s.replace(/\b\d{4}\b/g, ' ');
+    // — Étiquettes de métadonnées SEPA (le nom du champ ; sa valeur code/date est retirée à côté) —
+    s = s.replace(/\b(?:EMETTEUR|EMET|BENEFICIAIRE|BENEF|MOTIF|REFERENCE|REFDO|REF|RUM|MDT|MANDAT|ECHEANCE|ECH|IBAN|LIB)\b/gi, ' ');
+
+    // — Suites de chiffres isolées (≥4) : années, dates 6/8 chiffres (270426…), réfs, 4 derniers de carte —
+    s = s.replace(/\b\d{4,}\b/g, ' ');
+
+    // — « DU » résiduel (marqueur de date omniprésent sur les relevés) —
+    s = s.replace(/\bDU\b/gi, ' ');
+
+    // — Codes de référence (lettres+chiffres mêlés, ex. FR35ZZZ418323, PAGP0110FHQUU2) et
+    //   ponctuation isolée (- : /) laissée par les retraits — token par token —
+    s = s.split(/\s+/).filter(tok => {
+      const core = tok.replace(/^[^0-9A-Za-zÀ-ÿ]+|[^0-9A-Za-zÀ-ÿ]+$/g, '');
+      return core && !this._looksLikeCode(core);
+    }).join(' ');
 
     // — Normalisation finale —
     return s.replace(/\s{2,}/g, ' ').trim();
+  },
+
+  // Un token ressemble-t-il à un code de référence (lettres ET chiffres mêlés) ?
+  // Retire FR35ZZZ418323, PAGP0110FHQUU2, AB123… ; conserve les noms courts G20, M6, 4G.
+  _looksLikeCode(t) {
+    if (!/[A-Za-z]/.test(t) || !/\d/.test(t)) return false; // besoin de lettres ET de chiffres
+    if (t.length >= 6) return true;                          // codes longs (IBAN, RUM, réf opération…)
+    const digits = (t.match(/\d/g) || []).length;
+    return t.length >= 4 && digits >= 2;                     // AB12, X1Y2 (mais pas G20, M6)
   },
 
   // Échappement HTML minimal (libellés de relevé injectés dans l'aperçu).
