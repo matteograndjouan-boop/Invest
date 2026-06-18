@@ -7,7 +7,10 @@
 const GeminiCat = {
   _CACHE_KEY:  'invest_gemini_cache',
   _CATMAP_KEY: 'invest_cat_map_cache', // correspondances « catégorie du fichier » → catégorie de l'app
-  _MODEL:     'gemini-2.0-flash-lite', // modèle gratuit Google AI Studio
+  // Modèles essayés dans l'ordre, avec repli automatique si l'un n'a pas de quota
+  // gratuit (ex. gemini-2.0-flash-lite → « free tier limit: 0 » sur certains projets).
+  // Le premier modèle qui répond est mémorisé (localStorage 'gemini_model').
+  _MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'],
   _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
@@ -99,6 +102,47 @@ const GeminiCat = {
     localStorage.removeItem(this._CACHE_KEY);
   },
 
+  // Un appel à un modèle donné — renvoie le texte brut de la réponse.
+  async _callModel(model, prompt) {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.getApiKey()}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Gemini HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  },
+
+  // Essaie les modèles dans l'ordre (celui qui a déjà marché en premier), avec repli
+  // sur le suivant si quota épuisé / modèle indisponible. Mémorise le modèle qui répond.
+  async _generate(prompt) {
+    const remembered = localStorage.getItem('gemini_model');
+    const list = [remembered, ...this._MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
+    let lastErr;
+    for (const model of list) {
+      try {
+        const text = await this._callModel(model, prompt);
+        localStorage.setItem('gemini_model', model);
+        return text;
+      } catch (err) {
+        lastErr = err;
+        // Quota épuisé / modèle indispo → essayer le suivant ; sinon (clé, réseau) → stop.
+        if (!/quota|RESOURCE_EXHAUSTED|429|404|not ?found|not supported|unsupported|400/i.test(err.message || '')) break;
+      }
+    }
+    throw lastErr || new Error('Aucun modèle Gemini disponible');
+  },
+
   // Appel effectif à l'API Gemini.
   // SEULS les libellés (texte du libellé bancaire) sont transmis — rien d'autre.
   async _callGemini(labels, userCategories) {
@@ -136,25 +180,7 @@ Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
 {"r":[{"i":1,"n":"Carrefour","c":"catégorie","s":"sous-catégorie ou vide"}]}`;
 
 
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this._MODEL}:generateContent?key=${this.getApiKey()}`,
-      {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Gemini HTTP ${resp.status}`);
-    }
-
-    const data  = await resp.json();
-    const text  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text  = await this._generate(prompt);
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('Réponse Gemini non-JSON');
 
@@ -240,23 +266,7 @@ ${lines}
 
 Réponds UNIQUEMENT en JSON valide : {"r":[{"i":1,"c":"catégorie app ou vide"}]}`;
 
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this._MODEL}:generateContent?key=${this.getApiKey()}`,
-      {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Gemini HTTP ${resp.status}`);
-    }
-    const data  = await resp.json();
-    const text  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text  = await this._generate(prompt);
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('Réponse Gemini non-JSON');
     const parsed  = JSON.parse(match[0]);
