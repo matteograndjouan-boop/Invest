@@ -10,7 +10,7 @@ const GeminiCat = {
   // Modèles essayés dans l'ordre, avec repli automatique si l'un n'a pas de quota
   // gratuit (ex. gemini-2.0-flash-lite → « free tier limit: 0 » sur certains projets).
   // Le premier modèle qui répond est mémorisé (localStorage 'gemini_model').
-  _MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'],
+  _MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'],
   _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
@@ -128,19 +128,25 @@ const GeminiCat = {
   async _generate(prompt) {
     const remembered = localStorage.getItem('gemini_model');
     const list = [remembered, ...this._MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
-    let lastErr;
+    const errs = [];
     for (const model of list) {
       try {
         const text = await this._callModel(model, prompt);
         localStorage.setItem('gemini_model', model);
         return text;
       } catch (err) {
-        lastErr = err;
-        // Quota épuisé / modèle indispo → essayer le suivant ; sinon (clé, réseau) → stop.
-        if (!/quota|RESOURCE_EXHAUSTED|429|404|not ?found|not supported|unsupported|400/i.test(err.message || '')) break;
+        const msg = (err.message || String(err)).replace(/\s+/g, ' ').trim();
+        errs.push({ model, msg });
+        // Quota / modèle indispo → essayer le suivant ; erreur dure (clé, réseau) → stop net.
+        if (!/quota|exceeded|RESOURCE_EXHAUSTED|429|limit:\s*0|404|not ?found|not supported|unsupported/i.test(msg)) {
+          throw new Error(msg);
+        }
       }
     }
-    throw lastErr || new Error('Aucun modèle Gemini disponible');
+    console.warn('[GeminiCat] Aucun modèle Gemini disponible :', errs);
+    const quota = errs.some(e => /quota|exceeded|RESOURCE_EXHAUSTED|429|limit:\s*0/i.test(e.msg));
+    throw new Error(quota ? ('GEMINI_QUOTA:' + errs.map(e => e.model).join(','))
+                          : (errs[0] ? errs[0].msg : 'Aucun modèle Gemini disponible'));
   },
 
   // Appel effectif à l'API Gemini.

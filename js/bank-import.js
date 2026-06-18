@@ -733,6 +733,8 @@ const BankImport = {
       m = m.replace(PREF, '');                 // un préfixe de type d'opération
     } while (m !== prev && m);
     m = m.replace(/\s+[AÀ]\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-]+\s*$/i, ''); // « ... A REIMS »
+    // Grande ville (+ arrondissement éventuel) en fin de libellé, si un nom subsiste avant.
+    m = m.replace(/\s+(?:PARIS|MARSEILLE|LYON|TOULOUSE|NICE|NANTES|MONTPELLIER|STRASBOURG|BORDEAUX|LILLE|RENNES|REIMS|LE\s+HAVRE|SAINT[\s\-]ETIENNE|TOULON|GRENOBLE|DIJON|ANGERS|NIMES|CLERMONT[\s\-]FERRAND|AIX[\s\-]EN[\s\-]PROVENCE|BREST|TOURS|AMIENS|LIMOGES|ANNECY|PERPIGNAN|METZ|BESANCON|ORLEANS|ROUEN|MULHOUSE|CAEN|NANCY|AVIGNON|CERGY|VERSAILLES|NANTERRE|COURBEVOIE|BOULOGNE|MONTREUIL|VINCENNES|NEUILLY|LEVALLOIS|ISSY)(?:\s+\d{1,3})?\s*$/i, '');
     return m.replace(/\s{2,}/g, ' ').trim() || clean;
   },
 
@@ -740,6 +742,16 @@ const BankImport = {
   _esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+
+  // Bandeau d'erreur Gemini (fenêtre 3) : message clair et actionnable si quota gratuit à 0.
+  _geminiErrorNote() {
+    const e = GeminiCat._lastError || '';
+    if (e.indexOf('GEMINI_QUOTA:') === 0) {
+      const models = this._esc(e.slice('GEMINI_QUOTA:'.length).replace(/,/g, ', '));
+      return `<div class="bank-import-note bank-note-warn">⚠️ <strong>Quota gratuit Gemini épuisé / indisponible</strong> sur ton projet Google (modèles essayés : ${models} — tous en « limit: 0 »).<br>→ Crée une <strong>nouvelle clé</strong> sur aistudio.google.com (nouveau projet), ou active la facturation. En attendant, les libellés sont <strong>simplifiés localement</strong> et catégorisés par mots-clés.</div>`;
+    }
+    return `<div class="bank-import-note bank-note-warn">⚠️ <strong>Gemini n'a pas répondu</strong> — ${this._esc(e)}. Libellés simplifiés localement, catégories par mots-clés.</div>`;
   },
 
   // Étape 2 (réduction au commerçant) appliquée EN PLACE à un lot de transactions.
@@ -1047,7 +1059,7 @@ const BankImport = {
       ? `<div class="bank-import-note bank-note-ok">🔒 <strong>Détection 100 % locale</strong> — rien n'a encore été envoyé. ${hasGemini ? 'En validant, seuls les <strong>libellés nettoyés</strong> (sans montant, date ni n° de carte) seront envoyés à Gemini pour la mise en forme du commerçant et la catégorisation.' : 'Configurez Gemini pour la mise en forme IA, ou continuez avec les catégories par mots-clés.'}</div>`
       : (hasGemini
           ? (GeminiCat._lastError
-              ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>Gemini n'a pas répondu</strong> — ${this._esc(GeminiCat._lastError)}. Libellés simplifiés localement, catégories par mots-clés.</div>`
+              ? this._geminiErrorNote()
               : `<div class="bank-import-note bank-note-ok">🤖 <strong>Commerçants mis en forme &amp; catégorisés par Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés nettoyés ont été envoyés.</span></div>`)
           : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés (pas de clé Gemini). <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`);
     const dupNote = dupCount
