@@ -5930,6 +5930,7 @@ const GeminiCat = {
   _CACHE_KEY:  'invest_gemini_cache',
   _CATMAP_KEY: 'invest_cat_map_cache', // correspondances « catégorie du fichier » → catégorie de l'app
   _MODEL:     'gemini-2.0-flash-lite', // modèle gratuit Google AI Studio
+  _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
   saveApiKey(key) {
@@ -6002,8 +6003,10 @@ const GeminiCat = {
           if (key && cat.name) updatedCache[key] = cat;   // on ne cache que si on a un nom
         }
         this._saveCache(updatedCache);
+        this._lastError = '';
       } catch (err) {
-        console.warn('[GeminiCat] Fallback mots-clés (' + err.message + ')');
+        this._lastError = err.message || String(err);
+        console.warn('[GeminiCat] Fallback mots-clés (' + this._lastError + ')');
         for (const label of toFetch) result[label] = fallback(label);
       }
     } else {
@@ -7558,6 +7561,22 @@ const BankImport = {
     return t.length >= 4 && digits >= 2;                     // AB12, X1Y2 (mais pas G20, M6)
   },
 
+  // Repli local (sans IA) : réduit un libellé déjà nettoyé au nom du commerçant en
+  // retirant les préfixes de type d'opération et « A <ville> » en fin. Léger — Gemini fait mieux.
+  _localMerchant(clean) {
+    let m = String(clean || '').trim();
+    // (?![A-Za-z]) : le préfixe doit être un mot entier (CARTE, pas CARTER).
+    const PREF = /^(?:PAIEMENTS?|PAIMNT|ACHATS?|ABONNEMENTS?|FACTURE\(?S?\)?|VIR(?:EMENT)?|PR[EÉ]?LV|PR[EÉ]L[EÈ]VEMENTS?|RETRAITS?|CB|CARTE|SEPA|RE[CÇ]U|EMIS|INST(?:ANTANE)?|PERMANENT|DAB|GAB|REMISE|DE|POUR|DU)(?![A-Za-zÀ-ÿ])[\s:.()\-\/]*/i;
+    let prev;
+    do {
+      prev = m;
+      m = m.replace(/^[^A-Za-zÀ-ÿ0-9]+/, ''); // ponctuation / slash en tête (ex. « /DE »)
+      m = m.replace(PREF, '');                 // un préfixe de type d'opération
+    } while (m !== prev && m);
+    m = m.replace(/\s+[AÀ]\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-]+\s*$/i, ''); // « ... A REIMS »
+    return m.replace(/\s{2,}/g, ' ').trim() || clean;
+  },
+
   // Échappement HTML minimal (libellés de relevé injectés dans l'aperçu).
   _esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
@@ -7606,6 +7625,13 @@ const BankImport = {
     window._bankTransactions = txns;
 
     const allCats = Storage.getCategories();
+    const pending = t => !t.needsReview && !t._catResolved;
+
+    // Repli LOCAL : réduit déjà le libellé au commerçant (retire préfixes d'opération
+    // + « A <ville> »). Garantit une fenêtre 3 distincte de la 2 même si Gemini échoue
+    // ou n'est pas configuré ; Gemini affine ensuite (nom + catégorie) si possible.
+    txns.forEach(t => { if (pending(t)) t.description = this._localMerchant(t.descriptionClean); });
+
     if (GeminiCat.getApiKey()) {
       Modal.open('Catégorisation IA…', `
         <div style="text-align:center;padding:52px 20px">
@@ -7619,8 +7645,7 @@ const BankImport = {
         await this._resolveFuzzyCategories(txns, allCats);
       }
       // Mise en forme du libellé + catégorisation, sur les libellés NETTOYÉS uniquement.
-      const pending = t => !t.needsReview && !t._catResolved;
-      const labels  = txns.filter(pending).map(t => t.descriptionClean);
+      const labels = txns.filter(pending).map(t => t.descriptionClean);
       if (labels.length) {
         const catMap = await GeminiCat.categorize(labels, allCats);
         txns.forEach(t => { if (pending(t)) this._applyCatResult(t, catMap, allCats); });
@@ -7862,7 +7887,9 @@ const BankImport = {
     const note = isLocal
       ? `<div class="bank-import-note bank-note-ok">🔒 <strong>Détection 100 % locale</strong> — rien n'a encore été envoyé. ${hasGemini ? 'En validant, seuls les <strong>libellés nettoyés</strong> (sans montant, date ni n° de carte) seront envoyés à Gemini pour la mise en forme du commerçant et la catégorisation.' : 'Configurez Gemini pour la mise en forme IA, ou continuez avec les catégories par mots-clés.'}</div>`
       : (hasGemini
-          ? `<div class="bank-import-note bank-note-ok">🤖 <strong>Commerçants mis en forme &amp; catégorisés par Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés nettoyés ont été envoyés.</span></div>`
+          ? (GeminiCat._lastError
+              ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>Gemini n'a pas répondu</strong> — ${this._esc(GeminiCat._lastError)}. Libellés simplifiés localement, catégories par mots-clés.</div>`
+              : `<div class="bank-import-note bank-note-ok">🤖 <strong>Commerçants mis en forme &amp; catégorisés par Gemini.</strong> <span class="privacy-badge">🔒 Seuls les libellés nettoyés ont été envoyés.</span></div>`)
           : `<div class="bank-import-note bank-note-warn">💡 Catégories par mots-clés (pas de clé Gemini). <a href="#" onclick="BankImport.openSettings();return false">Configurer Gemini gratuit →</a></div>`);
     const dupNote = dupCount
       ? `<div class="bank-import-note bank-note-warn">⚠️ <strong>${dupCount} doublon(s) détecté(s)</strong> et décochés — cochez-les pour forcer l'import.</div>`

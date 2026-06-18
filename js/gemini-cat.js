@@ -8,6 +8,7 @@ const GeminiCat = {
   _CACHE_KEY:  'invest_gemini_cache',
   _CATMAP_KEY: 'invest_cat_map_cache', // correspondances « catégorie du fichier » → catégorie de l'app
   _MODEL:     'gemini-2.0-flash-lite', // modèle gratuit Google AI Studio
+  _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
   saveApiKey(key) {
@@ -80,8 +81,10 @@ const GeminiCat = {
           if (key && cat.name) updatedCache[key] = cat;   // on ne cache que si on a un nom
         }
         this._saveCache(updatedCache);
+        this._lastError = '';
       } catch (err) {
-        console.warn('[GeminiCat] Fallback mots-clés (' + err.message + ')');
+        this._lastError = err.message || String(err);
+        console.warn('[GeminiCat] Fallback mots-clés (' + this._lastError + ')');
         for (const label of toFetch) result[label] = fallback(label);
       }
     } else {
