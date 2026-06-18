@@ -50,42 +50,43 @@ const GeminiCat = {
     const result  = {};
     const toFetch = [];
 
-    // Séparation : libellés connus (cache) vs inconnus (à envoyer à Gemini)
+    // Le cache n'est valable que s'il contient DÉJÀ le nom mis en forme (name).
+    // Les anciennes entrées (sans name) sont redemandées à Gemini pour l'obtenir —
+    // sinon la fenêtre 3 afficherait le libellé nettoyé tel quel (= fenêtre 2).
     for (const label of labels) {
-      const key = this._normalize(label);
-      if (cache[key]) {
-        result[label] = cache[key];
+      const c = cache[this._normalize(label)];
+      if (c && c.name) {
+        result[label] = c;
       } else {
-        result[label] = null;
+        result[label] = c || null;   // garde la catégorie connue comme repli
         toFetch.push(label);
       }
     }
 
     if (!toFetch.length) return result;
 
-    const apiKey = this.getApiKey();
+    const apiKey   = this.getApiKey();
+    const fallback = label => cache[this._normalize(label)]
+      || { name: '', category: guessCategory(label), subcategory: '' };
+
     if (apiKey) {
       try {
         const geminiResult = await this._callGemini(toFetch, userCategories);
         const updatedCache = this._getCache();
         for (const label of toFetch) {
-          const cat = geminiResult[label] || { name: '', category: guessCategory(label), subcategory: '' };
+          const cat = geminiResult[label] || fallback(label);
           result[label] = cat;
           const key = this._normalize(label);
-          if (key) updatedCache[key] = cat;
+          if (key && cat.name) updatedCache[key] = cat;   // on ne cache que si on a un nom
         }
         this._saveCache(updatedCache);
       } catch (err) {
         console.warn('[GeminiCat] Fallback mots-clés (' + err.message + ')');
-        for (const label of toFetch) {
-          result[label] = { name: '', category: guessCategory(label), subcategory: '' };
-        }
+        for (const label of toFetch) result[label] = fallback(label);
       }
     } else {
       // Pas de clé API → fallback silencieux sur la détection par mots-clés
-      for (const label of toFetch) {
-        result[label] = { name: '', category: guessCategory(label), subcategory: '' };
-      }
+      for (const label of toFetch) result[label] = fallback(label);
     }
 
     return result;
@@ -110,11 +111,17 @@ const GeminiCat = {
     const labelLines = labels.map((l, i) => `${i + 1}. "${l}"`).join('\n');
 
     const prompt =
-`Voici une liste de libellés de transactions bancaires françaises (déjà nettoyés).
-Pour chacun, donne :
-- "n" : le nom du commerçant / fournisseur SEUL, lisible et mis en forme (ex. "SNCF", "Carrefour", "Opmobility", "Netflix") — sans dates, codes ni mentions techniques ;
+`Tu nettoies et catégorises des libellés de transactions bancaires françaises.
+Pour chaque libellé, donne :
+- "n" : UNIQUEMENT le nom de l'enseigne / du commerçant / du fournisseur, le plus court et lisible possible, avec une majuscule initiale. RETIRE absolument tout le reste : type d'opération (PAIEMENT, CB, CARTE, VIR, VIREMENT, PRLV, PRELEVEMENT, RETRAIT, FACTURE…), villes et « A <ville> », codes, références, mentions techniques. Si tu ne reconnais aucune enseigne, garde le mot principal le plus parlant.
 - "c" : LA catégorie la plus adaptée, choisie UNIQUEMENT dans la liste ci-dessous ;
 - "s" : LA sous-catégorie (même liste), ou "" si aucune ne convient.
+
+Exemples pour "n" :
+"PAIEMENT CB CARREFOUR A REIMS" → "Carrefour"
+"VIR SEPA RECU /DE OPMOBILITY GESTION" → "Opmobility"
+"PRELEVEMENT BOUYGUES TELECOM" → "Bouygues Telecom"
+"PAIEMENT CB SNCF-VOYAGEURS PARIS 10" → "SNCF"
 
 Catégories disponibles :
 ${catBlock}
@@ -123,7 +130,7 @@ Libellés :
 ${labelLines}
 
 Réponds UNIQUEMENT en JSON valide, sans aucun texte autour :
-{"r":[{"i":1,"n":"nom commerçant","c":"catégorie","s":"sous-catégorie ou vide"}]}`;
+{"r":[{"i":1,"n":"Carrefour","c":"catégorie","s":"sous-catégorie ou vide"}]}`;
 
 
     const resp = await fetch(
