@@ -12,6 +12,7 @@ const GeminiCat = {
   // Le premier modèle qui répond est mémorisé (localStorage 'gemini_model').
   _MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'],
   _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
+  _PROMPT_V: 3,                        // version du prompt — bumper invalide les noms en cache (re-demande à Gemini)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
   saveApiKey(key) {
@@ -41,7 +42,7 @@ const GeminiCat = {
     const key = this._normalize(rawLabel);
     if (!key) return;
     const cache = this._getCache();
-    cache[key] = { ...cache[key], category, subcategory: subcategory || '' }; // conserve le nom mis en forme s'il existe
+    cache[key] = { ...cache[key], category, subcategory: subcategory || '', _learned: true }; // correction manuelle : prioritaire, jamais redemandée
     this._saveCache(cache);
   },
 
@@ -59,7 +60,8 @@ const GeminiCat = {
     // sinon la fenêtre 3 afficherait le libellé nettoyé tel quel (= fenêtre 2).
     for (const label of labels) {
       const c = cache[this._normalize(label)];
-      if (c && c.name) {
+      // Valide si : nom présent ET (correction manuelle OU version de prompt à jour).
+      if (c && c.name && (c._learned || c._v === this._PROMPT_V)) {
         result[label] = c;
       } else {
         result[label] = c || null;   // garde la catégorie connue comme repli
@@ -81,7 +83,7 @@ const GeminiCat = {
           const cat = geminiResult[label] || fallback(label);
           result[label] = cat;
           const key = this._normalize(label);
-          if (key && cat.name) updatedCache[key] = cat;   // on ne cache que si on a un nom
+          if (key && cat.name) updatedCache[key] = { ...cat, _v: this._PROMPT_V }; // cache + version
         }
         this._saveCache(updatedCache);
         this._lastError = '';
@@ -166,7 +168,7 @@ const GeminiCat = {
     const prompt =
 `Tu nettoies et catégorises des libellés de transactions bancaires françaises.
 Pour chaque libellé, donne :
-- "n" : UNIQUEMENT le nom de l'enseigne / du commerçant / du fournisseur, le plus court et lisible possible, avec une majuscule initiale. RETIRE absolument tout le reste : type d'opération (PAIEMENT, CB, CARTE, VIR, VIREMENT, PRLV, PRELEVEMENT, RETRAIT, FACTURE…), villes et « A <ville> », codes, références, mentions techniques. Si tu ne reconnais aucune enseigne, garde le mot principal le plus parlant.
+- "n" : UNIQUEMENT le nom de la MARQUE / enseigne la plus connue et la plus COURTE (le plus souvent 1 seul mot), majuscule initiale. Préfère la marque mère : "SNCF-VOYAGEURS" → "SNCF", "CARREFOUR MARKET" → "Carrefour", "AMAZON PAYMENTS" → "Amazon", "PAYPAL *SPOTIFY" → "Spotify". RETIRE tout le reste : type d'opération (PAIEMENT, CB, CARTE, VIR, VIREMENT, PRLV, PRELEVEMENT, RETRAIT, FACTURE…), villes et « A <ville> », codes, références, formes juridiques (SARL, SAS, SA), mentions techniques (GESTION, SERVICES…). Si tu ne reconnais aucune enseigne, garde le seul mot principal le plus parlant.
 - "c" : LA catégorie la plus adaptée, choisie UNIQUEMENT dans la liste ci-dessous ;
 - "s" : LA sous-catégorie (même liste), ou "" si aucune ne convient.
 
@@ -175,6 +177,8 @@ Exemples pour "n" :
 "VIR SEPA RECU /DE OPMOBILITY GESTION" → "Opmobility"
 "PRELEVEMENT BOUYGUES TELECOM" → "Bouygues Telecom"
 "PAIEMENT CB SNCF-VOYAGEURS PARIS 10" → "SNCF"
+"CB CARREFOUR MARKET REIMS" → "Carrefour"
+"DU 270426 FNAC DARTY PARIS 04" → "Fnac"
 
 Catégories disponibles :
 ${catBlock}
