@@ -7593,9 +7593,13 @@ const BankImport = {
       m = m.replace(/^[^A-Za-zÀ-ÿ0-9]+/, ''); // ponctuation / slash en tête (ex. « /DE »)
       m = m.replace(PREF, '');                 // un préfixe de type d'opération
     } while (m !== prev && m);
-    m = m.replace(/\s+[AÀ]\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-]+\s*$/i, ''); // « ... A REIMS »
-    // Grande ville (+ arrondissement éventuel) en fin de libellé, si un nom subsiste avant.
-    m = m.replace(/\s+(?:PARIS|MARSEILLE|LYON|TOULOUSE|NICE|NANTES|MONTPELLIER|STRASBOURG|BORDEAUX|LILLE|RENNES|REIMS|LE\s+HAVRE|SAINT[\s\-]ETIENNE|TOULON|GRENOBLE|DIJON|ANGERS|NIMES|CLERMONT[\s\-]FERRAND|AIX[\s\-]EN[\s\-]PROVENCE|BREST|TOURS|AMIENS|LIMOGES|ANNECY|PERPIGNAN|METZ|BESANCON|ORLEANS|ROUEN|MULHOUSE|CAEN|NANCY|AVIGNON|CERGY|VERSAILLES|NANTERRE|COURBEVOIE|BOULOGNE|MONTREUIL|VINCENNES|NEUILLY|LEVALLOIS|ISSY)(?:\s+\d{1,3})?\s*$/i, '');
+    // Quartier d'affaires (« PARIS LA DEFENSE » / « LA DEFE ») en fin → retiré d'abord.
+    m = m.replace(/\s+LA\s+D[EÉ]FEN?S?E?\b\s*$/i, '');
+    // « A <ville> [arrondissement] » ou « <ville> [arrondissement] » en fin de libellé.
+    m = m.replace(/\s+(?:[AÀ]\s+)?(?:PARIS|MARSEILLE|LYON|TOULOUSE|NICE|NANTES|MONTPELLIER|STRASBOURG|BORDEAUX|LILLE|RENNES|REIMS|LE\s+HAVRE|SAINT[\s\-]ETIENNE|TOULON|GRENOBLE|DIJON|ANGERS|NIMES|CLERMONT[\s\-]FERRAND|AIX[\s\-]EN[\s\-]PROVENCE|BREST|TOURS|AMIENS|LIMOGES|ANNECY|PERPIGNAN|METZ|BESANCON|ORLEANS|ROUEN|MULHOUSE|CAEN|NANCY|AVIGNON|CERGY|VERSAILLES|NANTERRE|COURBEVOIE|BOULOGNE|MONTREUIL|VINCENNES|NEUILLY|LEVALLOIS|ISSY)(?:\s+\d{1,3})?\s*$/i, '');
+    // « A <lieu non listé> » en fin (ex. « A GEISPOLSHEIM »), puis « A » résiduel.
+    m = m.replace(/\s+[AÀ]\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-]+\s*$/i, '');
+    m = m.replace(/\s+[AÀ]\s*$/i, '');
     return m.replace(/\s{2,}/g, ' ').trim() || clean;
   },
 
@@ -7657,7 +7661,11 @@ const BankImport = {
     window._bankTransactions = txns;
 
     const allCats = Storage.getCategories();
-    const pending = t => !t.needsReview && !t._catResolved;
+    // Le nettoyage du LIBELLÉ (→ nom du commerçant) s'applique à TOUTES les lignes,
+    // y compris celles dont la catégorie vient déjà du fichier (#3) — sinon, sur un
+    // Excel avec colonne « Catégorie », ces lignes resteraient brutes (≠ PDF).
+    // La catégorie du fichier reste prioritaire (gérée dans _applyCatResult).
+    const pending = t => !t.needsReview;
 
     // Repli LOCAL : réduit déjà le libellé au commerçant (retire préfixes d'opération
     // + « A <ville> »). Garantit une fenêtre 3 distincte de la 2 même si Gemini échoue
@@ -7818,6 +7826,9 @@ const BankImport = {
     // Nom du commerçant mis en forme par Gemini → devient le libellé affiché/importé
     // (sinon on garde le libellé nettoyé). Le nettoyé reste la clé de cache (descriptionClean).
     if (result.name) t.description = result.name;
+    // Catégorie : si elle a déjà été résolue depuis le fichier (#3), elle est
+    // prioritaire — on garde, on ne touche QUE le nom ci-dessus.
+    if (t._catResolved) return;
     if (t.isRevenue) {
       const revCat = this._revenueCat(allCats);
       t.category = revCat.name;
