@@ -12,7 +12,7 @@ const GeminiCat = {
   // Le premier modèle qui répond est mémorisé (localStorage 'gemini_model').
   _MODELS: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'],
   _lastError: '',                      // dernière erreur d'appel Gemini (affichée dans l'aperçu)
-  _PROMPT_V: 3,                        // version du prompt — bumper invalide les noms en cache (re-demande à Gemini)
+  _PROMPT_V: 4,                        // version du prompt — bumper invalide les noms en cache (re-demande à Gemini)
 
   getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
   saveApiKey(key) {
@@ -168,17 +168,19 @@ const GeminiCat = {
     const prompt =
 `Tu nettoies et catégorises des libellés de transactions bancaires françaises.
 Pour chaque libellé, donne :
-- "n" : UNIQUEMENT le nom de la MARQUE / enseigne la plus connue et la plus COURTE (le plus souvent 1 seul mot), majuscule initiale. Préfère la marque mère : "SNCF-VOYAGEURS" → "SNCF", "CARREFOUR MARKET" → "Carrefour", "AMAZON PAYMENTS" → "Amazon", "PAYPAL *SPOTIFY" → "Spotify". RETIRE tout le reste : type d'opération (PAIEMENT, CB, CARTE, VIR, VIREMENT, PRLV, PRELEVEMENT, RETRAIT, FACTURE…), villes et « A <ville> », codes, références, formes juridiques (SARL, SAS, SA), mentions techniques (GESTION, SERVICES…). Si tu ne reconnais aucune enseigne, garde le seul mot principal le plus parlant.
+- "n" : le nom CLAIR et reconnaissable du commerçant, de l'enseigne ou de l'organisme, tel qu'une personne le dirait. Garde le nom complet utile (ex. "Neoma Business School", "Comité Entreprise Plastic Omnium") mais RETIRE le bruit : type d'opération (PAIEMENT, CB, CARTE, VIR, VIREMENT, PRLV, PRELEVEMENT, RETRAIT, FACTURE…), dates, codes, références, villes et « A <ville> », pays/lieu entre parenthèses, formes juridiques (SARL, SAS, SA), mentions techniques (GESTION, SERVICES, ID…). Pour une grande marque, utilise son nom usuel court ("SNCF" pas "SNCF-Voyageurs", "Fnac" pas "Fnac Darty"). Pour un virement de/vers une personne, garde le nom de la personne. Majuscule initiale.
 - "c" : LA catégorie la plus adaptée, choisie UNIQUEMENT dans la liste ci-dessous ;
 - "s" : LA sous-catégorie (même liste), ou "" si aucune ne convient.
 
 Exemples pour "n" :
 "PAIEMENT CB CARREFOUR A REIMS" → "Carrefour"
 "VIR SEPA RECU /DE OPMOBILITY GESTION" → "Opmobility"
-"PRELEVEMENT BOUYGUES TELECOM" → "Bouygues Telecom"
 "PAIEMENT CB SNCF-VOYAGEURS PARIS 10" → "SNCF"
-"CB CARREFOUR MARKET REIMS" → "Carrefour"
-"DU 270426 FNAC DARTY PARIS 04" → "Fnac"
+"VIREMENT DE EESC NEOMA BUSINESS SCHOOL BOURSES REIMS" → "Neoma Business School"
+"VIREMENT INSTANTANE RECU DE MLE JULIETTE FAIVRE" → "Juliette Faivre"
+"PAIEMENT CB CLAUDE.AI SUBSC (ETATS-UNIS)" → "Claude.ai"
+"PAIEMENT CB AIRBNB (LUXEMBOURG)" → "Airbnb"
+"RETRAIT DISTRIBUTEUR BP ALSACE LORRAINE C A STRASBOURG" → "Retrait DAB"
 
 Catégories disponibles :
 ${catBlock}
