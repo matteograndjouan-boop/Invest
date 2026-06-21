@@ -7433,13 +7433,20 @@ const BankImport = {
         }
       }
 
-      transactions.push({ date, description: desc || 'Opération', amount, isRevenue,
+      // Pas de libellé dans le fichier mais une catégorie/sous-catégorie fournie →
+      // le libellé reprend la SOUS-CATÉGORIE (sinon la catégorie). Marqué _fixedLabel :
+      // rien à extraire comme commerçant → ni repli local, ni renommage Gemini.
+      const fixedLabel = !desc && !!(fileSubcat || fileCat);
+      const descFinal  = desc || (fixedLabel ? (fileSubcat || fileCat) : 'Opération');
+
+      transactions.push({ date, description: descFinal, amount, isRevenue,
         category, subcategory,
         ...(effectiveDate && { effectiveDate }),
         ...(fileCat && !isRevenue && { fileCat }),
         ...(fileSubcat && !isRevenue && { fileSubcat }),
         ...(catOrigin && { catOrigin }),
-        ...(catResolved && { _catResolved: true }) });
+        ...(catResolved && { _catResolved: true }),
+        ...(fixedLabel && { _fixedLabel: true }) });
     }
     return transactions;
   },
@@ -7627,7 +7634,8 @@ const BankImport = {
   _cleanLabels(transactions, allCats) {
     transactions.forEach(t => {
       const raw     = t.descriptionRaw || t.description || '';
-      const cleaned = this._cleanLabel(raw);
+      // Libellé fixe (= sous-catégorie d'une ligne sans libellé) : gardé tel quel, sans nettoyage.
+      const cleaned = t._fixedLabel ? raw.trim() : this._cleanLabel(raw);
       t.descriptionRaw = raw;
       // descriptionClean = libellé minimal : affiché en fenêtre 2, sert de clé de cache
       // et c'est CE texte (et lui seul) qui part à Gemini. t.description en part, puis sera
@@ -7667,7 +7675,8 @@ const BankImport = {
     // y compris celles dont la catégorie vient déjà du fichier (#3) — sinon, sur un
     // Excel avec colonne « Catégorie », ces lignes resteraient brutes (≠ PDF).
     // La catégorie du fichier reste prioritaire (gérée dans _applyCatResult).
-    const pending = t => !t.needsReview;
+    // _fixedLabel = libellé déjà fixé sur la sous-catégorie (ligne sans libellé) : on n'y touche pas.
+    const pending = t => !t.needsReview && !t._fixedLabel;
 
     // Repli LOCAL : réduit déjà le libellé au commerçant (retire préfixes d'opération
     // + « A <ville> »). Garantit une fenêtre 3 distincte de la 2 même si Gemini échoue
