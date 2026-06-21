@@ -108,7 +108,20 @@ const Categories = {
     const revenues = Storage.getRevenues();
     const dt       = t => Utils.getExpenseDate(t); // respecte le toggle comptable/effective
 
+    // Fusionne des anciens noms (alias) sans doublon ni le nom courant : l'import les
+    // reconnaît (ex. un relevé étiqueté « Alimentation » après renommage en « Courses »).
+    const nn = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const mergeAliases = (list, selfName) => {
+      const out = [];
+      list.forEach(a => {
+        if (!a || nn(a) === nn(selfName) || out.some(x => nn(x) === nn(a))) return;
+        out.push(a);
+      });
+      return out;
+    };
+
     if (scope === 'all') {
+      cat.aliases = mergeAliases([...(cat.aliases || []), oldName], newName);
       cat.name = newName;
       delete cat.obsolete; delete cat.versionNote;
       [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName) t.category = newName; }));
@@ -129,6 +142,9 @@ const Categories = {
         cat.obsolete    = true;
         cat.versionNote = `Remplacée par « ${newName} » depuis le ${fmt(today)} — anciennes transactions`;
         newCat.versionNote = `Remplace « ${oldName} » depuis le ${fmt(today)}`;
+        // L'ancien nom doit désormais router les imports vers la NOUVELLE catégorie active.
+        newCat.aliases = mergeAliases([...(cat.aliases || []), oldName], newName);
+        cat.aliases    = [];
       } else if (scope === 'past') {
         newCat.obsolete    = true;
         newCat.versionNote = `« ${oldName} » d'avant aujourd'hui, renommées — inactive pour les nouvelles`;

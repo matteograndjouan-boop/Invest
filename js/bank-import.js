@@ -943,7 +943,16 @@ const BankImport = {
   _matchCat(name, allCats) {
     if (!name) return null;
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
-    return allCats.find(c => n(c.name) === n(name)) || null;
+    const target = n(name);
+    const active = allCats.filter(c => !c.obsolete);
+    // Priorité : catégorie ACTIVE par son nom courant, puis par un ancien nom mémorisé
+    // (alias après un renommage) — pour qu'un import étiqueté « Alimentation » retombe
+    // sur « Courses » si la catégorie a été renommée. Repli sur n'importe quelle catégorie.
+    return active.find(c => n(c.name) === target)
+        || active.find(c => (c.aliases || []).some(a => n(a) === target))
+        || allCats.find(c => n(c.name) === target)
+        || allCats.find(c => (c.aliases || []).some(a => n(a) === target))
+        || null;
   },
   _matchSubcat(cat, subName) {
     if (!cat || !subName) return '';
