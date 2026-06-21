@@ -73,6 +73,11 @@ const Storage = {
   },
   saveCategories(data) { this.set(this.KEYS.CATEGORIES, data); },
 
+  // Catégories proposées pour les NOUVELLES transactions (saisie/import) : exclut les
+  // versions devenues obsolètes après un renommage à portée (futures/passées).
+  // Les obsolètes restent dans getCategories() pour l'affichage des anciennes données.
+  getActiveCategories() { return this.getCategories().filter(c => !c.obsolete); },
+
   exportAll() {
     return {
       investments: this.getInvestments(),

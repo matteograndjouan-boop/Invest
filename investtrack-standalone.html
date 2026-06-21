@@ -1091,6 +1091,19 @@ input:focus:not(:focus-visible) { outline: none; }
 @keyframes dndLineAppear { from { opacity: 0; } to { opacity: 1; } }
 .category-card.dnd-ghost { opacity: 0.3; }
 .category-card.editing { border-color: var(--primary); }
+/* Catégorie devenue inactive après un renommage à portée (futures/passées) */
+.category-card.cat-obsolete { opacity: 0.72; background: repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(0,0,0,0.025) 9px, rgba(0,0,0,0.025) 18px); }
+.category-card.cat-obsolete h3 { text-decoration: line-through; color: var(--text-muted); }
+.cat-obsolete-badge { background: #fee2e2; color: #b91c1c; font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+.cat-version-note { font-size: 0.72rem; color: var(--text-muted); padding: 0.3rem 1rem; font-style: italic; border-bottom: 1px dashed var(--border); }
+.cat-rename-btn { padding: 4px 10px; font-size: 0.8rem; font-weight: 500; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.cat-rename-btn:hover { border-color: var(--primary); color: var(--primary); }
+/* Modal de renommage : choix de portée */
+.rename-scope { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.4rem 0; cursor: pointer; font-size: 0.85rem; line-height: 1.35; }
+.rename-scope input[type="radio"] { margin-top: 0.2rem; }
+.rename-scope small { color: var(--text-muted); }
+.rename-scope input[type="date"] { padding: 2px 6px; font-size: 0.8rem; }
+.rename-hint { font-size: 0.72rem; color: var(--text-muted); margin: 0.25rem 0 0; }
 .category-card-header {
   display: flex;
   align-items: center;
@@ -2415,6 +2428,11 @@ const Storage = {
     return defaults;
   },
   saveCategories(data) { this.set(this.KEYS.CATEGORIES, data); },
+
+  // Catégories proposées pour les NOUVELLES transactions (saisie/import) : exclut les
+  // versions devenues obsolètes après un renommage à portée (futures/passées).
+  // Les obsolètes restent dans getCategories() pour l'affichage des anciennes données.
+  getActiveCategories() { return this.getCategories().filter(c => !c.obsolete); },
 
   exportAll() {
     return {
@@ -4645,12 +4663,15 @@ const Categories = {
         </div>` : '';
 
       return `
-        <div class="category-card${editing ? ' editing' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
+        <div class="category-card${editing ? ' editing' : ''}${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
           <div class="category-card-header">
             <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)">⠿</span>
             <h3>${cat.name}</h3>
+            ${cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : ''}
+            ${editing ? `<button class="cat-rename-btn" onclick="Categories._openRenameCat('${cat.id}')" title="Renommer">✏️ Renommer</button>` : ''}
             ${!editing ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>` : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">Terminer</button>`}
           </div>
+          ${cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : ''}
           <div class="subcat-list" data-cat-id="${cat.id}">
             ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
           </div>
@@ -4661,6 +4682,107 @@ const Categories = {
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
   _stopEdit()       { this._editingCatId = null;  this.render(); },
+
+  // ---- Renommage d'une catégorie, avec portée temporelle ----
+  //
+  // 4 portées (la date de transaction respecte le toggle comptable/effective) :
+  //  • Toutes    : renommage simple, toutes les transactions migrent, rien ne se duplique.
+  //  • Futures   : l'ancienne devient INACTIVE, la nouvelle (active) reçoit les futures.
+  //  • Passées   : les transactions passées migrent vers la nouvelle (INACTIVE) ; l'ancienne reste active.
+  //  • Période   : les transactions de la plage migrent ; les DEUX coexistent (aucune inactive),
+  //                avec une mention « valable du… au… » sur chacune.
+  _openRenameCat(catId) {
+    const cat = Storage.getCategories().find(c => c.id === catId);
+    if (!cat) return;
+    Modal.open(`Renommer « ${cat.name} »`, `
+      <form onsubmit="Categories._confirmRename(event,'${catId}')">
+        <div class="form-group">
+          <label>Nouveau nom</label>
+          <input name="newname" class="form-input" required autofocus value="${cat.name}" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label>Appliquer le nouveau nom à :</label>
+          <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple, rien ne se duplique</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="future"> <span><strong>Uniquement les futures</strong> <small>— les passées gardent l'ancien nom</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="past"> <span><strong>Uniquement les passées</strong> <small>— les futures gardent l'ancien nom</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> <small>du</small> <input type="date" name="from"> <small>au</small> <input type="date" name="to"></span></label>
+        </div>
+        <p class="rename-hint">↪ Le découpage passé/futur utilise la date <strong>${Storage.getDateMode() === 'effective' ? 'effective' : 'comptable'}</strong> (réglable via le toggle de période).</p>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Appliquer</button>
+        </div>
+      </form>`);
+  },
+
+  _confirmRename(event, catId) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const newName = (fd.get('newname') || '').trim();
+    const scope = fd.get('scope');
+    const from = fd.get('from'), to = fd.get('to');
+    if (scope === 'period' && (!from || !to)) { alert('Choisissez une date de début et de fin.'); return; }
+    if (scope === 'period' && from > to)       { alert('La date de début doit précéder la date de fin.'); return; }
+    this._applyRename(catId, newName, scope, from, to);
+  },
+
+  _applyRename(catId, newName, scope, from, to) {
+    const cats = Storage.getCategories();
+    const cat  = cats.find(c => c.id === catId);
+    if (!cat) return;
+    const oldName = cat.name;
+    if (!newName || newName === oldName) { Modal.close(); return; }
+    if (cats.some(c => c.id !== catId && c.name.toLowerCase() === newName.toLowerCase())) {
+      alert('Une catégorie porte déjà ce nom.'); return;
+    }
+
+    const today    = new Date().toISOString().slice(0, 10);
+    const fmt      = d => Utils.formatDate(d);
+    const expenses = Storage.getExpenses();
+    const revenues = Storage.getRevenues();
+    const dt       = t => Utils.getExpenseDate(t); // respecte le toggle comptable/effective
+
+    if (scope === 'all') {
+      cat.name = newName;
+      delete cat.obsolete; delete cat.versionNote;
+      [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName) t.category = newName; }));
+    } else {
+      let inScope;
+      if (scope === 'future')    inScope = t => dt(t) >= today;
+      else if (scope === 'past') inScope = t => dt(t) <  today;
+      else                       inScope = t => { const d = dt(t); return d >= from && d <= to; };
+
+      // Réaffecte au nouveau nom les transactions DANS la portée.
+      [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName && inScope(t)) t.category = newName; }));
+
+      // Nouvelle catégorie (copie des sous-catégories) ; l'ancienne reste pour le hors-portée.
+      const newCat = { id: 'cat_' + Date.now(), name: newName, subcategories: [...cat.subcategories] };
+      delete cat.obsolete; delete cat.versionNote;
+
+      if (scope === 'future') {
+        cat.obsolete    = true;
+        cat.versionNote = `Remplacée par « ${newName} » depuis le ${fmt(today)} — anciennes transactions`;
+        newCat.versionNote = `Remplace « ${oldName} » depuis le ${fmt(today)}`;
+      } else if (scope === 'past') {
+        newCat.obsolete    = true;
+        newCat.versionNote = `« ${oldName} » d'avant aujourd'hui, renommées — inactive pour les nouvelles`;
+        cat.versionNote    = `Active · coexiste avec « ${newName} » (transactions passées renommées)`;
+      } else { // période — aucune inactive
+        newCat.versionNote = `Valable du ${fmt(from)} au ${fmt(to)}`;
+        cat.versionNote    = `Valable hors du ${fmt(from)} – ${fmt(to)}`;
+      }
+
+      const idx = cats.findIndex(c => c.id === catId);
+      cats.splice(idx + 1, 0, newCat);
+    }
+
+    Storage.saveCategories(cats);
+    Storage.saveExpenses(expenses);
+    Storage.saveRevenues(revenues);
+    Modal.close();
+    this.render();
+    if (typeof Expenses !== 'undefined' && Expenses._populateCatFilter) Expenses._populateCatFilter();
+  },
 
   _openAddSubcatModal(catId) {
     const cat = Storage.getCategories().find(c => c.id === catId);
@@ -5171,7 +5293,13 @@ const DataEntry = {
     const type = item?._type || defaultType || 'expense';
     const today = new Date().toISOString().split('T')[0];
 
-    const cats = Storage.getCategories();
+    // Catégories actives pour la saisie ; on conserve la catégorie actuelle de la
+    // transaction éditée même si elle est devenue inactive (renommage à portée).
+    const cats = Storage.getActiveCategories();
+    if (item?.category && !cats.some(c => c.name === item.category)) {
+      const cur = Storage.getCategories().find(c => c.name === item.category);
+      if (cur) cats.push(cur);
+    }
     const catOptions = cats.map(c =>
       `<option value="${c.name}" ${item?.category === c.name ? 'selected' : ''}>${c.name}</option>`
     ).join('');

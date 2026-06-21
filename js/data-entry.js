@@ -274,7 +274,13 @@ const DataEntry = {
     const type = item?._type || defaultType || 'expense';
     const today = new Date().toISOString().split('T')[0];
 
-    const cats = Storage.getCategories();
+    // Catégories actives pour la saisie ; on conserve la catégorie actuelle de la
+    // transaction éditée même si elle est devenue inactive (renommage à portée).
+    const cats = Storage.getActiveCategories();
+    if (item?.category && !cats.some(c => c.name === item.category)) {
+      const cur = Storage.getCategories().find(c => c.name === item.category);
+      if (cur) cats.push(cur);
+    }
     const catOptions = cats.map(c =>
       `<option value="${c.name}" ${item?.category === c.name ? 'selected' : ''}>${c.name}</option>`
     ).join('');
