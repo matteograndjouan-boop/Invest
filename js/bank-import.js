@@ -552,21 +552,31 @@ const BankImport = {
         else if (c && Math.abs(c) > 0) { amount = Math.abs(c); isRevenue = true; }
       }
       if (!amount || amount <= 0) continue;
-      const guess = isRevenue
-        ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
-        : this._smartGuess(desc, allCats);
-
-      // Catégorie/sous-catégorie issues du fichier (étape #3) — dépenses uniquement
-      // (un revenu est toujours rattaché à la catégorie « Revenus »).
       const fileCat    = mapping.category    != null ? String(row[mapping.category]    || '').trim() : '';
       const fileSubcat = mapping.subcategory != null ? String(row[mapping.subcategory] || '').trim() : '';
-      let category = guess.category, subcategory = guess.subcategory, catOrigin, catResolved = false;
-      if (fileCat && !isRevenue) {
-        const exact = this._matchCat(fileCat, allCats); // correspondance exacte (insensible casse/accents/espaces)
-        if (exact) {
-          category    = exact.name;
-          subcategory = fileSubcat ? (this._matchSubcat(exact, fileSubcat) || '') : '';
-          catOrigin = 'file'; catResolved = true;
+
+      // Catégorie/sous-catégorie : on respecte le fichier quand il en fournit (#3),
+      // pour les DÉPENSES comme pour les REVENUS.
+      let category, subcategory, catOrigin, catResolved = false;
+      if (isRevenue) {
+        // Un revenu est toujours rattaché à la catégorie « Revenus ». Sa sous-catégorie
+        // vient du fichier si elle correspond à une sous-catégorie de Revenus, sinon défaut.
+        const revCat = this._revenueCat(allCats);
+        category = revCat.name;
+        const matchedSub = fileSubcat ? this._matchSubcat(revCat, fileSubcat) : '';
+        if (matchedSub) { subcategory = matchedSub; catOrigin = 'file'; catResolved = true; }
+        else subcategory = this._defaultRevenueCat(allCats);
+      } else {
+        // Dépense : catégorie du fichier (correspondance exacte) sinon devinette par mots-clés.
+        const guess = this._smartGuess(desc, allCats);
+        category = guess.category; subcategory = guess.subcategory;
+        if (fileCat) {
+          const exact = this._matchCat(fileCat, allCats); // exact (insensible casse/accents/espaces)
+          if (exact) {
+            category    = exact.name;
+            subcategory = fileSubcat ? (this._matchSubcat(exact, fileSubcat) || '') : '';
+            catOrigin = 'file'; catResolved = true;
+          }
         }
       }
 
