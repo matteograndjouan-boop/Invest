@@ -51,7 +51,7 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 | `js/flux.js` | Onglet Flux (vue cash-flow, cross-filtering façon Power BI sur les catégories). |
 | `js/comparisons.js` | Comparaison entre deux périodes. |
 | `js/budget.js` | Budgets par thème, suivi de consommation. |
-| `js/categories.js` | CRUD des catégories/sous-catégories (drag & drop pour réordonner) + **renommage à portée temporelle** (`_applyRename` : toutes / futures / passées / période ; futures→ancienne `obsolete`, passées→nouvelle `obsolete`, période→coexistence). Mémorise les anciens noms en `aliases` pour la correspondance d'import. |
+| `js/categories.js` | CRUD des catégories/sous-catégories (drag & drop pour réordonner) + **renommage à portée temporelle** (`_applyRename` : toutes / futures / passées / période ; futures→ancienne `obsolete`, passées→nouvelle `obsolete`, période→coexistence). Mémorise les anciens noms en `aliases` pour la correspondance d'import (éditables manuellement en mode Modifier via `_openAliasModal`/`_removeAlias`, indispensable pour les catégories renommées avant l'ajout de cette mémoire). |
 | `js/data-entry.js` | Onglet « Données » : table unifiée dépenses+revenus, recherche, sélection multiple, édition en masse. |
 | `js/patrimony.js` | Onglet Patrimoine (actifs/passifs manuels + valorisation du portefeuille). |
 | `js/invest-import.js` | Import de positions de portefeuille depuis un export courtier (CSV/Excel). |

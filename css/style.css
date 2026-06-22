@@ -1097,6 +1097,15 @@ input:focus:not(:focus-visible) { outline: none; }
 .rename-scope small { color: var(--text-muted); }
 .rename-scope input[type="date"] { padding: 2px 6px; font-size: 0.8rem; }
 .rename-hint { font-size: 0.72rem; color: var(--text-muted); margin: 0.25rem 0 0; }
+/* Anciens noms (alias) d'une catégorie, éditables en mode Modifier */
+.cat-alias-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-top: 1px solid var(--border); }
+.cat-alias-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+.cat-alias-empty { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+.cat-alias-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px 2px 10px; font-size: 0.75rem; }
+.cat-alias-chip button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; padding: 0; line-height: 1; }
+.cat-alias-chip button:hover { color: #b91c1c; }
+.cat-alias-add { font-size: 0.72rem; padding: 2px 8px; border: 1px dashed var(--border); background: none; border-radius: 999px; cursor: pointer; color: var(--primary); }
+.cat-alias-add:hover { border-color: var(--primary); }
 .category-card-header {
   display: flex;
   align-items: center;

@@ -22,7 +22,14 @@ const Categories = {
           ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
         </div>`).join('');
 
+      const aliasChips = (cat.aliases || []).map((a, i) =>
+        `<span class="cat-alias-chip">${a}<button onclick="Categories._removeAlias('${cat.id}',${i})" title="Retirer">✕</button></span>`).join('');
       const footer = editing ? `
+        <div class="cat-alias-row">
+          <span class="cat-alias-label" title="À l'import, une dépense étiquetée (ou devinée) avec un de ces anciens noms est classée dans cette catégorie.">Anciens noms (import) :</span>
+          ${aliasChips || '<span class="cat-alias-empty">aucun</span>'}
+          <button class="cat-alias-add" onclick="Categories._openAliasModal('${cat.id}')">＋ ancien nom</button>
+        </div>
         <div class="cat-edit-footer">
           <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
           <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
@@ -164,6 +171,58 @@ const Categories = {
     Modal.close();
     this.render();
     if (typeof Expenses !== 'undefined' && Expenses._populateCatFilter) Expenses._populateCatFilter();
+  },
+
+  // ---- Anciens noms (alias) : édition manuelle ----
+  // Indispensable pour les catégories renommées AVANT que l'app ne mémorise
+  // automatiquement l'ancien nom (l'ancien nom n'existe alors plus dans les données).
+  // Une fois l'ancien nom déclaré ici, l'import (_matchCat) y route les dépenses.
+  _openAliasModal(catId) {
+    const cat = Storage.getCategories().find(c => c.id === catId);
+    if (!cat) return;
+    Modal.open(`Ancien nom pour « ${cat.name} »`, `
+      <form onsubmit="Categories._confirmAddAlias(event,'${catId}')">
+        <div class="form-group">
+          <label>Ancien nom de cette catégorie</label>
+          <input name="alias" class="form-input" required autofocus placeholder="ex : Alimentation" style="width:100%">
+          <p class="rename-hint">À l'import, les dépenses étiquetées (ou devinées) avec cet ancien nom seront classées dans « ${cat.name} ».</p>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Ajouter</button>
+        </div>
+      </form>`);
+  },
+
+  _confirmAddAlias(event, catId) {
+    event.preventDefault();
+    const alias = (new FormData(event.target).get('alias') || '').trim();
+    if (!alias) return;
+    const cats = Storage.getCategories();
+    const cat  = cats.find(c => c.id === catId);
+    if (!cat) return;
+    const nn = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (nn(alias) === nn(cat.name)) { alert('C\'est déjà le nom actuel de la catégorie.'); return; }
+    if ((cat.aliases || []).some(a => nn(a) === nn(alias))) { Modal.close(); return; }
+    if (cats.some(c => c.id !== catId && nn(c.name) === nn(alias))) {
+      if (!confirm(`« ${alias} » est le nom d'une autre catégorie existante. L'ajouter comme ancien nom de « ${cat.name} » redirigera vers ici les imports portant ce nom. Continuer ?`)) return;
+    }
+    cat.aliases = [...(cat.aliases || []), alias];
+    Storage.saveCategories(cats);
+    Modal.close();
+    this._editingCatId = catId;
+    this.render();
+  },
+
+  _removeAlias(catId, idx) {
+    const cats = Storage.getCategories();
+    const cat  = cats.find(c => c.id === catId);
+    if (!cat || !cat.aliases) return;
+    cat.aliases.splice(idx, 1);
+    if (!cat.aliases.length) delete cat.aliases;
+    Storage.saveCategories(cats);
+    this._editingCatId = catId;
+    this.render();
   },
 
   _openAddSubcatModal(catId) {

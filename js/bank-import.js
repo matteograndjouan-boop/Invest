@@ -874,7 +874,12 @@ const BankImport = {
     // Construit le résultat final
     const res = (catH, subH) => {
       const c = cat(catH);
-      return { category: c?.name || catH, subcategory: sub(c, subH) };
+      if (c) return { category: c.name, subcategory: sub(c, subH) };
+      // Hint non résolu (catégorie par défaut renommée sans alias connu) : ne JAMAIS
+      // renvoyer un nom orphelin — le <select> de l'aperçu retomberait silencieusement
+      // sur la 1ère catégorie (« Abonnements »). Repli sur une catégorie qui existe.
+      const fb = allCats.find(x => n(x.name) === 'divers') || allCats[allCats.length - 1];
+      return { category: fb?.name || catH, subcategory: '' };
     };
 
     // Alimentation
