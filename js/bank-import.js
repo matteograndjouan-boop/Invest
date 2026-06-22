@@ -860,8 +860,12 @@ const BankImport = {
     const d = (desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
-    // Résout un hint de catégorie vers le nom réel de l'utilisateur
-    const cat = h => allCats.find(c => n(c.name) === n(h))
+    // Résout un hint de catégorie vers le nom réel de l'utilisateur. Passe par _matchCat
+    // (alias-aware + priorité aux catégories actives) pour qu'une catégorie renommée
+    // — ex. « Alimentation » → « Courses » — soit résolue vers son nom ACTUEL, et non
+    // vers un littéral orphelin qui ferait retomber le <select> de l'aperçu sur la
+    // première catégorie (« Abonnements ») sans sous-catégorie. Sous-chaîne en repli.
+    const cat = h => this._matchCat(h, allCats)
                   || allCats.find(c => n(c.name).includes(n(h)) || n(h).includes(n(c.name)));
     // Résout un hint de sous-catégorie dans une catégorie utilisateur
     const sub = (c, h) => !c || !h ? ''
