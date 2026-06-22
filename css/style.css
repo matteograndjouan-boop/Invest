@@ -1097,15 +1097,18 @@ input:focus:not(:focus-visible) { outline: none; }
 .rename-scope small { color: var(--text-muted); }
 .rename-scope input[type="date"] { padding: 2px 6px; font-size: 0.8rem; }
 .rename-hint { font-size: 0.72rem; color: var(--text-muted); margin: 0.25rem 0 0; }
-/* Anciens noms (alias) d'une catégorie, éditables en mode Modifier */
-.cat-alias-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-top: 1px solid var(--border); }
-.cat-alias-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-.cat-alias-empty { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
-.cat-alias-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px 2px 10px; font-size: 0.75rem; }
-.cat-alias-chip button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; padding: 0; line-height: 1; }
+/* Badge d'historique 🕘 (anciens noms) dans le header d'une catégorie */
+.cat-hist-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; cursor: pointer; line-height: 1.4; }
+.cat-hist-badge:hover { border-color: #1d4ed8; }
+.cat-hist-badge.cat-hist-empty { background: none; color: var(--text-muted); font-weight: 500; border-style: dashed; border-color: var(--border); }
+/* Fenêtre d'historique : liste d'anciens noms (puces) + formulaire d'ajout */
+.cat-hist-list { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; min-height: 1.6rem; }
+.cat-hist-form { margin-top: 12px; display: flex; gap: 8px; }
+.cat-hist-form .form-input { flex: 1; }
+.cat-alias-empty { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+.cat-alias-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px 3px 12px; font-size: 0.78rem; }
+.cat-alias-chip button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.72rem; padding: 0; line-height: 1; }
 .cat-alias-chip button:hover { color: #b91c1c; }
-.cat-alias-add { font-size: 0.72rem; padding: 2px 8px; border: 1px dashed var(--border); background: none; border-radius: 999px; cursor: pointer; color: var(--primary); }
-.cat-alias-add:hover { border-color: var(--primary); }
 .category-card-header {
   display: flex;
   align-items: center;
