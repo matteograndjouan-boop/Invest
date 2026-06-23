@@ -62,8 +62,8 @@ const Categories = {
   //
   // 3 portées (date comptable de chaque transaction) :
   //  • Toutes               : renommage simple, toutes les transactions migrent ; alias = ancien nom.
-  //  • À partir d'une date D : avant D → ancien nom (devient INACTIVE) ; à partir de D
-  //                           (imports compris) → nouveau nom (actif).
+  //  • Date charnière D     : sens 'from' (≥ D → nouveau, < D → ancien INACTIVE) ou 'until'
+  //                           (≤ D → nouveau INACTIVE, > D → ancien actif), au choix.
   //  • Sur une période [from,to] : dans la plage → nouveau nom ; en dehors → ancien
   //                           (les deux restent actives).
   // La « lignée datée » (cat.lineage + validFrom/validTo sur la nouvelle version) permet à
@@ -82,7 +82,7 @@ const Categories = {
         <div class="form-group">
           <label>Appliquer le nouveau nom à :</label>
           <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="from"> <span><strong>À partir d'une date</strong> <input type="date" name="fromdate" value="${today}"> <small>— avant : ancien nom · à partir d'elle (imports compris) : nouveau nom</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="date"> <span><strong>À une date charnière</strong> — nouveau nom <select name="dir" class="rename-dir"><option value="after">à partir du (inclus)</option><option value="before">jusqu'au (inclus)</option></select> <input type="date" name="fromdate" value="${today}"> <small>— l'autre côté garde l'ancien nom (imports compris)</small></span></label>
           <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> du <input type="date" name="pfrom"> au <input type="date" name="pto"> <small>— dans la plage : nouveau nom · en dehors : ancien</small></span></label>
         </div>
         <p class="rename-hint">↪ Le découpage utilise la date comptable de chaque transaction. À l'import, le bon nom est choisi automatiquement selon la date de la dépense.</p>
@@ -98,10 +98,10 @@ const Categories = {
     const fd = new FormData(event.target);
     const newName = (fd.get('newname') || '').trim();
     const scope = fd.get('scope');
-    if (scope === 'from') {
+    if (scope === 'date') {
       const from = fd.get('fromdate');
       if (!from) { alert('Choisissez une date.'); return; }
-      this._applyRename(catId, newName, 'from', from, null);
+      this._applyRename(catId, newName, fd.get('dir') === 'before' ? 'until' : 'from', from, null);
     } else if (scope === 'period') {
       const from = fd.get('pfrom'), to = fd.get('pto');
       if (!from || !to) { alert('Choisissez une date de début et de fin.'); return; }
@@ -150,9 +150,15 @@ const Categories = {
       if (scope === 'from') {
         inScope = t => td(t) >= from;
         newCat.validFrom = from; newCat.validTo = null;
-        cat.obsolete = true;
+        cat.obsolete = true; // l'ancien (avant D) n'est plus proposé aux nouvelles saisies
         cat.versionNote    = `Avant le ${fmt(from)} — remplacée par « ${newName} »`;
         newCat.versionNote = `À partir du ${fmt(from)} (remplace « ${oldName} »)`;
+      } else if (scope === 'until') {
+        inScope = t => td(t) <= from;            // 'from' porte la date charnière
+        newCat.validFrom = null; newCat.validTo = from;
+        newCat.obsolete = true; delete cat.obsolete; // le nouveau couvre le passé → l'ancien reste actif
+        cat.versionNote    = `Après le ${fmt(from)} — garde « ${oldName} »`;
+        newCat.versionNote = `Jusqu'au ${fmt(from)} (remplace « ${oldName} »)`;
       } else { // period
         inScope = t => { const d = td(t); return d >= from && d <= to; };
         newCat.validFrom = from; newCat.validTo = to;

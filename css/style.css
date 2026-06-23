@@ -1096,6 +1096,7 @@ input:focus:not(:focus-visible) { outline: none; }
 .rename-scope input[type="radio"] { margin-top: 0.2rem; }
 .rename-scope small { color: var(--text-muted); }
 .rename-scope input[type="date"] { padding: 2px 6px; font-size: 0.8rem; }
+.rename-dir { padding: 2px 6px; font-size: 0.8rem; }
 .rename-hint { font-size: 0.72rem; color: var(--text-muted); margin: 0.25rem 0 0; }
 /* Badge d'historique 🕘 (anciens noms) dans le header d'une catégorie */
 .cat-hist-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; cursor: pointer; line-height: 1.4; }
