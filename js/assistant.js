@@ -1,5 +1,5 @@
-// Assistant en langage naturel : saisir une dépense ou un revenu depuis une
-// phrase écrite ou dictée (« 45 € chez Carrefour hier »).
+// Assistant en langage naturel : saisir une ou PLUSIEURS dépenses/revenus depuis
+// une phrase écrite ou dictée (« 45 € Carrefour hier, 14 Netflix et 30 Uber »).
 //
 // CONFIDENTIALITÉ : par défaut, tout est analysé EN LOCAL. Seul le libellé
 // nettoyé part à Gemini pour la catégorie (chemin GeminiCat habituel). Si le
@@ -11,6 +11,7 @@ const Assistant = {
   _listening: false,
   _lastText: '',
   _draft: null,       // brouillon de transaction en cours de validation
+  _multiDrafts: null, // brouillons multiples (saisie de plusieurs opérations)
 
   init() {
     const fab = document.getElementById('assistant-fab');
@@ -19,14 +20,21 @@ const Assistant = {
 
   // ── Écrans ────────────────────────────────────────────────────────────────
 
+  // Ouvre/met à jour la modale ; `wide` élargit pour le tableau multi-lignes.
+  _show(title, html, wide = false) {
+    Modal.open(title, html);
+    const m = document.getElementById('modal');
+    if (m) m.classList.toggle('modal-wide', !!wide);
+  },
+
   open() {
     this._draft = null;
-    Modal.open('Assistant', this._inputScreen(this._lastText));
+    this._show('Assistant', this._inputScreen(this._lastText));
     this._focusInput();
   },
 
   reformulate() {
-    Modal.open('Assistant', this._inputScreen(this._lastText));
+    this._show('Assistant', this._inputScreen(this._lastText));
     this._focusInput();
   },
 
@@ -63,7 +71,8 @@ const Assistant = {
           <button type="button" class="btn-primary" onclick="Assistant.analyze()">Analyser</button>
         </div>
         <div class="assistant-examples">
-          Exemples : « 12,50 au tabac » · « salaire reçu 1800 le 28 mai » · « 30 € Uber avant-hier »
+          Une à la fois : « 12,50 au tabac » · « salaire reçu 1800 le 28 mai »<br>
+          Ou plusieurs d'un coup : « 45 Carrefour hier, 14 Netflix et 30 € Uber jeudi dernier »
         </div>
       </div>`;
   },
@@ -174,9 +183,12 @@ const Assistant = {
     if (!text) { input?.focus(); return; }
     this._lastText = text;
 
+    // Plusieurs opérations énumérées → tableau d'aperçu groupé.
+    if (this._splitSegments(text).length >= 2) { this._toMulti(text); return; }
+
     const parsed = this._parse(text);
     if (parsed.missing.length) {
-      Modal.open('Assistant', this._missingScreen(text, parsed));
+      this._show('Assistant', this._missingScreen(text, parsed));
       return;
     }
     this._toPreview(text, parsed);
@@ -184,7 +196,7 @@ const Assistant = {
 
   // Construit le brouillon depuis le parsing local + catégorisation (libellé seul).
   async _toPreview(text, parsed) {
-    Modal.open('Assistant', this._loadingScreen('Catégorisation…'));
+    this._show('Assistant', this._loadingScreen('Catégorisation…'));
     const allCats = Storage.getCategories();
     const t = {
       date: parsed.date,
@@ -192,13 +204,7 @@ const Assistant = {
       amount: parsed.amount,
       isRevenue: parsed.isRevenue,
     };
-    // Devine localement (résout les vrais noms de catégories de l'utilisateur,
-    // version datée selon la date de l'opération si la catégorie a été renommée).
-    const guess = parsed.isRevenue
-      ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
-      : BankImport._smartGuess(t.description, allCats, t.date);
-    t.category = guess.category;
-    t.subcategory = guess.subcategory;
+    this._guessCat(t, allCats);
     // Affine via le cache/Gemini (seul le libellé part) — sans casser le guess local.
     try {
       const catMap = await GeminiCat.categorize([t.description], allCats);
@@ -206,20 +212,20 @@ const Assistant = {
     } catch (_) { /* on garde le guess local */ }
 
     this._draft = { ...t, rawText: text };
-    Modal.open('Assistant — vérifier', this._previewScreen(this._draft));
+    this._show('Assistant — vérifier', this._previewScreen(this._draft));
   },
 
   // Repli explicite : la phrase ENTIÈRE est envoyée à Gemini (opt-in confirmé).
   async geminiFull() {
-    Modal.open('Assistant', this._loadingScreen('Analyse de la phrase par Gemini…'));
+    this._show('Assistant', this._loadingScreen('Analyse de la phrase par Gemini…'));
     try {
       this._draft = await this._geminiFullParse(this._lastText);
-      Modal.open('Assistant — vérifier', this._previewScreen(this._draft));
+      this._show('Assistant — vérifier', this._previewScreen(this._draft));
     } catch (e) {
       const msg = e.message === 'no-key'
         ? 'Aucune clé Gemini configurée — reformule ta phrase.'
         : "Gemini n'a pas réussi à analyser la phrase — reformule-la.";
-      Modal.open('Assistant', this._inputScreen(this._lastText, msg));
+      this._show('Assistant', this._inputScreen(this._lastText, msg));
       this._focusInput();
     }
   },
@@ -249,14 +255,161 @@ const Assistant = {
       const list = Storage.getExpenses(); list.push(rec); Storage.saveExpenses(list);
     }
 
-    this._stopVoice();
-    Modal.close();
+    this.close();
     this._refreshViews();
     this._toast(isRevenue ? 'Revenu enregistré ✓' : 'Dépense enregistrée ✓');
   },
 
+  // ── Plusieurs opérations en une fois ──────────────────────────────────────
+
+  // Découpe la saisie en segments (une opération chacun). Protège les virgules
+  // décimales (12,50) avant de couper sur les séparateurs/connecteurs.
+  _splitSegments(text) {
+    const SENT = '\u0001';   // marqueur temporaire : protège les virgules décimales (12,50)
+    const masked = String(text).replace(/(\d)\s*,\s*(\d)/g, '$1' + SENT + '$2');
+    return masked
+      .split(/\s*(?:,|;|\bet\b|\bpuis\b|\bensuite\b)\s*|\n+/i)
+      .map(p => p.split(SENT).join(',').trim())
+      .filter(Boolean);
+  },
+
+  async _toMulti(text) {
+    this._show('Assistant', this._loadingScreen('Analyse des opérations…'));
+    const allCats = Storage.getCategories();
+    const drafts = [];
+    let runningDate = this._isoOf(new Date());   // date propagée aux segments sans date
+    for (const seg of this._splitSegments(text)) {
+      const p = this._parse(seg);
+      if (p.dateExplicit) runningDate = p.date;
+      if (p.amount == null) continue;            // segment sans montant : ne sert qu'à la date
+      drafts.push({
+        date: p.dateExplicit ? p.date : runningDate,
+        description: p.label || (p.isRevenue ? 'Revenu' : 'Dépense'),
+        amount: p.amount,
+        isRevenue: p.isRevenue,
+      });
+    }
+
+    if (drafts.length === 0) {                   // aucun montant nulle part
+      this._show('Assistant', this._missingScreen(text, { missing: ['le montant'] }));
+      return;
+    }
+    if (drafts.length === 1) {                   // une seule opération → aperçu simple
+      const t = drafts[0];
+      this._guessCat(t, allCats);
+      try {
+        const catMap = await GeminiCat.categorize([t.description], allCats);
+        BankImport._applyCatResult(t, catMap, allCats);
+      } catch (_) {}
+      this._draft = { ...t, rawText: text };
+      this._show('Assistant — vérifier', this._previewScreen(this._draft));
+      return;
+    }
+
+    // Plusieurs : devine localement puis affine en UN seul appel groupé (libellés seuls).
+    drafts.forEach(d => this._guessCat(d, allCats));
+    try {
+      const catMap = await GeminiCat.categorize(drafts.map(d => d.description), allCats);
+      drafts.forEach(d => BankImport._applyCatResult(d, catMap, allCats));
+    } catch (_) {}
+
+    this._multiDrafts = drafts;
+    this._show('Assistant — vérifier', this._multiPreviewScreen(drafts), true);
+  },
+
+  // Devine catégorie + sous-catégorie en local (vrais noms, version datée).
+  _guessCat(t, allCats) {
+    const g = t.isRevenue
+      ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
+      : BankImport._smartGuess(t.description, allCats, t.date);
+    t.category = g.category;
+    t.subcategory = g.subcategory;
+  },
+
+  _multiPreviewScreen(drafts) {
+    const cats = Storage.getCategories();
+    const rows = drafts.map((d, i) => {
+      const catOptions = cats
+        .map(c => `<option value="${this._esc(c.name)}"${c.name === d.category ? ' selected' : ''}>${this._esc(c.name)}</option>`)
+        .join('');
+      const subOptions = BankImport._subcatOpts(d.category, d.subcategory || '');
+      return `<tr>
+        <td style="text-align:center"><input type="checkbox" data-row="${i}" checked></td>
+        <td><select id="am-type-${i}" onchange="Assistant._onMultiType(${i})">
+          <option value="depense"${d.isRevenue ? '' : ' selected'}>Dépense</option>
+          <option value="revenu"${d.isRevenue ? ' selected' : ''}>Revenu</option>
+        </select></td>
+        <td><input id="am-date-${i}" type="date" value="${this._esc(d.date)}"></td>
+        <td><input id="am-desc-${i}" value="${this._esc(d.description)}" placeholder="libellé"></td>
+        <td><input id="am-amt-${i}" type="number" step="0.01" min="0" value="${d.amount != null ? d.amount : ''}"></td>
+        <td><select id="am-cat-${i}" onchange="Assistant._onMultiCat(${i})">${catOptions}</select></td>
+        <td><select id="am-sub-${i}">${subOptions}</select></td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="assistant-box">
+        <p class="assistant-hint"><strong>${drafts.length} opérations</strong> détectées. Décoche pour exclure, ajuste si besoin, puis enregistre.</p>
+        <div class="preview-table-wrap">
+          <table class="data-table assistant-multi-table">
+            <thead><tr>
+              <th></th><th>Type</th><th>Date</th><th>Libellé</th><th>Montant</th><th>Catégorie</th><th>Sous-cat.</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Assistant.reformulate()">Modifier la phrase</button>
+          <button type="button" class="btn-primary" onclick="Assistant.saveMulti()">Enregistrer (${drafts.length})</button>
+        </div>
+      </div>`;
+  },
+
+  _onMultiCat(i) {
+    const cat = document.getElementById(`am-cat-${i}`)?.value;
+    const sub = document.getElementById(`am-sub-${i}`);
+    if (sub) sub.innerHTML = BankImport._subcatOpts(cat, '');
+  },
+
+  _onMultiType(i) {
+    const type = document.getElementById(`am-type-${i}`)?.value;
+    const catSel = document.getElementById(`am-cat-${i}`);
+    if (catSel && type === 'revenu') catSel.value = BankImport._revenueCat(Storage.getCategories()).name;
+    this._onMultiCat(i);
+  },
+
+  saveMulti() {
+    const v = id => document.getElementById(id)?.value;
+    const expenses = Storage.getExpenses();
+    const revenues = Storage.getRevenues();
+    let n = 0;
+    document.querySelectorAll('[data-row]').forEach(cb => {
+      if (!cb.checked) return;
+      const i = cb.dataset.row;
+      const isRevenue = v(`am-type-${i}`) === 'revenu';
+      const amount = parseFloat(v(`am-amt-${i}`));
+      const description = (v(`am-desc-${i}`) || '').trim();
+      const category = v(`am-cat-${i}`);
+      const subcategory = v(`am-sub-${i}`) || '';
+      const date = v(`am-date-${i}`);
+      if (!description || isNaN(amount) || !date) return;
+      GeminiCat.learn(description, category, subcategory);
+      const rec = { id: Utils.generateId(), description, amount: Math.abs(amount), category, subcategory, date, notes: 'Assistant' };
+      (isRevenue ? revenues : expenses).push(rec);
+      n++;
+    });
+    if (!n) return;
+    Storage.saveExpenses(expenses);
+    Storage.saveRevenues(revenues);
+    this._multiDrafts = null;
+    this.close();
+    this._refreshViews();
+    this._toast(`${n} opération(s) enregistrée(s) ✓`);
+  },
+
   close() {
     this._stopVoice();
+    const m = document.getElementById('modal');
+    if (m) m.classList.remove('modal-wide');
     Modal.close();
   },
 
@@ -295,6 +448,7 @@ const Assistant = {
     return {
       amount: amount ? amount.value : null,
       date: date.iso,
+      dateExplicit: date.span !== null,
       isRevenue, label, missing,
     };
   },
@@ -353,8 +507,29 @@ const Assistant = {
       }
     }
 
+    // Jour de la semaine : « jeudi », « jeudi dernier/passé », « jeudi prochain ».
+    const WD = { dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6 };
+    const wm = low.match(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/);
+    if (wm) {
+      const target = WD[wm[1]];
+      const tail = low.slice(wm.index + wm[0].length).match(/^\s+(derniere?|passee?|prochaine?)\b/);
+      const mod = tail ? tail[1] : '';
+      const d = new Date(today);
+      const dow = today.getDay();
+      if (/^prochaine?$/.test(mod)) {
+        let diff = (target - dow + 7) % 7; if (diff === 0) diff = 7;
+        d.setDate(d.getDate() + diff);                 // prochaine occurrence future
+      } else {
+        let diff = (dow - target + 7) % 7;             // occurrence la plus récente ≤ aujourd'hui
+        if (mod && diff === 0) diff = 7;               // « dernier » un même jour = il y a 7 jours
+        d.setDate(d.getDate() - diff);
+      }
+      const end = wm.index + wm[0].length + (tail ? tail[0].length : 0);
+      return { iso: this._isoOf(d), span: [wm.index, end], unresolved: false };
+    }
+
     // Date évoquée mais non résoluble localement → on demandera confirmation.
-    if (/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|la semaine derniere|le mois dernier|l'autre jour|recemment|debut du mois|fin du mois|week[ -]?end)\b/.test(low)) {
+    if (/\b(la semaine derniere|le mois dernier|l'autre jour|recemment|debut du mois|fin du mois|week[ -]?end)\b/.test(low)) {
       return { iso: null, span: null, unresolved: true };
     }
 
@@ -366,9 +541,9 @@ const Assistant = {
     let s = low;
     if (dateSpan) s = s.slice(0, dateSpan[0]) + ' '.repeat(dateSpan[1] - dateSpan[0]) + s.slice(dateSpan[1]);
     const tries = [
-      /(\d[\d.   ]*(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\b|balles?)/i, // nombre + devise
-      /(?:€|euros?|eur\b|balles?)\s*(\d[\d.   ]*(?:[.,]\d{1,2})?)/i, // devise + nombre
-      /(?<![\w.,\/])(\d[\d.   ]*(?:[.,]\d{1,2})?)(?![\w.,\/])/,       // nombre seul
+      /(\d[\d.   ]*(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\b|balles?)/i, // nombre + devise
+      /(?:€|euros?|eur\b|balles?)\s*(\d[\d.   ]*(?:[.,]\d{1,2})?)/i, // devise + nombre
+      /(?<![\w.,\/])(\d[\d.   ]*(?:[.,]\d{1,2})?)(?![\w.,\/])/,       // nombre seul
     ];
     for (const re of tries) {
       const m = s.match(re);
@@ -383,7 +558,7 @@ const Assistant = {
   // Convertit "45,50" / "1 800" / "1.800,50" / "45.50" en nombre.
   _toNumber(raw) {
     if (raw == null) return null;
-    let s = String(raw).trim().replace(/[   ]/g, ''); // retire les espaces de milliers
+    let s = String(raw).trim().replace(/[   ]/g, ''); // retire les espaces de milliers
     if (!s) return null;
     if (s.includes(',') && s.includes('.')) {
       // le dernier séparateur est le décimal
@@ -398,8 +573,8 @@ const Assistant = {
       // point décimal seulement si "x.dd" ; sinon c'est un séparateur de milliers
       if (!(parts.length === 2 && dec.length <= 2)) s = s.replace(/\./g, '');
     }
-    const v = parseFloat(s);
-    return isNaN(v) ? null : v;
+    const val = parseFloat(s);
+    return isNaN(val) ? null : val;
   },
 
   _isRevenue(low) {
@@ -422,6 +597,8 @@ const Assistant = {
     'prime', 'primes', 'bonus', 'dividende', 'allocation', 'pension', 'bourse', 'aide', 'prestation',
     'euro', 'euros', 'eur', 'balle', 'balles',
     'hier', 'demain', 'aujourdhui', 'ajd', 'auj',
+    'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',
+    'dernier', 'derniere', 'passe', 'passee', 'prochain', 'prochaine',
   ]),
 
   // Reconstruit le libellé (commerçant/source) : retire date + montant + mots
@@ -513,8 +690,7 @@ Réponds UNIQUEMENT en JSON, sans texte autour :
         t.category = matched.name;
         t.subcategory = BankImport._matchSubcat(matched, p.subcategory);
       } else {
-        const g = BankImport._smartGuess(t.description, allCats, t.date);
-        t.category = g.category; t.subcategory = g.subcategory;
+        this._guessCat(t, allCats);
       }
     }
     return { ...t, rawText: text };

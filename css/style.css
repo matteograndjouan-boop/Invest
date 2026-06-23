@@ -1761,3 +1761,12 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   opacity: 0; transform: translateY(10px); transition: opacity .25s, transform .25s;
 }
 .assistant-toast.show { opacity: 1; transform: translateY(0); }
+
+.assistant-multi-table th, .assistant-multi-table td { padding: 6px 8px; vertical-align: middle; }
+.assistant-multi-table input, .assistant-multi-table select {
+  width: 100%; padding: 6px 7px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px; background: var(--surface);
+}
+.assistant-multi-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.assistant-multi-table input[type="date"] { min-width: 140px; }
+.assistant-multi-table input[type="number"] { min-width: 80px; text-align: right; }
