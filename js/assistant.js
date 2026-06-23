@@ -1,11 +1,12 @@
 // Assistant en langage naturel : saisir une ou PLUSIEURS dépenses/revenus depuis
 // une phrase écrite ou dictée (« 45 € Carrefour hier, 14 Netflix et 30 Uber »).
 //
-// CONFIDENTIALITÉ : par défaut, tout est analysé EN LOCAL. Seul le libellé
-// nettoyé part à Gemini pour la catégorie (chemin GeminiCat habituel). Si le
-// parsing local ne trouve pas le montant (ou une date évoquée mais illisible),
-// l'app le signale et propose, en option explicite, d'envoyer la phrase
-// ENTIÈRE à Gemini — jamais sans confirmation de l'utilisateur.
+// CONFIDENTIALITÉ : tout est analysé EN LOCAL. La catégorie est d'abord devinée
+// localement ; seul le libellé d'une opération que le local ne RECONNAÎT PAS part
+// à Gemini (enseignes connues et corrections déjà apprises restent 100 % locales).
+// Jamais le montant, la date, le solde. Si le parsing local ne trouve pas le
+// montant (ou une date évoquée mais illisible), l'app propose, en option explicite
+// et confirmée, d'envoyer la phrase ENTIÈRE à Gemini.
 const Assistant = {
   _rec: null,         // instance SpeechRecognition (dictée vocale)
   _listening: false,
@@ -204,12 +205,7 @@ const Assistant = {
       amount: parsed.amount,
       isRevenue: parsed.isRevenue,
     };
-    this._guessCat(t, allCats);
-    // Affine via le cache/Gemini (seul le libellé part) — sans casser le guess local.
-    try {
-      const catMap = await GeminiCat.categorize([t.description], allCats);
-      BankImport._applyCatResult(t, catMap, allCats);
-    } catch (_) { /* on garde le guess local */ }
+    await this._resolveCats([t], allCats);
 
     this._draft = { ...t, rawText: text };
     this._show('Assistant — vérifier', this._previewScreen(this._draft));
@@ -294,25 +290,13 @@ const Assistant = {
       this._show('Assistant', this._missingScreen(text, { missing: ['le montant'] }));
       return;
     }
+    await this._resolveCats(drafts, allCats);
+
     if (drafts.length === 1) {                   // une seule opération → aperçu simple
-      const t = drafts[0];
-      this._guessCat(t, allCats);
-      try {
-        const catMap = await GeminiCat.categorize([t.description], allCats);
-        BankImport._applyCatResult(t, catMap, allCats);
-      } catch (_) {}
-      this._draft = { ...t, rawText: text };
+      this._draft = { ...drafts[0], rawText: text };
       this._show('Assistant — vérifier', this._previewScreen(this._draft));
       return;
     }
-
-    // Plusieurs : devine localement puis affine en UN seul appel groupé (libellés seuls).
-    drafts.forEach(d => this._guessCat(d, allCats));
-    try {
-      const catMap = await GeminiCat.categorize(drafts.map(d => d.description), allCats);
-      drafts.forEach(d => BankImport._applyCatResult(d, catMap, allCats));
-    } catch (_) {}
-
     this._multiDrafts = drafts;
     this._show('Assistant — vérifier', this._multiPreviewScreen(drafts), true);
   },
@@ -327,6 +311,41 @@ const Assistant = {
       : BankImport._smartGuess(' ' + t.description + ' ', allCats, t.date);
     t.category = g.category;
     t.subcategory = g.subcategory;
+  },
+
+  // Vrai si la devinette locale a reconnu une enseigne (≠ repli générique).
+  // _smartGuess renvoie « Divers » (ou la dernière catégorie) + sous-cat vide
+  // quand rien ne matche ; tout autre résultat = enseigne identifiée.
+  _localHit(t, allCats) {
+    if (t.isRevenue) return true;   // un revenu → catégorie Revenus, toujours « sûre »
+    const n = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const fb = allCats.find(c => n(c.name) === 'divers') || allCats[allCats.length - 1];
+    return !(t.category === (fb && fb.name) && !t.subcategory);
+  },
+
+  // Catégorise une liste de brouillons selon la priorité :
+  //   1. correction déjà APPRISE (cache _learned) — toujours prioritaire
+  //   2. enseigne reconnue EN LOCAL — on garde, rien n'est envoyé
+  //   3. libellé inconnu — seul celui-là part à Gemini (cache + IA)
+  async _resolveCats(drafts, allCats) {
+    const cache = GeminiCat._getCache();
+    const toAsk = [];
+    drafts.forEach(d => {
+      this._guessCat(d, allCats);                       // devinette locale d'abord
+      const corr = cache[GeminiCat._normalize(d.description)];
+      if (corr && corr._learned) {                       // 1. correction manuelle apprise
+        BankImport._applyCatResult(d, { [d.description]: corr }, allCats);
+      } else if (this._localHit(d, allCats)) {           // 2. enseigne reconnue → garder local
+        /* on conserve la devinette locale, aucun envoi */
+      } else {                                            // 3. inconnu → Gemini
+        toAsk.push(d);
+      }
+    });
+    if (!toAsk.length) return;
+    try {
+      const catMap = await GeminiCat.categorize(toAsk.map(d => d.description), allCats);
+      toAsk.forEach(d => BankImport._applyCatResult(d, catMap, allCats));
+    } catch (_) { /* on garde la devinette locale */ }
   },
 
   _multiPreviewScreen(drafts) {
