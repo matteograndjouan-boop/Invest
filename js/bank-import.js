@@ -891,7 +891,7 @@ const BankImport = {
     if (/auchan|leclerc|carrefour|intermarche|lidl|aldi|super u|biocoop|naturalia|monoprix|franprix|picard|casino |cora |simply|netto |market|supermarche|hypermarche|epicerie|primeur|grand frais|g20 |vival|spar |coccinelle|proxi |8 a huit|huit a huit|dia |leader price|cernay|alimenta/.test(d)) return res('Alimentation','Courses');
 
     // Transport
-    if (/sncf|ter |tgv |ouigo|trenitalia|eurostar|lyria|izy /.test(d))                    return res('Transport','Train');
+    if (/sncf|ter |tgv |ouigo|trenitalia|eurostar|lyria|izy |\btrains?\b/.test(d))        return res('Transport','Train');
     if (/tram|tramway/.test(d))                                                             return res('Transport','Tram');
     if (/ratp|navigo|metro |tiseo|tcl |tbm |tan |tbc |stib|bus |navette|transpole/.test(d)) return res('Transport','Bus');
     if (/uber|bolt |heetch|taxi|g7 |lecab|vtc |kapten|chauffeur/.test(d))                  return res('Transport','Bus');

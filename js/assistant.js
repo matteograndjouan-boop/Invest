@@ -319,9 +319,12 @@ const Assistant = {
 
   // Devine catégorie + sous-catégorie en local (vrais noms, version datée).
   _guessCat(t, allCats) {
+    // On encadre le libellé d'espaces : les motifs d'enseignes de _smartGuess
+    // (« jules », « spar », « free »…) attendent un espace de fin, absent d'un
+    // libellé d'un seul mot — sans ça « Jules » retomberait sur « Divers ».
     const g = t.isRevenue
       ? { category: BankImport._revenueCat(allCats).name, subcategory: BankImport._defaultRevenueCat(allCats) }
-      : BankImport._smartGuess(t.description, allCats, t.date);
+      : BankImport._smartGuess(' ' + t.description + ' ', allCats, t.date);
     t.category = g.category;
     t.subcategory = g.subcategory;
   },
@@ -599,6 +602,7 @@ const Assistant = {
     'hier', 'demain', 'aujourdhui', 'ajd', 'auj',
     'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',
     'dernier', 'derniere', 'passe', 'passee', 'prochain', 'prochaine',
+    'aussi', 'meme', 'memes', 'jour', 'jours', 'journee', 'pareil', 'idem', 'fois', 'encore',
   ]),
 
   // Reconstruit le libellé (commerçant/source) : retire date + montant + mots
@@ -610,10 +614,15 @@ const Assistant = {
     s = blank(s, amountSpan);
     s = blank(s, dateSpan);
 
-    const tokens = s.split(/[\s'’]+/).filter(Boolean);
+    // Retire les articles/pronoms élidés (l', d', j', qu'…) sans casser un vrai
+    // token d'une lettre (« Super U ») ni un nom à apostrophe (« McDonald's »).
+    s = s.replace(/\b(?:qu|[a-z])['’]/gi, ' ');
+    const NOISE1 = new Set(['a', 'c', 'd', 'j', 'l', 'm', 'n', 's', 't', 'y']);
+    const tokens = s.split(/\s+/).filter(Boolean);
     const kept = tokens.filter(tok => {
       const n = this._norm(tok).replace(/[^a-z0-9&]/g, '');
-      if (n.length <= 1) return false;        // lettres isolées (l', d', a…)
+      if (!n) return false;
+      if (n.length === 1 && NOISE1.has(n)) return false; // lettres élidées orphelines
       if (this._STOP.has(n)) return false;
       if (/^\d+$/.test(n)) return false;       // chiffres résiduels
       return true;
