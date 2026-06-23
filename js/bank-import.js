@@ -441,7 +441,7 @@ const BankImport = {
   // Applique une correspondance (cache/Gemini) : catégorie de l'app + sous-catégorie
   // exacte si le fichier en fournit une. Marque l'origine « fuzzy » pour l'aperçu.
   _applyFileCat(t, catName, subName, allCats) {
-    const cat = this._matchCat(catName, allCats);
+    const cat = this._versionedPick(this._matchCat(catName, allCats), t.date, allCats);
     if (!cat) return; // garde-fou : nom inconnu → on ne résout pas (fallback libellé)
     t.category = cat.name;
     let sub = '';
@@ -568,10 +568,11 @@ const BankImport = {
         else subcategory = this._defaultRevenueCat(allCats);
       } else {
         // Dépense : catégorie du fichier (correspondance exacte) sinon devinette par mots-clés.
-        const guess = this._smartGuess(desc, allCats);
+        const guess = this._smartGuess(desc, allCats, date);
         category = guess.category; subcategory = guess.subcategory;
         if (fileCat) {
-          const exact = this._matchCat(fileCat, allCats); // exact (insensible casse/accents/espaces)
+          // Correspondance exacte (insensible casse/accents) + version datée selon la date de la ligne.
+          const exact = this._versionedPick(this._matchCat(fileCat, allCats), date, allCats);
           if (exact) {
             category    = exact.name;
             subcategory = fileSubcat ? (this._matchSubcat(exact, fileSubcat) || '') : '';
@@ -661,7 +662,7 @@ const BankImport = {
           const isRevenue = t.amount > 0;
           const guess = isRevenue
             ? { category: this._revenueCat(allCats).name, subcategory: this._defaultRevenueCat(allCats) }
-            : this._smartGuess(desc, allCats);
+            : this._smartGuess(desc, allCats, t.date);
           return { date: t.date, description: desc,
             amount: Math.abs(t.amount), isRevenue,
             category: guess.category, subcategory: guess.subcategory };
@@ -794,7 +795,7 @@ const BankImport = {
       // Catégorie provisoire par mots-clés (_smartGuess) — affinée par Gemini en fenêtre 3.
       // Pas touché si la catégorie vient déjà du fichier (#3, correspondance exacte).
       if (!t.isRevenue && !t._catResolved) {
-        const g = this._smartGuess(t.descriptionClean, allCats);
+        const g = this._smartGuess(t.descriptionClean, allCats, t.date);
         t.category = g.category; t.subcategory = g.subcategory;
       }
     });
@@ -856,7 +857,7 @@ const BankImport = {
 
   // Fallback lorsque Gemini n'est pas disponible — base de 100+ enseignes/marques françaises.
   // Renvoie {category, subcategory} en résolvant les noms réels de l'utilisateur.
-  _smartGuess(desc, allCats) {
+  _smartGuess(desc, allCats, date) {
     const d = (desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
@@ -873,7 +874,8 @@ const BankImport = {
      || c.subcategories.find(s => n(s).includes(n(h)) || n(h).includes(n(s))) || '';
     // Construit le résultat final
     const res = (catH, subH) => {
-      const c = cat(catH);
+      // Résout le hint puis choisit la VERSION datée selon la date de la dépense.
+      const c = this._versionedPick(cat(catH), date, allCats);
       if (c) return { category: c.name, subcategory: sub(c, subH) };
       // Hint non résolu (catégorie par défaut renommée sans alias connu) : ne JAMAIS
       // renvoyer un nom orphelin — le <select> de l'aperçu retomberait silencieusement
@@ -963,6 +965,22 @@ const BankImport = {
         || allCats.find(c => (c.aliases || []).some(a => n(a) === target))
         || null;
   },
+
+  // Choisit la bonne VERSION d'une catégorie selon la DATE de la transaction, quand la
+  // catégorie a été renommée « à portée » (lignée datée : chaque version porte sa fenêtre
+  // validFrom/validTo). Ex. « Alimentation »→« Courses » à partir du 2026-06-01 : une
+  // dépense du 15/06 → « Courses », du 10/05 → « Alimentation ». Hors lignée → inchangé.
+  _versionedPick(cat, date, allCats) {
+    if (!cat || !cat.lineage || !date) return cat;
+    const sibs = allCats.filter(c => c.lineage === cat.lineage);
+    if (sibs.length < 2) return cat;
+    const d = String(date).slice(0, 10);
+    const covers = c => (!c.validFrom || d >= c.validFrom) && (!c.validTo || d <= c.validTo);
+    // Version spécifique (avec fenêtre) couvrant la date ; sinon version de base (sans fenêtre).
+    return sibs.find(c => (c.validFrom || c.validTo) && covers(c))
+        || sibs.find(c => !c.validFrom && !c.validTo)
+        || cat;
+  },
   _matchSubcat(cat, subName) {
     if (!cat || !subName) return '';
     const n = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -1011,7 +1029,7 @@ const BankImport = {
       const matchedSub = this._matchSubcat(revCat, result.subcategory);
       if (matchedSub) t.subcategory = matchedSub;
     } else {
-      const matched = this._matchCat(result.category, allCats);
+      const matched = this._versionedPick(this._matchCat(result.category, allCats), t.date, allCats);
       if (matched) {
         t.category = matched.name;
         t.subcategory = this._matchSubcat(matched, result.subcategory);

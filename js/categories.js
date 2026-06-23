@@ -58,17 +58,21 @@ const Categories = {
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
   _stopEdit()       { this._editingCatId = null;  this.render(); },
 
-  // ---- Renommage d'une catégorie, avec portée temporelle ----
+  // ---- Renommage d'une catégorie, avec portée DATÉE ----
   //
-  // 4 portées (la date de transaction respecte le toggle comptable/effective) :
-  //  • Toutes    : renommage simple, toutes les transactions migrent, rien ne se duplique.
-  //  • Futures   : l'ancienne devient INACTIVE, la nouvelle (active) reçoit les futures.
-  //  • Passées   : les transactions passées migrent vers la nouvelle (INACTIVE) ; l'ancienne reste active.
-  //  • Période   : les transactions de la plage migrent ; les DEUX coexistent (aucune inactive),
-  //                avec une mention « valable du… au… » sur chacune.
+  // 3 portées (date comptable de chaque transaction) :
+  //  • Toutes               : renommage simple, toutes les transactions migrent ; alias = ancien nom.
+  //  • À partir d'une date D : avant D → ancien nom (devient INACTIVE) ; à partir de D
+  //                           (imports compris) → nouveau nom (actif).
+  //  • Sur une période [from,to] : dans la plage → nouveau nom ; en dehors → ancien
+  //                           (les deux restent actives).
+  // La « lignée datée » (cat.lineage + validFrom/validTo sur la nouvelle version) permet à
+  // l'import de choisir AUTOMATIQUEMENT le bon nom selon la date de la dépense
+  // (BankImport._versionedPick) — c'est ce qui faisait défaut auparavant.
   _openRenameCat(catId) {
     const cat = Storage.getCategories().find(c => c.id === catId);
     if (!cat) return;
+    const today = new Date().toISOString().slice(0, 10);
     Modal.open(`Renommer « ${cat.name} »`, `
       <form onsubmit="Categories._confirmRename(event,'${catId}')">
         <div class="form-group">
@@ -77,12 +81,11 @@ const Categories = {
         </div>
         <div class="form-group">
           <label>Appliquer le nouveau nom à :</label>
-          <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple, rien ne se duplique</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="future"> <span><strong>Uniquement les futures</strong> <small>— les passées gardent l'ancien nom</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="past"> <span><strong>Uniquement les passées</strong> <small>— les futures gardent l'ancien nom</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> <small>du</small> <input type="date" name="from"> <small>au</small> <input type="date" name="to"></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="from"> <span><strong>À partir d'une date</strong> <input type="date" name="fromdate" value="${today}"> <small>— avant : ancien nom · à partir d'elle (imports compris) : nouveau nom</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> du <input type="date" name="pfrom"> au <input type="date" name="pto"> <small>— dans la plage : nouveau nom · en dehors : ancien</small></span></label>
         </div>
-        <p class="rename-hint">↪ Le découpage passé/futur utilise la date <strong>${Storage.getDateMode() === 'effective' ? 'effective' : 'comptable'}</strong> (réglable via le toggle de période).</p>
+        <p class="rename-hint">↪ Le découpage utilise la date comptable de chaque transaction. À l'import, le bon nom est choisi automatiquement selon la date de la dépense.</p>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
           <button type="submit" class="btn-primary">Appliquer</button>
@@ -95,10 +98,18 @@ const Categories = {
     const fd = new FormData(event.target);
     const newName = (fd.get('newname') || '').trim();
     const scope = fd.get('scope');
-    const from = fd.get('from'), to = fd.get('to');
-    if (scope === 'period' && (!from || !to)) { alert('Choisissez une date de début et de fin.'); return; }
-    if (scope === 'period' && from > to)       { alert('La date de début doit précéder la date de fin.'); return; }
-    this._applyRename(catId, newName, scope, from, to);
+    if (scope === 'from') {
+      const from = fd.get('fromdate');
+      if (!from) { alert('Choisissez une date.'); return; }
+      this._applyRename(catId, newName, 'from', from, null);
+    } else if (scope === 'period') {
+      const from = fd.get('pfrom'), to = fd.get('pto');
+      if (!from || !to) { alert('Choisissez une date de début et de fin.'); return; }
+      if (from > to)    { alert('La date de début doit précéder la date de fin.'); return; }
+      this._applyRename(catId, newName, 'period', from, to);
+    } else {
+      this._applyRename(catId, newName, 'all');
+    }
   },
 
   _applyRename(catId, newName, scope, from, to) {
@@ -111,57 +122,49 @@ const Categories = {
       alert('Une catégorie porte déjà ce nom.'); return;
     }
 
-    const today    = new Date().toISOString().slice(0, 10);
     const fmt      = d => Utils.formatDate(d);
     const expenses = Storage.getExpenses();
     const revenues = Storage.getRevenues();
-    const dt       = t => Utils.getExpenseDate(t); // respecte le toggle comptable/effective
-
-    // Fusionne des anciens noms (alias) sans doublon ni le nom courant : l'import les
-    // reconnaît (ex. un relevé étiqueté « Alimentation » après renommage en « Courses »).
+    const td       = t => t.date; // date comptable (cohérent avec la résolution d'import)
     const nn = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
     const mergeAliases = (list, selfName) => {
       const out = [];
-      list.forEach(a => {
-        if (!a || nn(a) === nn(selfName) || out.some(x => nn(x) === nn(a))) return;
-        out.push(a);
-      });
+      list.forEach(a => { if (!a || nn(a) === nn(selfName) || out.some(x => nn(x) === nn(a))) return; out.push(a); });
       return out;
     };
 
     if (scope === 'all') {
       cat.aliases = mergeAliases([...(cat.aliases || []), oldName], newName);
       cat.name = newName;
-      delete cat.obsolete; delete cat.versionNote;
+      delete cat.obsolete; delete cat.versionNote; delete cat.lineage; delete cat.validFrom; delete cat.validTo;
       [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName) t.category = newName; }));
     } else {
+      // Portée datée : lignée partagée ; la NOUVELLE version porte la fenêtre [validFrom,validTo],
+      // l'ancienne devient la « base » (hors fenêtre). L'import choisit selon la date (_versionedPick).
+      const lineage = cat.lineage || ('lin_' + Date.now());
+      cat.lineage = lineage;
+      delete cat.validFrom; delete cat.validTo;
+      const newCat = { id: 'cat_' + Date.now(), name: newName, subcategories: [...cat.subcategories], lineage };
       let inScope;
-      if (scope === 'future')    inScope = t => dt(t) >= today;
-      else if (scope === 'past') inScope = t => dt(t) <  today;
-      else                       inScope = t => { const d = dt(t); return d >= from && d <= to; };
 
-      // Réaffecte au nouveau nom les transactions DANS la portée.
-      [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName && inScope(t)) t.category = newName; }));
-
-      // Nouvelle catégorie (copie des sous-catégories) ; l'ancienne reste pour le hors-portée.
-      const newCat = { id: 'cat_' + Date.now(), name: newName, subcategories: [...cat.subcategories] };
-      delete cat.obsolete; delete cat.versionNote;
-
-      if (scope === 'future') {
-        cat.obsolete    = true;
-        cat.versionNote = `Remplacée par « ${newName} » depuis le ${fmt(today)} — anciennes transactions`;
-        newCat.versionNote = `Remplace « ${oldName} » depuis le ${fmt(today)}`;
-        // L'ancien nom doit désormais router les imports vers la NOUVELLE catégorie active.
-        newCat.aliases = mergeAliases([...(cat.aliases || []), oldName], newName);
-        cat.aliases    = [];
-      } else if (scope === 'past') {
-        newCat.obsolete    = true;
-        newCat.versionNote = `« ${oldName} » d'avant aujourd'hui, renommées — inactive pour les nouvelles`;
-        cat.versionNote    = `Active · coexiste avec « ${newName} » (transactions passées renommées)`;
-      } else { // période — aucune inactive
-        newCat.versionNote = `Valable du ${fmt(from)} au ${fmt(to)}`;
-        cat.versionNote    = `Valable hors du ${fmt(from)} – ${fmt(to)}`;
+      if (scope === 'from') {
+        inScope = t => td(t) >= from;
+        newCat.validFrom = from; newCat.validTo = null;
+        cat.obsolete = true;
+        cat.versionNote    = `Avant le ${fmt(from)} — remplacée par « ${newName} »`;
+        newCat.versionNote = `À partir du ${fmt(from)} (remplace « ${oldName} »)`;
+      } else { // period
+        inScope = t => { const d = td(t); return d >= from && d <= to; };
+        newCat.validFrom = from; newCat.validTo = to;
+        delete cat.obsolete;
+        cat.versionNote    = `Hors période ${fmt(from)} – ${fmt(to)}`;
+        newCat.versionNote = `Valable du ${fmt(from)} au ${fmt(to)} (remplace « ${oldName} »)`;
       }
+
+      // Réaffecte les transactions existantes de la portée vers le nouveau nom.
+      [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === oldName && inScope(t)) t.category = newName; }));
+      // Lien visuel (badge 🕘) + repli de correspondance : l'ancien nom devient alias du nouveau.
+      newCat.aliases = mergeAliases([...(cat.aliases || []), oldName], newName);
 
       const idx = cats.findIndex(c => c.id === catId);
       cats.splice(idx + 1, 0, newCat);
