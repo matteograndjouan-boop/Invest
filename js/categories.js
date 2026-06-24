@@ -1,6 +1,7 @@
 const Categories = {
   _dnd: null,
-  _editingCatId: null, // catégorie en mode édition
+  _editingCatId: null,        // catégorie en mode édition
+  _expanded: new Set(),       // catégories dont la liste de sous-catégories est dépliée
 
   render() {
     const cats = Storage.getCategories();
@@ -24,18 +25,24 @@ const Categories = {
       const editing = this._editingCatId === cat.id;
       const m  = this._meta(cat.name);
       const sc = m.scheme;
+      const icon = cat.icon || m.icon;
       const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
       const n = cat.subcategories.length;
       const aliases = cat.aliases || [];
 
+      // 🕘 = simple indicateur passif des anciens noms (mémorisés AUTO au renommage).
       const histInline = aliases.length
-        ? `<button class="cat-hist-mini" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · cliquer pour gérer">🕘 ${aliases.length}</button>` : '';
+        ? `<span class="cat-hist-mini" title="Anciens noms : ${aliases.join(' · ')}">🕘 ${aliases.length}</span>` : '';
       const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus de nouvelles transactions">Inactive</span>' : '';
+      // En mode édition, l'icône devient un bouton (clic = choisir une autre icône).
+      const iconHtml = editing
+        ? `<button class="cat-icon cat-icon-edit" onclick="Categories._openIconPicker('${cat.id}')" title="Changer l'icône">${icon}</button>`
+        : `<div class="cat-icon">${icon}</div>`;
 
       const top = `
         <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">
           <div class="cat-left">
-            <div class="cat-icon">${m.icon}</div>
+            ${iconHtml}
             <span class="cat-name" title="${cat.name}">${cat.name}</span>
           </div>
           <div class="cat-top-right">
@@ -46,24 +53,27 @@ const Categories = {
       const note = cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : '';
 
       if (!editing) {
-        const shown = cat.subcategories.slice(0, MAX_VIEW).map(s =>
+        const expanded = this._expanded.has(cat.id);
+        const list = expanded ? cat.subcategories : cat.subcategories.slice(0, MAX_VIEW);
+        const shown = list.map(s =>
           `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
-        const more = n > MAX_VIEW ? `<div class="more">+${n - MAX_VIEW} autre${n - MAX_VIEW > 1 ? 's' : ''}</div>` : '';
-        const body = n ? `<div class="subs">${shown}</div>${more}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
+        let moreLink = '';
+        if (n > MAX_VIEW) {
+          moreLink = expanded
+            ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
+            : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - MAX_VIEW} autre${n - MAX_VIEW > 1 ? 's' : ''}</div>`;
+        }
+        const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
         return `
           <div class="category-card${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
             ${top}${note}${body}
             <div class="card-footer">
               <button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button>
-              <button class="btn-del" onclick="Categories.deleteCategory('${cat.id}')" title="Supprimer la catégorie">🗑</button>
             </div>
           </div>`;
       }
 
       // Mode édition
-      const histBtn = aliases.length
-        ? `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · gérer">🕘 ${aliases.length}</button>`
-        : `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom (pour l'import)">⊕ Ancien nom</button>`;
       const subEdit = cat.subcategories.map((s, idx) => `
         <div class="subcat-item sub-edit" data-cat-id="${cat.id}" data-subcat-idx="${idx}"
              onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">
@@ -75,7 +85,6 @@ const Categories = {
           ${top}
           <div class="edit-bar">
             <button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button>
-            ${histBtn}
           </div>
           ${note}
           <div class="subs subcat-list" data-cat-id="${cat.id}">
@@ -134,6 +143,38 @@ const Categories = {
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
   _stopEdit()       { this._editingCatId = null;  this.render(); },
+
+  _toggleExpand(catId) {
+    if (this._expanded.has(catId)) this._expanded.delete(catId);
+    else this._expanded.add(catId);
+    this.render();
+  },
+
+  // ---- Icône personnalisée d'une catégorie (mode édition) ----
+  _ICON_CHOICES: ['🏷️','🛒','🍽️','🥖','☕','🍔','🍷','🛍️','👕','👟','💄','🏠','💡','🔥','🚰','🚌','🚆','🚗','✈️','⛽','❤️','💊','🦷','🏥','🎯','🎬','🎮','🎵','📚','🏋️','⚽','🐷','💰','💳','🏦','📈','🎁','🐾','👶','🎓','🧾','🛡️','📶','📱','💻','🌍','🎉','🔧','✂️','📦','💼','🌱','🧹','⚡'],
+  _openIconPicker(catId) {
+    const cat = Storage.getCategories().find(c => c.id === catId);
+    if (!cat) return;
+    const grid = this._ICON_CHOICES.map(e =>
+      `<button class="icon-pick${cat.icon === e ? ' active' : ''}" onclick="Categories._setIcon('${catId}','${e}')">${e}</button>`).join('');
+    Modal.open(`Icône de « ${cat.name} »`, `
+      <p class="rename-hint" style="margin-bottom:10px">Choisis une icône pour cette catégorie.</p>
+      <div class="icon-picker-grid">${grid}</div>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="Categories._setIcon('${catId}','')">↺ Icône auto</button>
+        <button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button>
+      </div>`);
+  },
+  _setIcon(catId, icon) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    if (icon) cat.icon = icon; else delete cat.icon;
+    Storage.saveCategories(cats);
+    Modal.close();
+    this._editingCatId = catId; // on reste en édition
+    this.render();
+  },
 
   // ---- Renommage d'une catégorie, avec portée DATÉE ----
   //
@@ -535,6 +576,8 @@ const Categories = {
     const cats = Storage.getCategories();
     const cat = cats.find(c => c.id === catId);
     if (!cat) return;
+    const name = cat.subcategories[idx];
+    if (!confirm(`Supprimer la sous-catégorie « ${name} » ?`)) return;
     cat.subcategories.splice(idx, 1);
     Storage.saveCategories(cats);
     this.render();

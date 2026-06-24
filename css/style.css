@@ -1944,3 +1944,18 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .new-label { font-size: 13px; font-weight: 600; }
 
 .cat-version-note { font-size: 11px; color: var(--text-muted); font-style: italic; margin: -2px 0 12px; padding: 7px 10px; background: var(--bg); border-radius: 8px; border-bottom: none; }
+
+/* Icône éditable (mode édition) : indice crayon + halo au survol */
+.cat-icon-edit { padding: 0; font-family: inherit; border: none; cursor: pointer; position: relative; transition: transform .12s, box-shadow .12s; }
+.cat-icon-edit:hover { box-shadow: 0 0 0 2px var(--primary); transform: scale(1.05); }
+.cat-icon-edit::after { content: '✎'; position: absolute; right: -4px; bottom: -4px; width: 17px; height: 17px; background: var(--primary); color: #fff; border-radius: 50%; font-size: 9px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+
+/* « +N autres / Réduire » cliquable */
+.more-link { cursor: pointer; font-weight: 600; transition: color .12s; }
+.more-link:hover { color: var(--primary); }
+
+/* Sélecteur d'icône */
+.icon-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 280px; overflow-y: auto; margin-bottom: 8px; padding: 2px; }
+.icon-pick { font-size: 22px; padding: 9px 0; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; cursor: pointer; transition: all .12s; }
+.icon-pick:hover { border-color: var(--primary); background: var(--primary-light); transform: translateY(-1px); }
+.icon-pick.active { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 2px var(--primary); }
