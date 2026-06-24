@@ -237,8 +237,13 @@ const Assistant = {
     const date = fd.get('date');
     if (!description || isNaN(amount) || !date) return;
 
-    // Mémorise la correction pour la future catégorisation par libellé.
-    GeminiCat.learn(description, category, subcategory);
+    // N'apprend QUE si l'utilisateur a modifié la catégorie suggérée — sinon une
+    // simple validation enregistrerait la devinette (parfois Gemini) comme une
+    // « correction manuelle » prioritaire, qui ressortirait ensuite à tort.
+    const sug = this._draft || {};
+    if (category !== sug.category || subcategory !== (sug.subcategory || '')) {
+      GeminiCat.learn(description, category, subcategory);
+    }
 
     const rec = {
       id: Utils.generateId(),
@@ -401,6 +406,7 @@ const Assistant = {
 
   saveMulti() {
     const v = id => document.getElementById(id)?.value;
+    const drafts = this._multiDrafts || [];
     const expenses = Storage.getExpenses();
     const revenues = Storage.getRevenues();
     let n = 0;
@@ -414,7 +420,12 @@ const Assistant = {
       const subcategory = v(`am-sub-${i}`) || '';
       const date = v(`am-date-${i}`);
       if (!description || isNaN(amount) || !date) return;
-      GeminiCat.learn(description, category, subcategory);
+      // N'apprend QUE si l'utilisateur a modifié la catégorie suggérée (sinon on
+      // enregistrerait la devinette comme une correction manuelle prioritaire).
+      const sug = drafts[Number(i)] || {};
+      if (category !== sug.category || subcategory !== (sug.subcategory || '')) {
+        GeminiCat.learn(description, category, subcategory);
+      }
       const rec = { id: Utils.generateId(), description, amount: Math.abs(amount), category, subcategory, date, notes: 'Assistant' };
       (isRevenue ? revenues : expenses).push(rec);
       n++;
