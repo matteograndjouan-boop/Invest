@@ -2,6 +2,12 @@ const Categories = {
   _dnd: null,
   _editingCatId: null,        // catégorie en mode édition
   _expanded: new Set(),       // catégories dont la liste de sous-catégories est dépliée
+  _expandedHist: new Set(),   // lignées dont le volet « versions datées » est ouvert
+  _TYPES: [
+    { key: 'expense',    label: 'Dépenses',      icon: '💳' },
+    { key: 'revenue',    label: 'Revenus',        icon: '💰' },
+    { key: 'investment', label: 'Investissement', icon: '📈' },
+  ],
 
   render() {
     const cats = Storage.getCategories();
@@ -14,92 +20,142 @@ const Categories = {
       subEl.textContent = `${cats.length} catégorie${cats.length > 1 ? 's' : ''} · ${nSub} sous-catégorie${nSub > 1 ? 's' : ''}`;
     }
 
-    if (!cats.length) {
-      container.innerHTML = `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
-      return;
+    // Replie les lignées de renommage daté en une unité, puis répartit dans les
+    // 3 types (dépense / revenu / investissement).
+    const units = this._displayUnits(cats);
+    const byType = { expense: [], revenue: [], investment: [] };
+    units.forEach(u => { (byType[this._catType(u.primary)] || byType.expense).push(u); });
+
+    container.innerHTML = this._TYPES.map(T => {
+      const cards = byType[T.key].map(u => this._renderUnit(u)).join('');
+      const addCard = `<div class="category-card card-new" onclick="Categories.openAddModal('${T.key}')"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
+      return `<section class="cat-type-section">
+        <h2 class="cat-type-head"><span class="cat-type-ic">${T.icon}</span>${T.label}<span class="cat-type-count">${byType[T.key].length}</span></h2>
+        <div class="categories-grid">${cards}${addCard}</div>
+      </section>`;
+    }).join('');
+  },
+
+  // Une carte = la version ACTIVE d'une catégorie. Ses éventuelles versions datées
+  // (renommage à portée) sont repliées dans un volet, plus en cartes grisées.
+  _renderUnit(unit) {
+    const cat = unit.primary;
+    const editing = this._editingCatId === cat.id;
+    const m = this._meta(cat.name);
+    const icon = cat.icon || m.icon;
+    const sc = m.scheme;
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const n = cat.subcategories.length;
+    const aliases = cat.aliases || [];
+
+    const histInline = aliases.length
+      ? `<span class="cat-hist-mini" title="Anciens noms : ${aliases.join(' · ')}">🕘 ${aliases.length}</span>` : '';
+    const iconHtml = editing
+      ? `<button class="cat-icon cat-icon-edit" onclick="Categories._openIconPicker('${cat.id}')" title="Changer l'icône">${icon}</button>`
+      : `<div class="cat-icon">${icon}</div>`;
+    const top = `
+      <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner ou changer de type">
+        <div class="cat-left">${iconHtml}<span class="cat-name" title="${cat.name}">${cat.name}</span></div>
+        <div class="cat-top-right">${!editing ? histInline : ''}<span class="cat-count">${n}</span></div>
+      </div>`;
+    const datedPanel = unit.dated ? this._renderDatedPanel(unit) : '';
+
+    if (!editing) {
+      const expanded = this._expanded.has(cat.id);
+      const list = expanded ? cat.subcategories : cat.subcategories.slice(0, 3);
+      const shown = list.map(s => `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
+      let moreLink = '';
+      if (n > 3) moreLink = expanded
+        ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
+        : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - 3} autre${n - 3 > 1 ? 's' : ''}</div>`;
+      const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
+      return `<div class="category-card" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+        ${top}${body}${datedPanel}
+        <div class="card-footer"><button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button></div>
+      </div>`;
     }
 
-    const MAX_VIEW = 3; // sous-catégories visibles avant « +N autres »
+    const subEdit = cat.subcategories.map((s, idx) => `
+      <div class="subcat-item sub-edit" data-cat-id="${cat.id}" data-subcat-idx="${idx}"
+           onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">
+        <span class="sub-txt" title="${s}">${s}</span>
+        <button class="sub-x" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">×</button>
+      </div>`).join('');
+    const curType = this._catType(cat);
+    const typeSel = this._TYPES.map(T =>
+      `<button class="cat-type-btn${curType === T.key ? ' active' : ''}" onclick="Categories._setType('${cat.id}','${T.key}')">${T.icon} ${T.label}</button>`).join('');
+    return `<div class="category-card editing" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+      ${top}
+      <div class="cat-type-pick">${typeSel}</div>
+      <div class="edit-bar"><button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button></div>
+      <div class="subs subcat-list" data-cat-id="${cat.id}">${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}</div>
+      <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
+      ${datedPanel}
+      <div class="edit-footer">
+        <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+        <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
+      </div>
+    </div>`;
+  },
 
-    const cards = cats.map(cat => {
-      const editing = this._editingCatId === cat.id;
-      const m  = this._meta(cat.name);
-      const sc = m.scheme;
-      const icon = cat.icon || m.icon;
-      const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
-      const n = cat.subcategories.length;
-      const aliases = cat.aliases || [];
-
-      // 🕘 = simple indicateur passif des anciens noms (mémorisés AUTO au renommage).
-      const histInline = aliases.length
-        ? `<span class="cat-hist-mini" title="Anciens noms : ${aliases.join(' · ')}">🕘 ${aliases.length}</span>` : '';
-      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus de nouvelles transactions">Inactive</span>' : '';
-      // En mode édition, l'icône devient un bouton (clic = choisir une autre icône).
-      const iconHtml = editing
-        ? `<button class="cat-icon cat-icon-edit" onclick="Categories._openIconPicker('${cat.id}')" title="Changer l'icône">${icon}</button>`
-        : `<div class="cat-icon">${icon}</div>`;
-
-      const top = `
-        <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">
-          <div class="cat-left">
-            ${iconHtml}
-            <span class="cat-name" title="${cat.name}">${cat.name}</span>
-          </div>
-          <div class="cat-top-right">
-            ${!editing ? histInline : ''}${obsoleteBadge}
-            <span class="cat-count">${n}</span>
-          </div>
-        </div>`;
-      const note = cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : '';
-
-      if (!editing) {
-        const expanded = this._expanded.has(cat.id);
-        const list = expanded ? cat.subcategories : cat.subcategories.slice(0, MAX_VIEW);
-        const shown = list.map(s =>
-          `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
-        let moreLink = '';
-        if (n > MAX_VIEW) {
-          moreLink = expanded
-            ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
-            : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - MAX_VIEW} autre${n - MAX_VIEW > 1 ? 's' : ''}</div>`;
-        }
-        const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
-        return `
-          <div class="category-card${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
-            ${top}${note}${body}
-            <div class="card-footer">
-              <button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button>
-            </div>
-          </div>`;
-      }
-
-      // Mode édition
-      const subEdit = cat.subcategories.map((s, idx) => `
-        <div class="subcat-item sub-edit" data-cat-id="${cat.id}" data-subcat-idx="${idx}"
-             onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">
-          <span class="sub-txt" title="${s}">${s}</span>
-          <button class="sub-x" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">×</button>
-        </div>`).join('');
-      return `
-        <div class="category-card editing${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
-          ${top}
-          <div class="edit-bar">
-            <button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button>
-          </div>
-          ${note}
-          <div class="subs subcat-list" data-cat-id="${cat.id}">
-            ${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}
-          </div>
-          <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
-          <div class="edit-footer">
-            <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
-            <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
-          </div>
-        </div>`;
+  // Volet dépliant listant les versions datées d'une lignée (à la place des cartes grises).
+  _renderDatedPanel(unit) {
+    const lin = unit.primary.lineage;
+    const open = this._expandedHist.has(lin);
+    const rows = unit.versions.map(v => {
+      const isPrim = v.id === unit.primary.id;
+      const note = v.versionNote || (isPrim ? 'Version actuelle' : '');
+      return `<div class="cat-ver-row${isPrim ? ' current' : ''}">
+        <button class="cat-ver-x" onclick="Categories.deleteCategory('${v.id}')" title="Supprimer cette version">×</button>
+        <span class="cat-ver-name">${v.name}${isPrim ? ' <span class="cat-ver-tag">actuelle</span>' : ''}</span>
+        <span class="cat-ver-note">${note}</span>
+      </div>`;
     }).join('');
+    return `<div class="cat-dated">
+      <button class="cat-dated-toggle" onclick="Categories._toggleHist('${lin}')">🕘 ${unit.versions.length} versions datées <span class="cat-dated-caret">${open ? '▲' : '▼'}</span></button>
+      ${open ? `<div class="cat-dated-list">${rows}</div>` : ''}
+    </div>`;
+  },
 
-    container.innerHTML = cards +
-      `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
+  // Type d'une catégorie : explicite (cat.type) sinon déduit du nom.
+  _catType(cat) {
+    if (cat.type === 'revenue' || cat.type === 'investment' || cat.type === 'expense') return cat.type;
+    const n = String(cat.name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (/revenu|salaire|paie/.test(n)) return 'revenue';
+    if (/epargne|invest|bourse|action|etf|crypto|\bpea\b|assurance vie|livret|placement/.test(n)) return 'investment';
+    return 'expense';
+  },
+
+  // Replie les lignées de renommage daté : 1 unité/catégorie, la version couvrant
+  // aujourd'hui (ou la 1re active) servant de carte principale.
+  _displayUnits(cats) {
+    const today = new Date().toISOString().slice(0, 10);
+    const covers = c => (!c.validFrom || today >= c.validFrom) && (!c.validTo || today <= c.validTo);
+    const seen = new Set(); const units = [];
+    cats.forEach(cat => {
+      if (!cat.lineage) { units.push({ primary: cat, versions: [cat], dated: false }); return; }
+      if (seen.has(cat.lineage)) return;
+      seen.add(cat.lineage);
+      const sibs = cats.filter(c => c.lineage === cat.lineage);
+      const primary = sibs.find(c => !c.obsolete && covers(c)) || sibs.find(c => !c.obsolete) || sibs[0];
+      units.push({ primary, versions: sibs, dated: sibs.length > 1 });
+    });
+    return units;
+  },
+
+  _setType(catId, type) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    cat.type = type;
+    Storage.saveCategories(cats);
+    this.render();
+  },
+
+  _toggleHist(lin) {
+    if (this._expandedHist.has(lin)) this._expandedHist.delete(lin);
+    else this._expandedHist.add(lin);
+    this.render();
   },
 
   // Palette de couleurs des cartes (barre du haut, pastille, fond d'icône, compteur).
@@ -501,6 +557,9 @@ const Categories = {
       let ti = cats.findIndex(c => c.id === tgtId);
       if (insertAfter) ti++;
       cats.splice(ti, 0, moved);
+      // Déposée dans la section d'un autre type → la catégorie change de type.
+      const tgt = cats.find(c => c.id === tgtId);
+      if (tgt) moved.type = this._catType(tgt);
 
     } else {
       const srcCat = cats.find(c => c.id === catId);
@@ -529,12 +588,19 @@ const Categories = {
 
   // ---- CRUD ----
 
-  openAddModal() {
+  openAddModal(type) {
+    const t = ['expense', 'revenue', 'investment'].includes(type) ? type : 'expense';
+    const typePick = this._TYPES.map(T =>
+      `<label class="cat-type-btn"><input type="radio" name="cat_type" value="${T.key}"${T.key === t ? ' checked' : ''}>${T.icon} ${T.label}</label>`).join('');
     Modal.open('Nouvelle catégorie', `
       <form onsubmit="Categories._confirmAdd(event)">
         <div class="form-group">
           <label>Nom de la catégorie</label>
           <input name="cat_name" class="form-input" required autofocus placeholder="ex: Transport, Loisirs, Santé…">
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <div class="cat-type-pick">${typePick}</div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
@@ -545,14 +611,15 @@ const Categories = {
 
   _confirmAdd(event) {
     event.preventDefault();
-    const name = new FormData(event.target).get('cat_name').trim();
+    const fd = new FormData(event.target);
+    const name = (fd.get('cat_name') || '').trim();
     if (!name) return;
     const cats = Storage.getCategories();
     if (cats.find(c => c.name.toLowerCase() === name.toLowerCase())) {
       alert('Cette catégorie existe déjà.');
       return;
     }
-    cats.push({ id: 'cat_' + Date.now(), name, subcategories: [] });
+    cats.push({ id: 'cat_' + Date.now(), name, subcategories: [], type: fd.get('cat_type') || 'expense' });
     Storage.saveCategories(cats);
     Modal.close();
     this.render();
