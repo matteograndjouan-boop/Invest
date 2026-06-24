@@ -7,65 +7,129 @@ const Categories = {
     const container = document.getElementById('categories-container');
     if (!container) return;
 
+    const subEl = document.getElementById('cat-subtitle');
+    if (subEl) {
+      const nSub = cats.reduce((s, c) => s + c.subcategories.length, 0);
+      subEl.textContent = `${cats.length} catégorie${cats.length > 1 ? 's' : ''} · ${nSub} sous-catégorie${nSub > 1 ? 's' : ''}`;
+    }
+
     if (!cats.length) {
-      container.innerHTML = '<p class="text-muted text-center py-lg">Aucune catégorie. Créez-en une !</p>';
+      container.innerHTML = `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
       return;
     }
 
-    container.innerHTML = cats.map(cat => {
+    const MAX_VIEW = 3; // sous-catégories visibles avant « +N autres »
+
+    const cards = cats.map(cat => {
       const editing = this._editingCatId === cat.id;
+      const m  = this._meta(cat.name);
+      const sc = m.scheme;
+      const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+      const n = cat.subcategories.length;
+      const aliases = cat.aliases || [];
 
-      const subcatRows = cat.subcategories.map((sub, idx) => `
-        <div class="subcat-item" data-cat-id="${cat.id}" data-subcat-idx="${idx}">
-          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">⠿</span>
-          <span class="subcat-name" title="${sub}">${sub}</span>
-          ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
+      const histInline = aliases.length
+        ? `<button class="cat-hist-mini" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · cliquer pour gérer">🕘 ${aliases.length}</button>` : '';
+      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus de nouvelles transactions">Inactive</span>' : '';
+
+      const top = `
+        <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">
+          <div class="cat-left">
+            <div class="cat-icon">${m.icon}</div>
+            <span class="cat-name" title="${cat.name}">${cat.name}</span>
+          </div>
+          <div class="cat-top-right">
+            ${!editing ? histInline : ''}${obsoleteBadge}
+            <span class="cat-count">${n}</span>
+          </div>
+        </div>`;
+      const note = cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : '';
+
+      if (!editing) {
+        const shown = cat.subcategories.slice(0, MAX_VIEW).map(s =>
+          `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
+        const more = n > MAX_VIEW ? `<div class="more">+${n - MAX_VIEW} autre${n - MAX_VIEW > 1 ? 's' : ''}</div>` : '';
+        const body = n ? `<div class="subs">${shown}</div>${more}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
+        return `
+          <div class="category-card${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+            ${top}${note}${body}
+            <div class="card-footer">
+              <button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button>
+              <button class="btn-del" onclick="Categories.deleteCategory('${cat.id}')" title="Supprimer la catégorie">🗑</button>
+            </div>
+          </div>`;
+      }
+
+      // Mode édition
+      const histBtn = aliases.length
+        ? `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · gérer">🕘 ${aliases.length}</button>`
+        : `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom (pour l'import)">⊕ Ancien nom</button>`;
+      const subEdit = cat.subcategories.map((s, idx) => `
+        <div class="subcat-item sub-edit" data-cat-id="${cat.id}" data-subcat-idx="${idx}"
+             onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">
+          <span class="sub-txt" title="${s}">${s}</span>
+          <button class="sub-x" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">×</button>
         </div>`).join('');
-
-      const aliases   = cat.aliases || [];
-      // Badge d'historique 🕘 : visible dès qu'un ancien nom existe (survol = anciens noms,
-      // clic = gestion). En mode édition, proposé même à 0 pour DÉCLARER un ancien nom
-      // (répare une catégorie renommée avant la mémoire d'alias → concordance d'import).
-      const histBadge = aliases.length
-        ? `<button class="cat-hist-badge" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')}  ·  cliquer pour gérer">🕘 ${aliases.length}</button>`
-        : (editing ? `<button class="cat-hist-badge cat-hist-empty" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom de cette catégorie (pour l'import)">🕘 ＋ ancien nom</button>` : '');
-      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : '';
-
-      // En mode édition, les actions « lourdes » vont sur leurs propres lignes (barre
-      // d'outils + pied) pour ne plus jamais déborder du header étroit.
-      const toolbar = editing
-        ? `<div class="cat-edit-toolbar">
-             <button class="cat-tool-btn" onclick="Categories._openRenameCat('${cat.id}')">✏️ Renommer</button>
-             ${histBadge}
-           </div>`
-        : '';
-      const footer = editing
-        ? `<div class="cat-edit-footer">
-             <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
-             <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
-           </div>`
-        : '';
-
       return `
-        <div class="category-card${editing ? ' editing' : ''}${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
-          <div class="category-card-header">
-            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">⠿</span>
-            <h3 title="${cat.name}">${cat.name}</h3>
-            ${!editing && aliases.length ? histBadge : ''}
-            ${obsoleteBadge}
-            ${!editing ? `<span class="cat-subcount" title="${cat.subcategories.length} sous-catégorie(s)">${cat.subcategories.length}</span>` : ''}
-            ${!editing
-              ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>`
-              : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">✓ Terminer</button>`}
+        <div class="category-card editing${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+          ${top}
+          <div class="edit-bar">
+            <button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button>
+            ${histBtn}
           </div>
-          ${toolbar}
-          ${cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : ''}
-          <div class="subcat-list" data-cat-id="${cat.id}">
-            ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
+          ${note}
+          <div class="subs subcat-list" data-cat-id="${cat.id}">
+            ${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}
           </div>
-          ${footer}
+          <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
+          <div class="edit-footer">
+            <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+            <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
+          </div>
         </div>`;
     }).join('');
+
+    container.innerHTML = cards +
+      `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
+  },
+
+  // Palette de couleurs des cartes (barre du haut, pastille, fond d'icône, compteur).
+  _PALETTE: [
+    { bar: '#6c63ff,#9c95ff', dot: '#7f77dd', bg: '#ede9ff', count: '#6c63ff' },
+    { bar: '#1a9e6e,#5dcaa5', dot: '#1d9e75', bg: '#e1f5ee', count: '#0f6e56' },
+    { bar: '#ef9f27,#fac775', dot: '#ba7517', bg: '#faeeda', count: '#854f0b' },
+    { bar: '#378add,#85b7eb', dot: '#378add', bg: '#e6f1fb', count: '#185fa5' },
+    { bar: '#d4537e,#ed93b1', dot: '#d4537e', bg: '#fbeaf0', count: '#993556' },
+    { bar: '#e24b4a,#f09595', dot: '#e24b4a', bg: '#fcebeb', count: '#a32d2d' },
+    { bar: '#888780,#b4b2a9', dot: '#888780', bg: '#f1efe8', count: '#5f5e5a' },
+    { bar: '#7c4dff,#b39ddb', dot: '#7c4dff', bg: '#efe7ff', count: '#5e35b1' },
+  ],
+  // Icône + couleur par mots-clés du nom (repli : couleur stable par hash + 🏷️).
+  _CATMETA: [
+    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒', p: 1 },
+    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌', p: 3 },
+    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠', p: 3 },
+    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️', p: 5 },
+    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯', p: 4 },
+    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️', p: 0 },
+    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶', p: 0 },
+    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷', p: 2 },
+    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰', p: 1 },
+    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦', p: 6 },
+    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️', p: 2 },
+    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️', p: 3 },
+    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓', p: 3 },
+    { kw: ['enfant', 'famille', 'bebe'], icon: '👶', p: 4 },
+    { kw: ['animal', 'chien', 'chat'], icon: '🐾', p: 2 },
+    { kw: ['cadeau'], icon: '🎁', p: 4 },
+    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾', p: 6 },
+    { kw: ['beaute', 'coiffure'], icon: '💄', p: 4 },
+  ],
+  _meta(name) {
+    const n = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme: this._PALETTE[m.p] };
+    let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+    return { icon: '🏷️', scheme: this._PALETTE[h % this._PALETTE.length] };
   },
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
@@ -291,6 +355,9 @@ const Categories = {
   // ---- Drag & Drop ----
 
   _dndStart(e, type, catId, subcatIdx) {
+    // Un clic sur un bouton dans la zone de saisie (× supprimer, 🕘 historique)
+    // ne doit PAS démarrer un glissement — on laisse le clic suivre son cours.
+    if (e.target.closest('button')) return;
     if (e.cancelable) e.preventDefault();
     const isTouch = !!e.touches;
     const px = isTouch ? e.touches[0].clientX : e.clientX;

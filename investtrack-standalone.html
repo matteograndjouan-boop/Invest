@@ -6,31 +6,32 @@
   <title>InvestTrack — Gestion de Patrimoine</title>
   <style>
 :root {
-  --primary: #6d76e8;
-  --primary-dark: #5a63d8;
-  --primary-light: #eceefc;
+  --primary: #6c63ff;
+  --primary-dark: #5a52e0;
+  --primary-light: #ede9ff;
   --success: #16c098;
   --success-bg: #d8f5ee;
-  --danger: #f0596b;
-  --danger-bg: #fde6e9;
-  --warning: #f5a623;
-  --warning-bg: #fdf0d9;
-  --info: #5b8def;
-  --info-bg: #e6eefd;
-  --bg: #eef0f9;
+  --danger: #e24b4a;
+  --danger-bg: #fdeaea;
+  --warning: #ef9f27;
+  --warning-bg: #faeeda;
+  --info: #378add;
+  --info-bg: #e6f1fb;
+  --bg: #f0eef8;
   --surface: #ffffff;
-  --border: #e9eaf4;
-  --text: #1c1d2b;
-  --text-muted: #8b8fa6;
-  --ink: #17181f;
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #71768d;
-  --sidebar-active: #17181f;
-  --sidebar-hover: #f2f3fb;
-  --radius: 20px;
+  --border: #ececf3;
+  --text: #0f0e17;
+  --text-muted: #6b6880;
+  --text3: #a09db8;
+  --ink: #0f0e17;
+  --sidebar-bg: #0f0e17;
+  --sidebar-text: #8884a8;
+  --sidebar-active: #6c63ff;
+  --sidebar-hover: rgba(255,255,255,0.06);
+  --radius: 18px;
   --radius-sm: 12px;
-  --shadow: 0 2px 10px rgba(46,49,97,.05);
-  --shadow-md: 0 12px 32px rgba(46,49,97,.11);
+  --shadow: 0 2px 12px rgba(15,14,23,.05);
+  --shadow-md: 0 10px 32px rgba(15,14,23,.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1860,6 +1861,96 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-sm { border-radius: 999px; padding: 6px 14px; }
 .btn-danger { border-radius: 999px; }
 .btn-icon { border-radius: 10px; transition: background .15s, color .15s; }
+
+/* ============================================================
+   Barre latérale sombre (maquette v2) — surcharges sur thème clair
+   ============================================================ */
+.sidebar { border-right: none; }
+.sidebar-header { color: #fff; }
+.mode-switcher { border-bottom: 1px solid rgba(255,255,255,0.07); }
+.nav-divider { background: rgba(255,255,255,0.07); }
+.mode-btn:hover, .nav-item:hover { color: #fff; }
+.sidebar-footer { border-top: 1px solid rgba(255,255,255,0.07); }
+.btn-icon-sm { border-color: rgba(255,255,255,0.14); }
+
+/* ============================================================
+   Onglet Catégories v2 — cartes colorées (maquette)
+   ============================================================ */
+.cat-page-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+.categories-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-items: start; }
+
+.category-card {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 20px;
+  position: relative; overflow: hidden; box-shadow: none;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.category-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--cat-bar, var(--primary)); border-radius: var(--radius) var(--radius) 0 0;
+}
+.category-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(15,14,23,.09); }
+.category-card.editing { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(108,99,255,.18); transform: none; }
+.category-card.cat-obsolete { opacity: .72; }
+
+/* Indicateurs drag & drop : ombre intérieure (zéro conflit avec la barre du haut) */
+.category-card.dnd-over::before, .category-card.dnd-over-after::after,
+.subcat-item.dnd-over::before, .subcat-item.dnd-over-after::after { content: none; }
+.category-card.dnd-over   { box-shadow: inset 4px 0 0 var(--primary), 0 8px 32px rgba(15,14,23,.10); }
+.category-card.dnd-over-after { box-shadow: inset -4px 0 0 var(--primary), 0 8px 32px rgba(15,14,23,.10); }
+.category-card.dnd-ghost { opacity: .35; }
+.subcat-item.dnd-over { box-shadow: inset 0 3px 0 var(--primary); }
+.subcat-item.dnd-over-after { box-shadow: inset 0 -3px 0 var(--primary); }
+.subcat-item.dnd-ghost { opacity: .35; }
+
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; cursor: grab; }
+.card-top:active { cursor: grabbing; }
+.cat-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; background: var(--cat-ico, var(--primary-light)); }
+.cat-name { font-size: 15px; font-weight: 700; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-top-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.cat-count { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--bg); color: var(--cat-cnt, var(--text-muted)); }
+.cat-hist-mini { border: none; background: var(--primary-light); color: var(--primary-dark); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+.cat-obsolete-badge { background: var(--danger-bg); color: var(--danger); font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+
+.subs { display: flex; flex-direction: column; }
+.sub-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border); }
+.sub-row:last-child { border-bottom: none; }
+.sub-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--cat-dot, var(--primary)); }
+.sub-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more { font-size: 11px; color: var(--text3); padding: 6px 0 0 14px; }
+.subs-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0; }
+
+.card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.btn-edit { font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-light); border: none; border-radius: 50px; padding: 6px 14px; cursor: pointer; transition: background .12s; }
+.btn-edit:hover { background: #ddd9ff; }
+.btn-del { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--text3); padding: 5px 8px; border-radius: 8px; transition: all .12s; }
+.btn-del:hover { color: var(--danger); background: var(--danger-bg); }
+
+.edit-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.btn-rename { font-size: 12px; font-weight: 600; padding: 6px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 50px; cursor: pointer; color: var(--text); white-space: nowrap; transition: all .12s; }
+.btn-rename:hover { border-color: var(--primary); color: var(--primary); }
+.btn-rename.cat-hist { color: var(--text-muted); }
+.subcat-item.sub-edit { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-muted); padding: 7px 8px; border-bottom: 1px solid var(--border); border-radius: 8px; cursor: grab; position: relative; }
+.subcat-item.sub-edit:last-child { border-bottom: none; }
+.subcat-item.sub-edit:hover { background: var(--bg); }
+.subcat-item.sub-edit:active { cursor: grabbing; }
+.sub-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 0 6px; line-height: 1; border-radius: 6px; }
+.sub-x:hover { color: var(--danger); }
+.btn-addsub { font-size: 12px; font-weight: 600; color: var(--primary); background: none; border: 1px dashed rgba(108,99,255,.35); border-radius: 50px; padding: 7px 14px; cursor: pointer; margin-top: 10px; width: 100%; transition: background .12s; }
+.btn-addsub:hover { background: var(--primary-light); }
+.edit-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.btn-delfull { font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-bg); border: none; border-radius: 50px; padding: 7px 15px; cursor: pointer; }
+.btn-done { font-size: 12px; font-weight: 600; padding: 7px 17px; background: var(--primary); color: #fff; border: none; border-radius: 50px; cursor: pointer; }
+.btn-done:hover { background: var(--primary-dark); }
+
+.card-new { border: 1px dashed var(--border); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 36px 20px; color: var(--text3); cursor: pointer; box-shadow: none; }
+.card-new::before { display: none; }
+.card-new:hover { background: rgba(108,99,255,.03); border-color: var(--primary); color: var(--primary); transform: none; box-shadow: none; }
+.new-plus { width: 40px; height: 40px; border-radius: 12px; border: 2px dashed currentColor; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 300; }
+.new-label { font-size: 13px; font-weight: 600; }
+
+.cat-version-note { font-size: 11px; color: var(--text-muted); font-style: italic; margin: -2px 0 12px; padding: 7px 10px; background: var(--bg); border-radius: 8px; border-bottom: none; }
 </style>
 </head>
 <body>
@@ -2444,7 +2535,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
       <!-- CATEGORIES -->
       <section class="section hidden" id="section-categories">
         <div class="section-header">
-          <h1>Catégories</h1>
+          <div>
+            <h1>Catégories</h1>
+            <div class="cat-page-sub" id="cat-subtitle"></div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser</button>
             <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
@@ -4804,65 +4898,129 @@ const Categories = {
     const container = document.getElementById('categories-container');
     if (!container) return;
 
+    const subEl = document.getElementById('cat-subtitle');
+    if (subEl) {
+      const nSub = cats.reduce((s, c) => s + c.subcategories.length, 0);
+      subEl.textContent = `${cats.length} catégorie${cats.length > 1 ? 's' : ''} · ${nSub} sous-catégorie${nSub > 1 ? 's' : ''}`;
+    }
+
     if (!cats.length) {
-      container.innerHTML = '<p class="text-muted text-center py-lg">Aucune catégorie. Créez-en une !</p>';
+      container.innerHTML = `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
       return;
     }
 
-    container.innerHTML = cats.map(cat => {
+    const MAX_VIEW = 3; // sous-catégories visibles avant « +N autres »
+
+    const cards = cats.map(cat => {
       const editing = this._editingCatId === cat.id;
+      const m  = this._meta(cat.name);
+      const sc = m.scheme;
+      const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+      const n = cat.subcategories.length;
+      const aliases = cat.aliases || [];
 
-      const subcatRows = cat.subcategories.map((sub, idx) => `
-        <div class="subcat-item" data-cat-id="${cat.id}" data-subcat-idx="${idx}">
-          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">⠿</span>
-          <span class="subcat-name" title="${sub}">${sub}</span>
-          ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
+      const histInline = aliases.length
+        ? `<button class="cat-hist-mini" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · cliquer pour gérer">🕘 ${aliases.length}</button>` : '';
+      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus de nouvelles transactions">Inactive</span>' : '';
+
+      const top = `
+        <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">
+          <div class="cat-left">
+            <div class="cat-icon">${m.icon}</div>
+            <span class="cat-name" title="${cat.name}">${cat.name}</span>
+          </div>
+          <div class="cat-top-right">
+            ${!editing ? histInline : ''}${obsoleteBadge}
+            <span class="cat-count">${n}</span>
+          </div>
+        </div>`;
+      const note = cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : '';
+
+      if (!editing) {
+        const shown = cat.subcategories.slice(0, MAX_VIEW).map(s =>
+          `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
+        const more = n > MAX_VIEW ? `<div class="more">+${n - MAX_VIEW} autre${n - MAX_VIEW > 1 ? 's' : ''}</div>` : '';
+        const body = n ? `<div class="subs">${shown}</div>${more}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
+        return `
+          <div class="category-card${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+            ${top}${note}${body}
+            <div class="card-footer">
+              <button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button>
+              <button class="btn-del" onclick="Categories.deleteCategory('${cat.id}')" title="Supprimer la catégorie">🗑</button>
+            </div>
+          </div>`;
+      }
+
+      // Mode édition
+      const histBtn = aliases.length
+        ? `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')} · gérer">🕘 ${aliases.length}</button>`
+        : `<button class="btn-rename cat-hist" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom (pour l'import)">⊕ Ancien nom</button>`;
+      const subEdit = cat.subcategories.map((s, idx) => `
+        <div class="subcat-item sub-edit" data-cat-id="${cat.id}" data-subcat-idx="${idx}"
+             onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">
+          <span class="sub-txt" title="${s}">${s}</span>
+          <button class="sub-x" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">×</button>
         </div>`).join('');
-
-      const aliases   = cat.aliases || [];
-      // Badge d'historique 🕘 : visible dès qu'un ancien nom existe (survol = anciens noms,
-      // clic = gestion). En mode édition, proposé même à 0 pour DÉCLARER un ancien nom
-      // (répare une catégorie renommée avant la mémoire d'alias → concordance d'import).
-      const histBadge = aliases.length
-        ? `<button class="cat-hist-badge" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')}  ·  cliquer pour gérer">🕘 ${aliases.length}</button>`
-        : (editing ? `<button class="cat-hist-badge cat-hist-empty" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom de cette catégorie (pour l'import)">🕘 ＋ ancien nom</button>` : '');
-      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : '';
-
-      // En mode édition, les actions « lourdes » vont sur leurs propres lignes (barre
-      // d'outils + pied) pour ne plus jamais déborder du header étroit.
-      const toolbar = editing
-        ? `<div class="cat-edit-toolbar">
-             <button class="cat-tool-btn" onclick="Categories._openRenameCat('${cat.id}')">✏️ Renommer</button>
-             ${histBadge}
-           </div>`
-        : '';
-      const footer = editing
-        ? `<div class="cat-edit-footer">
-             <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
-             <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
-           </div>`
-        : '';
-
       return `
-        <div class="category-card${editing ? ' editing' : ''}${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
-          <div class="category-card-header">
-            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">⠿</span>
-            <h3 title="${cat.name}">${cat.name}</h3>
-            ${!editing && aliases.length ? histBadge : ''}
-            ${obsoleteBadge}
-            ${!editing ? `<span class="cat-subcount" title="${cat.subcategories.length} sous-catégorie(s)">${cat.subcategories.length}</span>` : ''}
-            ${!editing
-              ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>`
-              : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">✓ Terminer</button>`}
+        <div class="category-card editing${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+          ${top}
+          <div class="edit-bar">
+            <button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button>
+            ${histBtn}
           </div>
-          ${toolbar}
-          ${cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : ''}
-          <div class="subcat-list" data-cat-id="${cat.id}">
-            ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
+          ${note}
+          <div class="subs subcat-list" data-cat-id="${cat.id}">
+            ${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}
           </div>
-          ${footer}
+          <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
+          <div class="edit-footer">
+            <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+            <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
+          </div>
         </div>`;
     }).join('');
+
+    container.innerHTML = cards +
+      `<div class="category-card card-new" onclick="Categories.openAddModal()"><div class="new-plus">＋</div><span class="new-label">Nouvelle catégorie</span></div>`;
+  },
+
+  // Palette de couleurs des cartes (barre du haut, pastille, fond d'icône, compteur).
+  _PALETTE: [
+    { bar: '#6c63ff,#9c95ff', dot: '#7f77dd', bg: '#ede9ff', count: '#6c63ff' },
+    { bar: '#1a9e6e,#5dcaa5', dot: '#1d9e75', bg: '#e1f5ee', count: '#0f6e56' },
+    { bar: '#ef9f27,#fac775', dot: '#ba7517', bg: '#faeeda', count: '#854f0b' },
+    { bar: '#378add,#85b7eb', dot: '#378add', bg: '#e6f1fb', count: '#185fa5' },
+    { bar: '#d4537e,#ed93b1', dot: '#d4537e', bg: '#fbeaf0', count: '#993556' },
+    { bar: '#e24b4a,#f09595', dot: '#e24b4a', bg: '#fcebeb', count: '#a32d2d' },
+    { bar: '#888780,#b4b2a9', dot: '#888780', bg: '#f1efe8', count: '#5f5e5a' },
+    { bar: '#7c4dff,#b39ddb', dot: '#7c4dff', bg: '#efe7ff', count: '#5e35b1' },
+  ],
+  // Icône + couleur par mots-clés du nom (repli : couleur stable par hash + 🏷️).
+  _CATMETA: [
+    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒', p: 1 },
+    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌', p: 3 },
+    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠', p: 3 },
+    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️', p: 5 },
+    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯', p: 4 },
+    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️', p: 0 },
+    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶', p: 0 },
+    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷', p: 2 },
+    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰', p: 1 },
+    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦', p: 6 },
+    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️', p: 2 },
+    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️', p: 3 },
+    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓', p: 3 },
+    { kw: ['enfant', 'famille', 'bebe'], icon: '👶', p: 4 },
+    { kw: ['animal', 'chien', 'chat'], icon: '🐾', p: 2 },
+    { kw: ['cadeau'], icon: '🎁', p: 4 },
+    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾', p: 6 },
+    { kw: ['beaute', 'coiffure'], icon: '💄', p: 4 },
+  ],
+  _meta(name) {
+    const n = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme: this._PALETTE[m.p] };
+    let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+    return { icon: '🏷️', scheme: this._PALETTE[h % this._PALETTE.length] };
   },
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
@@ -5088,6 +5246,9 @@ const Categories = {
   // ---- Drag & Drop ----
 
   _dndStart(e, type, catId, subcatIdx) {
+    // Un clic sur un bouton dans la zone de saisie (× supprimer, 🕘 historique)
+    // ne doit PAS démarrer un glissement — on laisse le clic suivre son cours.
+    if (e.target.closest('button')) return;
     if (e.cancelable) e.preventDefault();
     const isTouch = !!e.touches;
     const px = isTouch ? e.touches[0].clientX : e.clientX;
