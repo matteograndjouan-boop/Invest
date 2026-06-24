@@ -1810,6 +1810,56 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 #dash-solde-card .kpi-sub * { color: rgba(255,255,255,.88) !important; }
 #dash-solde-card .kpi-value { color: #fff !important; }
 #dash-solde-card .kpi-badge { background: rgba(255,255,255,.22) !important; color: #fff !important; }
+
+/* ===== Onglet Catégories — refonte (cartes nettes, zéro débordement) ===== */
+.categories-grid { gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.category-card { border: 1px solid transparent; box-shadow: var(--shadow); overflow: hidden; transition: box-shadow .18s; }
+.category-card:hover { box-shadow: var(--shadow-md); }
+.category-card.editing { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-md); }
+
+.category-card-header { gap: 8px; padding: 13px 14px; background: transparent; }
+.category-card-header h3 { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cat-subcount { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--bg); border-radius: 999px; padding: 2px 9px; min-width: 24px; text-align: center; }
+
+.cat-drag-handle { font-size: 18px; color: #c4c8da; padding: 4px 2px; flex-shrink: 0; transition: color .15s; }
+.cat-drag-handle:hover { color: var(--primary); }
+
+.cat-edit-btn { flex-shrink: 0; padding: 6px 15px; font-size: 12.5px; font-weight: 600; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); white-space: nowrap; transition: all .15s; }
+.cat-edit-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.cat-edit-btn.active { border-color: var(--primary); color: #fff; background: var(--primary); }
+
+.cat-edit-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); }
+.cat-tool-btn { padding: 6px 13px; font-size: 12.5px; font-weight: 600; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; transition: all .15s; }
+.cat-tool-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.cat-hist-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--primary-light); background: var(--primary-light); color: var(--primary-dark); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.cat-hist-badge.cat-hist-empty { background: none; color: var(--text-muted); font-weight: 600; border-style: dashed; border-color: var(--border); }
+
+.cat-obsolete-badge { flex-shrink: 0; background: var(--danger-bg); color: var(--danger); }
+.cat-version-note { background: var(--bg); border-bottom: 1px solid var(--border); padding: 8px 14px; }
+
+.subcat-list { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.subcat-list.dnd-over { background: var(--primary-light); border-radius: 12px; }
+.subcat-item { gap: 6px; padding: 7px 9px; border-radius: 10px; }
+.subcat-handle { font-size: 15px; color: #c4c8da; transition: color .15s; }
+.subcat-item:hover .subcat-handle { color: var(--primary); }
+.subcat-name { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subcat-delete-btn { color: var(--text-muted); border-radius: 8px; padding: 4px 7px; transition: all .15s; }
+.subcat-delete-btn:hover { background: var(--danger-bg); color: var(--danger); }
+
+.cat-edit-footer { gap: 8px; padding: 10px 14px; background: var(--bg); }
+.cat-edit-footer .btn-sm { flex: 1; min-width: 120px; }
+
+/* Lignes d'insertion drag & drop, plus nettes et animées */
+.category-card.dnd-over::before, .category-card.dnd-over-after::after { top: 6px; bottom: 6px; width: 4px; border-radius: 4px; }
+.category-card.dnd-ghost, .subcat-item.dnd-ghost { opacity: 0.35; }
+
+/* ===== Boutons — restyle global « pilule » douce ===== */
+.btn-primary, .btn-secondary { border-radius: 999px; padding: 9px 18px; }
+.btn-sm { border-radius: 999px; padding: 6px 14px; }
+.btn-danger { border-radius: 999px; }
+.btn-icon { border-radius: 10px; transition: background .15s, color .15s; }
 </style>
 </head>
 <body>
@@ -4764,35 +4814,48 @@ const Categories = {
 
       const subcatRows = cat.subcategories.map((sub, idx) => `
         <div class="subcat-item" data-cat-id="${cat.id}" data-subcat-idx="${idx}">
-          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})">⠿</span>
-          <span class="subcat-name">${sub}</span>
+          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">⠿</span>
+          <span class="subcat-name" title="${sub}">${sub}</span>
           ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
         </div>`).join('');
 
       const aliases   = cat.aliases || [];
-      // Badge d'historique 🕘 : toujours visible dès qu'un ancien nom existe (le « 1 »
-      // demandé), survol = anciens noms, clic = fenêtre de gestion. En mode édition, il
-      // s'affiche aussi à 0 pour permettre de DÉCLARER un ancien nom (répare une
-      // catégorie renommée avant la mémoire d'alias → fait concorder l'import).
+      // Badge d'historique 🕘 : visible dès qu'un ancien nom existe (survol = anciens noms,
+      // clic = gestion). En mode édition, proposé même à 0 pour DÉCLARER un ancien nom
+      // (répare une catégorie renommée avant la mémoire d'alias → concordance d'import).
       const histBadge = aliases.length
         ? `<button class="cat-hist-badge" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')}  ·  cliquer pour gérer">🕘 ${aliases.length}</button>`
         : (editing ? `<button class="cat-hist-badge cat-hist-empty" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom de cette catégorie (pour l'import)">🕘 ＋ ancien nom</button>` : '');
-      const footer = editing ? `
-        <div class="cat-edit-footer">
-          <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
-          <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
-        </div>` : '';
+      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : '';
+
+      // En mode édition, les actions « lourdes » vont sur leurs propres lignes (barre
+      // d'outils + pied) pour ne plus jamais déborder du header étroit.
+      const toolbar = editing
+        ? `<div class="cat-edit-toolbar">
+             <button class="cat-tool-btn" onclick="Categories._openRenameCat('${cat.id}')">✏️ Renommer</button>
+             ${histBadge}
+           </div>`
+        : '';
+      const footer = editing
+        ? `<div class="cat-edit-footer">
+             <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
+             <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+           </div>`
+        : '';
 
       return `
         <div class="category-card${editing ? ' editing' : ''}${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
           <div class="category-card-header">
-            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)">⠿</span>
-            <h3>${cat.name}</h3>
-            ${histBadge}
-            ${cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : ''}
-            ${editing ? `<button class="cat-rename-btn" onclick="Categories._openRenameCat('${cat.id}')" title="Renommer">✏️ Renommer</button>` : ''}
-            ${!editing ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>` : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">Terminer</button>`}
+            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">⠿</span>
+            <h3 title="${cat.name}">${cat.name}</h3>
+            ${!editing && aliases.length ? histBadge : ''}
+            ${obsoleteBadge}
+            ${!editing ? `<span class="cat-subcount" title="${cat.subcategories.length} sous-catégorie(s)">${cat.subcategories.length}</span>` : ''}
+            ${!editing
+              ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>`
+              : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">✓ Terminer</button>`}
           </div>
+          ${toolbar}
           ${cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : ''}
           <div class="subcat-list" data-cat-id="${cat.id}">
             ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}

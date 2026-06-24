@@ -1803,3 +1803,53 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 #dash-solde-card .kpi-sub * { color: rgba(255,255,255,.88) !important; }
 #dash-solde-card .kpi-value { color: #fff !important; }
 #dash-solde-card .kpi-badge { background: rgba(255,255,255,.22) !important; color: #fff !important; }
+
+/* ===== Onglet Catégories — refonte (cartes nettes, zéro débordement) ===== */
+.categories-grid { gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.category-card { border: 1px solid transparent; box-shadow: var(--shadow); overflow: hidden; transition: box-shadow .18s; }
+.category-card:hover { box-shadow: var(--shadow-md); }
+.category-card.editing { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-md); }
+
+.category-card-header { gap: 8px; padding: 13px 14px; background: transparent; }
+.category-card-header h3 { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cat-subcount { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--bg); border-radius: 999px; padding: 2px 9px; min-width: 24px; text-align: center; }
+
+.cat-drag-handle { font-size: 18px; color: #c4c8da; padding: 4px 2px; flex-shrink: 0; transition: color .15s; }
+.cat-drag-handle:hover { color: var(--primary); }
+
+.cat-edit-btn { flex-shrink: 0; padding: 6px 15px; font-size: 12.5px; font-weight: 600; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); white-space: nowrap; transition: all .15s; }
+.cat-edit-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.cat-edit-btn.active { border-color: var(--primary); color: #fff; background: var(--primary); }
+
+.cat-edit-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; background: var(--bg); border-bottom: 1px solid var(--border); }
+.cat-tool-btn { padding: 6px 13px; font-size: 12.5px; font-weight: 600; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; transition: all .15s; }
+.cat-tool-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.cat-hist-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--primary-light); background: var(--primary-light); color: var(--primary-dark); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.cat-hist-badge.cat-hist-empty { background: none; color: var(--text-muted); font-weight: 600; border-style: dashed; border-color: var(--border); }
+
+.cat-obsolete-badge { flex-shrink: 0; background: var(--danger-bg); color: var(--danger); }
+.cat-version-note { background: var(--bg); border-bottom: 1px solid var(--border); padding: 8px 14px; }
+
+.subcat-list { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.subcat-list.dnd-over { background: var(--primary-light); border-radius: 12px; }
+.subcat-item { gap: 6px; padding: 7px 9px; border-radius: 10px; }
+.subcat-handle { font-size: 15px; color: #c4c8da; transition: color .15s; }
+.subcat-item:hover .subcat-handle { color: var(--primary); }
+.subcat-name { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subcat-delete-btn { color: var(--text-muted); border-radius: 8px; padding: 4px 7px; transition: all .15s; }
+.subcat-delete-btn:hover { background: var(--danger-bg); color: var(--danger); }
+
+.cat-edit-footer { gap: 8px; padding: 10px 14px; background: var(--bg); }
+.cat-edit-footer .btn-sm { flex: 1; min-width: 120px; }
+
+/* Lignes d'insertion drag & drop, plus nettes et animées */
+.category-card.dnd-over::before, .category-card.dnd-over-after::after { top: 6px; bottom: 6px; width: 4px; border-radius: 4px; }
+.category-card.dnd-ghost, .subcat-item.dnd-ghost { opacity: 0.35; }
+
+/* ===== Boutons — restyle global « pilule » douce ===== */
+.btn-primary, .btn-secondary { border-radius: 999px; padding: 9px 18px; }
+.btn-sm { border-radius: 999px; padding: 6px 14px; }
+.btn-danger { border-radius: 999px; }
+.btn-icon { border-radius: 10px; transition: background .15s, color .15s; }

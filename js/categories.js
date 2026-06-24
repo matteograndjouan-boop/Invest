@@ -17,35 +17,48 @@ const Categories = {
 
       const subcatRows = cat.subcategories.map((sub, idx) => `
         <div class="subcat-item" data-cat-id="${cat.id}" data-subcat-idx="${idx}">
-          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})">⠿</span>
-          <span class="subcat-name">${sub}</span>
+          <span class="subcat-handle" onmousedown="Categories._dndStart(event,'subcat','${cat.id}',${idx})" ontouchstart="Categories._dndStart(event,'subcat','${cat.id}',${idx})" title="Glisser pour déplacer">⠿</span>
+          <span class="subcat-name" title="${sub}">${sub}</span>
           ${editing ? `<button class="subcat-delete-btn" onclick="Categories.deleteSubcat('${cat.id}',${idx})" title="Supprimer">✕</button>` : ''}
         </div>`).join('');
 
       const aliases   = cat.aliases || [];
-      // Badge d'historique 🕘 : toujours visible dès qu'un ancien nom existe (le « 1 »
-      // demandé), survol = anciens noms, clic = fenêtre de gestion. En mode édition, il
-      // s'affiche aussi à 0 pour permettre de DÉCLARER un ancien nom (répare une
-      // catégorie renommée avant la mémoire d'alias → fait concorder l'import).
+      // Badge d'historique 🕘 : visible dès qu'un ancien nom existe (survol = anciens noms,
+      // clic = gestion). En mode édition, proposé même à 0 pour DÉCLARER un ancien nom
+      // (répare une catégorie renommée avant la mémoire d'alias → concordance d'import).
       const histBadge = aliases.length
         ? `<button class="cat-hist-badge" onclick="Categories._openHistoryModal('${cat.id}')" title="Anciennement : ${aliases.join(' · ')}  ·  cliquer pour gérer">🕘 ${aliases.length}</button>`
         : (editing ? `<button class="cat-hist-badge cat-hist-empty" onclick="Categories._openHistoryModal('${cat.id}')" title="Déclarer un ancien nom de cette catégorie (pour l'import)">🕘 ＋ ancien nom</button>` : '');
-      const footer = editing ? `
-        <div class="cat-edit-footer">
-          <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Ajouter</button>
-          <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">Supprimer la catégorie</button>
-        </div>` : '';
+      const obsoleteBadge = cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : '';
+
+      // En mode édition, les actions « lourdes » vont sur leurs propres lignes (barre
+      // d'outils + pied) pour ne plus jamais déborder du header étroit.
+      const toolbar = editing
+        ? `<div class="cat-edit-toolbar">
+             <button class="cat-tool-btn" onclick="Categories._openRenameCat('${cat.id}')">✏️ Renommer</button>
+             ${histBadge}
+           </div>`
+        : '';
+      const footer = editing
+        ? `<div class="cat-edit-footer">
+             <button class="btn-secondary btn-sm" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
+             <button class="btn-danger btn-sm" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+           </div>`
+        : '';
 
       return `
         <div class="category-card${editing ? ' editing' : ''}${cat.obsolete ? ' cat-obsolete' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}">
           <div class="category-card-header">
-            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)">⠿</span>
-            <h3>${cat.name}</h3>
-            ${histBadge}
-            ${cat.obsolete ? '<span class="cat-obsolete-badge" title="Ne reçoit plus les nouvelles transactions">Inactive</span>' : ''}
-            ${editing ? `<button class="cat-rename-btn" onclick="Categories._openRenameCat('${cat.id}')" title="Renommer">✏️ Renommer</button>` : ''}
-            ${!editing ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>` : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">Terminer</button>`}
+            <span class="cat-drag-handle" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner">⠿</span>
+            <h3 title="${cat.name}">${cat.name}</h3>
+            ${!editing && aliases.length ? histBadge : ''}
+            ${obsoleteBadge}
+            ${!editing ? `<span class="cat-subcount" title="${cat.subcategories.length} sous-catégorie(s)">${cat.subcategories.length}</span>` : ''}
+            ${!editing
+              ? `<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')">Modifier</button>`
+              : `<button class="cat-edit-btn active" onclick="Categories._stopEdit()">✓ Terminer</button>`}
           </div>
+          ${toolbar}
           ${cat.versionNote ? `<div class="cat-version-note">↪ ${cat.versionNote}</div>` : ''}
           <div class="subcat-list" data-cat-id="${cat.id}">
             ${subcatRows || '<p class="text-muted text-center py-xs">Aucune sous-catégorie</p>'}
