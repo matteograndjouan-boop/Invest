@@ -1893,6 +1893,23 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .category-card.editing { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(108,99,255,.18); transform: none; }
 .category-card.cat-obsolete { opacity: .72; }
 
+/* « Pile de cartes » : une catégorie qui a des versions datées laisse deviner
+   des tranches de cartes empilées derrière elle (coin bas-droit). */
+.category-card.has-versions {
+  box-shadow: 3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--border),
+              6px 6px 0 -1px var(--surface), 6px 6px 0 0 var(--border);
+}
+.category-card.has-versions:hover {
+  box-shadow: 3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--border),
+              6px 6px 0 -1px var(--surface), 6px 6px 0 0 var(--border),
+              0 10px 30px rgba(15,14,23,.10);
+}
+.category-card.has-versions.editing {
+  box-shadow: 0 0 0 2px rgba(108,99,255,.18),
+              3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--border),
+              6px 6px 0 -1px var(--surface), 6px 6px 0 0 var(--border);
+}
+
 /* Indicateurs drag & drop : ombre intérieure (zéro conflit avec la barre du haut) */
 .category-card.dnd-over::before, .category-card.dnd-over-after::after,
 .subcat-item.dnd-over::before, .subcat-item.dnd-over-after::after { content: none; }
@@ -1980,18 +1997,51 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .cat-type-btn input { display: none; }
 .cat-type-btn:has(input:checked) { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-.cat-dated { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
-.cat-dated-toggle { display: flex; align-items: center; gap: 6px; width: 100%; font-size: 11.5px; font-weight: 600; color: var(--text-muted); background: var(--bg); border: none; border-radius: 10px; padding: 7px 11px; cursor: pointer; transition: color .12s; }
-.cat-dated-toggle:hover { color: var(--primary); }
-.cat-dated-caret { margin-left: auto; font-size: 9px; }
-.cat-dated-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
-.cat-ver-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; padding: 6px 8px; background: var(--bg); border-radius: 8px; }
-.cat-ver-row.current { background: var(--primary-light); }
-.cat-ver-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; flex-shrink: 0; }
-.cat-ver-x:hover { color: var(--danger); }
-.cat-ver-name { flex-shrink: 0; font-weight: 700; color: var(--text); white-space: nowrap; }
-.cat-ver-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--primary); background: #fff; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
-.cat-ver-note { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Badge 🕘 cliquable : déplie / replie les anciens noms à droite de la carte active. */
+.cat-stack-badge { display: inline-flex; align-items: center; gap: 2px; border: none; background: var(--primary-light); color: var(--primary-dark); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; line-height: 1.45; transition: background .12s; }
+.cat-stack-badge:hover { background: #ddd9ff; }
+.cat-stack-badge.open { background: var(--primary); color: #fff; }
+.cat-stack-chev { font-size: 8px; opacity: .85; }
+
+/* ---- Anciens noms dépliés à droite de la carte active ----
+   Mêmes cartes que les autres catégories, mais teinte « historique » : fond légèrement
+   grisé, bord pointillé, barre de couleur atténuée. On garde la couleur de la lignée
+   (même famille que l'active) pour signaler « même catégorie, ancien nom ». */
+.category-card.cat-ver-old {
+  background: linear-gradient(0deg, rgba(120,116,140,.07), rgba(120,116,140,.07)), var(--surface);
+  border-style: dashed; filter: saturate(.7);
+}
+.category-card.cat-ver-old::before { opacity: .45; }
+.category-card.cat-ver-old:hover { transform: none; box-shadow: 0 6px 22px rgba(15,14,23,.07); }
+.cat-ver-old .cat-icon { filter: grayscale(.2); }
+.cat-ver-old .cat-name { color: var(--text-muted); font-style: italic; }
+.ver-old-flag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--text-muted); background: rgba(0,0,0,.045);
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 12px;
+}
+.ver-old-top { margin-bottom: 8px; cursor: default; }
+.ver-old-link { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.ver-old-link strong { color: var(--text); font-weight: 700; }
+.ver-old-note { font-size: 11px; color: var(--text3); font-style: italic; margin-bottom: 12px; }
+.ver-old-samesubs { font-size: 11.5px; color: var(--text-muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; }
+.ver-old-footer { margin-top: 12px; }
+.ver-old-del { color: var(--text-muted); }
+.ver-old-del:hover { color: var(--danger); }
+
+/* Carte active dépliée : accent à droite qui « relie » visuellement aux anciens noms. */
+.category-card.old-open { box-shadow: inset -4px 0 0 var(--cat-dot, var(--primary)), 0 8px 30px rgba(15,14,23,.08); }
+
+/* Mini-carte « Déclarer un ancien nom » (rouvre la gestion d'historique / alias). */
+.category-card.cat-ver-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border-style: dashed; background: transparent; cursor: pointer; min-height: 120px; color: var(--text-muted);
+}
+.category-card.cat-ver-add::before { content: none; }
+.category-card.cat-ver-add:hover { border-color: var(--primary); color: var(--primary); transform: none; box-shadow: none; }
+.cat-ver-add-plus { font-size: 26px; line-height: 1; font-weight: 300; }
+.cat-ver-add-lbl { font-size: 12px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -4934,7 +4984,7 @@ const Categories = {
   _dnd: null,
   _editingCatId: null,        // catégorie en mode édition
   _expanded: new Set(),       // catégories dont la liste de sous-catégories est dépliée
-  _expandedHist: new Set(),   // lignées dont le volet « versions datées » est ouvert
+  _openOld: new Set(),        // catégories dont les anciens noms sont dépliés à droite (par id de la version active)
   _TYPES: [
     { key: 'expense',    label: 'Dépenses',      icon: '💳' },
     { key: 'revenue',    label: 'Revenus',        icon: '💰' },
@@ -4978,19 +5028,22 @@ const Categories = {
     const sc = m.scheme;
     const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
     const n = cat.subcategories.length;
-    const aliases = cat.aliases || [];
+    const oldItems = this._oldItems(unit);   // anciens noms (versions datées ou alias)
+    const openOld = this._openOld.has(cat.id);
 
-    const histInline = aliases.length
-      ? `<span class="cat-hist-mini" title="Anciens noms : ${aliases.join(' · ')}">🕘 ${aliases.length}</span>` : '';
     const iconHtml = editing
       ? `<button class="cat-icon cat-icon-edit" onclick="Categories._openIconPicker('${cat.id}')" title="Changer l'icône">${icon}</button>`
       : `<div class="cat-icon">${icon}</div>`;
+    // Un seul badge 🕘 : il déplie / replie les anciens noms à droite (au lieu d'ouvrir une modale).
+    const oldBadge = oldItems.length
+      ? `<button class="cat-stack-badge${openOld ? ' open' : ''}" onclick="Categories._toggleOld('${cat.id}')" title="Anciens noms — afficher / masquer">🕘 ${oldItems.length}<span class="cat-stack-chev">${openOld ? '▾' : '▸'}</span></button>` : '';
+    // Effet « pile » seulement quand c'est replié (laisse deviner qu'il y a des cartes derrière).
+    const stackCls = (oldItems.length && !openOld) ? ' has-versions' : '';
     const top = `
       <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner ou changer de type">
         <div class="cat-left">${iconHtml}<span class="cat-name" title="${cat.name}">${cat.name}</span></div>
-        <div class="cat-top-right">${!editing ? histInline : ''}<span class="cat-count">${n}</span></div>
+        <div class="cat-top-right">${!editing ? oldBadge : ''}<span class="cat-count">${n}</span></div>
       </div>`;
-    const datedPanel = unit.dated ? this._renderDatedPanel(unit) : '';
 
     if (!editing) {
       const expanded = this._expanded.has(cat.id);
@@ -5001,10 +5054,12 @@ const Categories = {
         ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
         : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - 3} autre${n - 3 > 1 ? 's' : ''}</div>`;
       const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
-      return `<div class="category-card" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
-        ${top}${body}${datedPanel}
+      const activeCard = `<div class="category-card${stackCls}${openOld ? ' old-open' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+        ${top}${body}
         <div class="card-footer"><button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button></div>
       </div>`;
+      // Quand c'est déplié, les anciens noms suivent la carte active dans la grille (donc à sa droite).
+      return activeCard + (openOld ? this._renderOldCards(unit, oldItems) : '');
     }
 
     const subEdit = cat.subcategories.map((s, idx) => `
@@ -5016,13 +5071,12 @@ const Categories = {
     const curType = this._catType(cat);
     const typeSel = this._TYPES.map(T =>
       `<button class="cat-type-btn${curType === T.key ? ' active' : ''}" onclick="Categories._setType('${cat.id}','${T.key}')">${T.icon} ${T.label}</button>`).join('');
-    return `<div class="category-card editing" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+    return `<div class="category-card editing${stackCls}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
       ${top}
       <div class="cat-type-pick">${typeSel}</div>
       <div class="edit-bar"><button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button></div>
       <div class="subs subcat-list" data-cat-id="${cat.id}">${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}</div>
       <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
-      ${datedPanel}
       <div class="edit-footer">
         <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
         <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
@@ -5030,23 +5084,76 @@ const Categories = {
     </div>`;
   },
 
-  // Volet dépliant listant les versions datées d'une lignée (à la place des cartes grises).
-  _renderDatedPanel(unit) {
-    const lin = unit.primary.lineage;
-    const open = this._expandedHist.has(lin);
-    const rows = unit.versions.map(v => {
-      const isPrim = v.id === unit.primary.id;
-      const note = v.versionNote || (isPrim ? 'Version actuelle' : '');
-      return `<div class="cat-ver-row${isPrim ? ' current' : ''}">
-        <button class="cat-ver-x" onclick="Categories.deleteCategory('${v.id}')" title="Supprimer cette version">×</button>
-        <span class="cat-ver-name">${v.name}${isPrim ? ' <span class="cat-ver-tag">actuelle</span>' : ''}</span>
-        <span class="cat-ver-note">${note}</span>
-      </div>`;
-    }).join('');
-    return `<div class="cat-dated">
-      <button class="cat-dated-toggle" onclick="Categories._toggleHist('${lin}')">🕘 ${unit.versions.length} versions datées <span class="cat-dated-caret">${open ? '▲' : '▼'}</span></button>
-      ${open ? `<div class="cat-dated-list">${rows}</div>` : ''}
+  // Déplie / replie les anciens noms d'une catégorie : ils apparaissent comme des cartes
+  // sœurs à droite (même grille), teintées « historique » pour montrer que c'est la même
+  // catégorie sous d'anciens noms. Clé = id de la version active.
+  _toggleOld(catId) {
+    if (this._openOld.has(catId)) this._openOld.delete(catId);
+    else this._openOld.add(catId);
+    this.render();
+  },
+
+  // Anciens noms d'une unité : versions datées (cartes riches) ou, à défaut, alias d'un
+  // renommage global (seul le nom a changé). Renvoie [] si rien à montrer.
+  _oldItems(unit) {
+    const cat = unit.primary;
+    if (unit.dated) return unit.versions.filter(v => v.id !== cat.id).map(v => ({ kind: 'version', v }));
+    return (cat.aliases || []).map((a, i) => ({ kind: 'alias', name: a, idx: i }));
+  },
+
+  // Cartes des anciens noms, insérées dans la grille juste après la carte active + une
+  // petite carte « Déclarer un ancien nom » (rouvre la gestion d'historique).
+  _renderOldCards(unit, oldItems) {
+    const cards = oldItems.map(it => this._renderOldCard(it, unit.primary)).join('');
+    const add = `<div class="category-card cat-ver-add" onclick="Categories._openHistoryModal('${unit.primary.id}')" title="Déclarer un ancien nom (utile pour l'import)">
+        <div class="cat-ver-add-plus">＋</div><span class="cat-ver-add-lbl">Déclarer un ancien nom</span></div>`;
+    return cards + add;
+  },
+
+  // Une carte « ancien nom » : même famille de couleur que l'active mais teinte atténuée,
+  // header dédié (🕘 Ancien nom) et lien « ↳ aujourd'hui : … » vers le nom actuel.
+  _renderOldCard(it, primary) {
+    const sc = this._meta(primary.name).scheme;   // couleur de la lignée = celle de l'active
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const name = it.kind === 'version' ? it.v.name : it.name;
+    const icon = it.kind === 'version' ? (it.v.icon || this._meta(name).icon) : this._meta(name).icon;
+    const note = it.kind === 'version' ? (it.v.versionNote || 'Ancienne version datée')
+                                       : 'Renommage global — seul le nom a changé';
+    let body;
+    if (it.kind === 'version' && it.v.subcategories.length) {
+      const subs = it.v.subcategories.slice(0, 3)
+        .map(s => `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
+      const extra = it.v.subcategories.length - 3;
+      body = `<div class="subs">${subs}</div>${extra > 0 ? `<div class="more">+${extra} autre${extra > 1 ? 's' : ''}</div>` : ''}`;
+    } else {
+      body = `<div class="ver-old-samesubs">↔ Mêmes sous-catégories que « ${primary.name} »</div>`;
+    }
+    const del = it.kind === 'version'
+      ? `<button class="btn-edit ver-old-del" onclick="Categories._delVersion('${primary.lineage}','${it.v.id}')" title="Supprimer cette version datée">🗑 Supprimer la version</button>`
+      : `<button class="btn-edit ver-old-del" onclick="Categories._histRemove('${primary.id}',${it.idx})" title="Retirer cet ancien nom">🗑 Retirer ce nom</button>`;
+    return `<div class="category-card cat-ver-old" style="${vars}">
+      <div class="ver-old-flag">🕘 Ancien nom</div>
+      <div class="card-top ver-old-top">
+        <div class="cat-left"><div class="cat-icon">${icon}</div><span class="cat-name" title="${name}">${name}</span></div>
+      </div>
+      <div class="ver-old-link">↳ aujourd'hui : <strong>${primary.name}</strong></div>
+      <div class="ver-old-note">${note}</div>
+      ${body}
+      <div class="card-footer ver-old-footer">${del}</div>
     </div>`;
+  },
+
+  // Supprime une version datée d'une lignée puis rafraîchit. Si la lignée n'a plus qu'une
+  // version, il n'y a plus rien à déplier : on referme le volet de sa carte.
+  _delVersion(lin, id) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === id);
+    if (!cat || !confirm(`Supprimer la version « ${cat.name} » ?`)) return;
+    const rest = cats.filter(c => c.id !== id);
+    Storage.saveCategories(rest);
+    const remain = rest.filter(c => c.lineage === lin);
+    if (remain.length < 2 && remain[0]) this._openOld.delete(remain[0].id);
+    this.render();
   },
 
   // Type d'une catégorie : explicite (cat.type) sinon déduit du nom.
@@ -5081,12 +5188,6 @@ const Categories = {
     if (!cat) return;
     cat.type = type;
     Storage.saveCategories(cats);
-    this.render();
-  },
-
-  _toggleHist(lin) {
-    if (this._expandedHist.has(lin)) this._expandedHist.delete(lin);
-    else this._expandedHist.add(lin);
     this.render();
   },
 
@@ -5300,7 +5401,7 @@ const Categories = {
     if (!cat) return;
     const aliases = cat.aliases || [];
     const chips = aliases.length
-      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i})" title="Retirer">✕</button></span>`).join(' ')
+      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i},true)" title="Retirer">✕</button></span>`).join(' ')
       : '<span class="cat-alias-empty">Aucun ancien nom déclaré pour l\'instant.</span>';
     Modal.open(`Historique de « ${cat.name} »`, `
       <p class="rename-hint" style="margin-bottom:12px">Déclare les <strong>anciens noms</strong> de cette catégorie. À l'import, une dépense étiquetée (ou devinée) avec l'un de ces noms sera automatiquement classée dans « ${cat.name} » (et plus dans « Abonnements »).</p>
@@ -5320,16 +5421,16 @@ const Categories = {
     if (this._addAliasValue(catId, alias)) this._openHistoryModal(catId); // ré-affiche la liste à jour
   },
 
-  _histRemove(catId, idx) {
+  _histRemove(catId, idx, fromModal) {
     const cats = Storage.getCategories();
     const cat  = cats.find(c => c.id === catId);
     if (cat && cat.aliases) {
       cat.aliases.splice(idx, 1);
-      if (!cat.aliases.length) delete cat.aliases;
+      if (!cat.aliases.length) { delete cat.aliases; this._openOld.delete(catId); }
       Storage.saveCategories(cats);
       this.render();
     }
-    this._openHistoryModal(catId);
+    if (fromModal) this._openHistoryModal(catId);  // ré-affiche la liste seulement depuis la modale
   },
 
   // Ajoute un ancien nom (dédup casse/accents + garde-fous). Renvoie true si ajouté.
