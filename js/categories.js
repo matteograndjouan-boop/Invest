@@ -2,7 +2,6 @@ const Categories = {
   _dnd: null,
   _editingCatId: null,        // catégorie en mode édition
   _expanded: new Set(),       // catégories dont la liste de sous-catégories est dépliée
-  _expandedHist: new Set(),   // lignées dont le volet « versions datées » est ouvert
   _TYPES: [
     { key: 'expense',    label: 'Dépenses',      icon: '💳' },
     { key: 'revenue',    label: 'Revenus',        icon: '💰' },
@@ -53,12 +52,15 @@ const Categories = {
     const iconHtml = editing
       ? `<button class="cat-icon cat-icon-edit" onclick="Categories._openIconPicker('${cat.id}')" title="Changer l'icône">${icon}</button>`
       : `<div class="cat-icon">${icon}</div>`;
+    const lin = cat.lineage;
+    const stackBadge = unit.dated
+      ? `<button class="cat-stack-badge" onclick="Categories._openVersions('${lin}')" title="Voir les versions datées">🕘 ${unit.versions.length}</button>` : '';
+    const stackCls = unit.dated ? ' has-versions' : '';
     const top = `
       <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner ou changer de type">
         <div class="cat-left">${iconHtml}<span class="cat-name" title="${cat.name}">${cat.name}</span></div>
-        <div class="cat-top-right">${!editing ? histInline : ''}<span class="cat-count">${n}</span></div>
+        <div class="cat-top-right">${!editing ? histInline : ''}${stackBadge}<span class="cat-count">${n}</span></div>
       </div>`;
-    const datedPanel = unit.dated ? this._renderDatedPanel(unit) : '';
 
     if (!editing) {
       const expanded = this._expanded.has(cat.id);
@@ -69,8 +71,8 @@ const Categories = {
         ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
         : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - 3} autre${n - 3 > 1 ? 's' : ''}</div>`;
       const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
-      return `<div class="category-card" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
-        ${top}${body}${datedPanel}
+      return `<div class="category-card${stackCls}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+        ${top}${body}
         <div class="card-footer"><button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button></div>
       </div>`;
     }
@@ -84,13 +86,12 @@ const Categories = {
     const curType = this._catType(cat);
     const typeSel = this._TYPES.map(T =>
       `<button class="cat-type-btn${curType === T.key ? ' active' : ''}" onclick="Categories._setType('${cat.id}','${T.key}')">${T.icon} ${T.label}</button>`).join('');
-    return `<div class="category-card editing" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
+    return `<div class="category-card editing${stackCls}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
       ${top}
       <div class="cat-type-pick">${typeSel}</div>
       <div class="edit-bar"><button class="btn-rename" onclick="Categories._openRenameCat('${cat.id}')">✎ Renommer</button></div>
       <div class="subs subcat-list" data-cat-id="${cat.id}">${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}</div>
       <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
-      ${datedPanel}
       <div class="edit-footer">
         <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
         <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
@@ -98,23 +99,52 @@ const Categories = {
     </div>`;
   },
 
-  // Volet dépliant listant les versions datées d'une lignée (à la place des cartes grises).
-  _renderDatedPanel(unit) {
-    const lin = unit.primary.lineage;
-    const open = this._expandedHist.has(lin);
-    const rows = unit.versions.map(v => {
-      const isPrim = v.id === unit.primary.id;
-      const note = v.versionNote || (isPrim ? 'Version actuelle' : '');
-      return `<div class="cat-ver-row${isPrim ? ' current' : ''}">
-        <button class="cat-ver-x" onclick="Categories.deleteCategory('${v.id}')" title="Supprimer cette version">×</button>
-        <span class="cat-ver-name">${v.name}${isPrim ? ' <span class="cat-ver-tag">actuelle</span>' : ''}</span>
-        <span class="cat-ver-note">${note}</span>
-      </div>`;
+  // Vue « pile de cartes » : ouvre la catégorie active + ses versions précédentes
+  // côte à côte (la droite = versions antérieures), sur le fond grisé de la modale.
+  _openVersions(lin) {
+    const cats = Storage.getCategories();
+    const sibs = cats.filter(c => c.lineage === lin);
+    if (!sibs.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const covers = c => (!c.validFrom || today >= c.validFrom) && (!c.validTo || today <= c.validTo);
+    const primary = sibs.find(c => !c.obsolete && covers(c)) || sibs.find(c => !c.obsolete) || sibs[0];
+    // Active d'abord, puis les versions précédentes à sa droite.
+    const ordered = [primary, ...sibs.filter(c => c.id !== primary.id)];
+    const cards = ordered.map((v, i) => {
+      const m = this._meta(v.name);
+      const icon = v.icon || m.icon;
+      const isPrim = v.id === primary.id;
+      const note = v.versionNote || (isPrim ? 'Version actuelle' : 'Ancienne version');
+      const subs = v.subcategories.slice(0, 5).map(s =>
+        `<div class="ver-sub"><span class="ver-dot" style="background:${m.scheme.dot}"></span>${s}</div>`).join('')
+        + (v.subcategories.length > 5 ? `<div class="ver-more">+${v.subcategories.length - 5} autres</div>` : '');
+      const arrow = i < ordered.length - 1 ? '<div class="ver-arrow">→</div>' : '';
+      return `<div class="ver-card${isPrim ? ' active' : ''}" style="--cat-ico:${m.scheme.bg}">
+          <div class="ver-card-head">
+            <div class="ver-card-ic">${icon}</div>
+            <div class="ver-card-meta">
+              <div class="ver-card-name">${v.name}${isPrim ? ' <span class="cat-ver-tag">actuelle</span>' : ''}</div>
+              <div class="ver-card-period">${note}</div>
+            </div>
+          </div>
+          <div class="ver-card-subs">${subs || '<span class="ver-none">Aucune sous-catégorie</span>'}</div>
+          <button class="ver-card-del" onclick="Categories._delVersion('${lin}','${v.id}')">🗑 Supprimer cette version</button>
+        </div>${arrow}`;
     }).join('');
-    return `<div class="cat-dated">
-      <button class="cat-dated-toggle" onclick="Categories._toggleHist('${lin}')">🕘 ${unit.versions.length} versions datées <span class="cat-dated-caret">${open ? '▲' : '▼'}</span></button>
-      ${open ? `<div class="cat-dated-list">${rows}</div>` : ''}
-    </div>`;
+    Modal.open('Versions de la catégorie', `
+      <p class="rename-hint" style="margin-bottom:14px">Cette catégorie a été renommée à une date charnière : voici la version active (à gauche) et ses versions précédentes. L'import choisit automatiquement le bon nom selon la date de chaque dépense.</p>
+      <div class="ver-spot">${cards}</div>`);
+  },
+
+  // Supprime une version d'une lignée puis rafraîchit la vue « pile » (ou la ferme).
+  _delVersion(lin, id) {
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.id === id);
+    if (!cat || !confirm(`Supprimer la version « ${cat.name} » ?`)) return;
+    Storage.saveCategories(cats.filter(c => c.id !== id));
+    this.render();
+    if (Storage.getCategories().filter(c => c.lineage === lin).length >= 2) this._openVersions(lin);
+    else Modal.close();
   },
 
   // Type d'une catégorie : explicite (cat.type) sinon déduit du nom.
@@ -149,12 +179,6 @@ const Categories = {
     if (!cat) return;
     cat.type = type;
     Storage.saveCategories(cats);
-    this.render();
-  },
-
-  _toggleHist(lin) {
-    if (this._expandedHist.has(lin)) this._expandedHist.delete(lin);
-    else this._expandedHist.add(lin);
     this.render();
   },
 
