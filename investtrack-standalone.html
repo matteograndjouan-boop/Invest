@@ -9384,7 +9384,8 @@ const Assistant = {
         </div>
         <div class="assistant-examples">
           Une à la fois : « 12,50 au tabac » · « salaire reçu 1800 le 28 mai »<br>
-          Ou plusieurs d'un coup : « 45 Carrefour hier, 14 Netflix et 30 € Uber jeudi dernier »
+          Ou plusieurs d'un coup : « 45 Carrefour hier, 14 Netflix et 30 € Uber jeudi dernier »<br>
+          🎤 À l'oral : marque une petite pause entre chaque dépense (date, montant, commerçant — dans l'ordre que tu veux).
         </div>
       </div>`;
   },
@@ -9576,11 +9577,19 @@ const Assistant = {
 
   // Découpe la saisie en segments (une opération chacun). Protège les virgules
   // décimales (12,50) avant de couper sur les séparateurs/connecteurs.
+  // Découpe le texte en segments = 1 dépense chacun.
+  // Sauts de ligne prioritaires (dictée vocale : 1 utterance/pause par ligne, ou saisie
+  // multi-lignes) : on ne re-découpe PAS une ligne sur « et »/virgule, sinon « 15 € et 50 »
+  // ou « Pierre et Vacances » seraient coupés en deux (« deux pour une »). Sinon (une seule
+  // ligne tapée) on tolère virgule/et/puis/ensuite, en protégeant la virgule décimale (12,50).
   _splitSegments(text) {
+    if (/\n/.test(String(text))) {
+      return String(text).split(/\n+|\s*;\s*|\s+(?:puis|ensuite)\s+/i).map(s => s.trim()).filter(Boolean);
+    }
     const SENT = '\u0001';   // marqueur temporaire : protège les virgules décimales (12,50)
     const masked = String(text).replace(/(\d)\s*,\s*(\d)/g, '$1' + SENT + '$2');
     return masked
-      .split(/\s*(?:,|;|\bet\b|\bpuis\b|\bensuite\b)\s*|\n+/i)
+      .split(/\s*(?:,|;|\bet\b|\bpuis\b|\bensuite\b)\s*/i)
       .map(p => p.split(SENT).join(',').trim())
       .filter(Boolean);
   },
@@ -10063,20 +10072,24 @@ Réponds UNIQUEMENT en JSON, sans texte autour :
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
     const input = document.getElementById('assistant-input');
-    // Repart du texte déjà présent : on peut relancer la dictée sans écraser ce qui est là.
-    this._voiceFinal = input && input.value ? input.value.replace(/\s+$/, '') + ' ' : '';
+    // Repart du texte déjà présent (sur une nouvelle ligne) : on peut relancer la dictée
+    // sans écraser ce qui est là.
+    this._voiceFinal = input && input.value ? input.value.replace(/\s+$/, '') + '\n' : '';
 
     const rec = new SR();
     rec.lang = 'fr-FR';
     rec.interimResults = true;
     rec.continuous = true;   // garde l'écoute entre les phrases (plusieurs dépenses d'affilée)
     rec.onresult = (e) => {
-      // Le finalisé est cumulé dans _voiceFinal (persiste à travers les redémarrages) ;
-      // l'interim n'est affiché que pour le retour visuel immédiat.
+      // Chaque utterance FINALISÉE (= une pause dans l'énumération) devient SA PROPRE LIGNE :
+      // c'est ce qui sépare proprement les dépenses dictées « plein à la suite » (le découpage
+      // se fait ensuite sur les sauts de ligne, pas sur « et »/virgule). L'interim n'est
+      // affiché que pour le retour visuel immédiat.
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) this._voiceFinal += t; else interim += t;
+        if (e.results[i].isFinal) { const c = t.trim(); if (c) this._voiceFinal += c + '\n'; }
+        else interim += t;
       }
       const el = document.getElementById('assistant-input');
       if (el) el.value = this._voiceFinal + interim;
@@ -10094,8 +10107,8 @@ Réponds UNIQUEMENT en JSON, sans texte autour :
     };
     rec.onend = () => {
       // Tant que l'utilisateur veut écouter, on relance (le navigateur a coupé sur silence).
+      // Le texte déjà finalisé est conservé (lignes), donc rien n'est perdu au redémarrage.
       if (this._listening) {
-        if (this._voiceFinal && !/\s$/.test(this._voiceFinal)) this._voiceFinal += ' ';
         try { rec.start(); return; } catch (_) { this._listening = false; }
       }
       this._updateMic();
