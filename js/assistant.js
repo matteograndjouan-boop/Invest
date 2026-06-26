@@ -9,7 +9,8 @@
 // et confirmée, d'envoyer la phrase ENTIÈRE à Gemini.
 const Assistant = {
   _rec: null,         // instance SpeechRecognition (dictée vocale)
-  _listening: false,
+  _listening: false,  // intention d'écoute : reste vrai tant que l'utilisateur n'a pas arrêté
+  _voiceFinal: '',    // transcription finalisée cumulée (survit aux redémarrages auto)
   _lastText: '',
   _draft: null,       // brouillon de transaction en cours de validation
   _multiDrafts: null, // brouillons multiples (saisie de plusieurs opérations)
@@ -743,44 +744,70 @@ Réponds UNIQUEMENT en JSON, sans texte autour :
 
   // ── Dictée vocale (Web Speech API) ────────────────────────────────────────
 
+  // Dictée « mains libres » : on écoute en continu et on RELANCE automatiquement quand le
+  // navigateur coupe tout seul sur un silence (Chrome arrête après quelques secondes). Ainsi
+  // l'utilisateur peut énumérer plusieurs dépenses ; l'écoute ne s'arrête que quand il
+  // ré-appuie sur le micro (_listening repasse à false).
   toggleVoice() {
     if (this._listening) { this._stopVoice(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
+    const input = document.getElementById('assistant-input');
+    // Repart du texte déjà présent : on peut relancer la dictée sans écraser ce qui est là.
+    this._voiceFinal = input && input.value ? input.value.replace(/\s+$/, '') + ' ' : '';
+
     const rec = new SR();
     rec.lang = 'fr-FR';
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;   // garde l'écoute entre les phrases (plusieurs dépenses d'affilée)
     rec.onresult = (e) => {
-      let txt = '';
-      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
-      const input = document.getElementById('assistant-input');
-      if (input) input.value = txt;
+      // Le finalisé est cumulé dans _voiceFinal (persiste à travers les redémarrages) ;
+      // l'interim n'est affiché que pour le retour visuel immédiat.
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) this._voiceFinal += t; else interim += t;
+      }
+      const el = document.getElementById('assistant-input');
+      if (el) el.value = this._voiceFinal + interim;
     };
     rec.onerror = (e) => {
-      this._listening = false; this._updateMic();
-      this._setVoiceStatus(e.error === 'not-allowed'
-        ? 'Micro refusé — autorise l\'accès dans le navigateur.'
-        : 'Micro indisponible.');
+      // Erreurs fatales seulement : on coupe et on prévient. Les transitoires ('no-speech',
+      // 'aborted', 'network') laissent onend relancer l'écoute.
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        this._listening = false;
+        this._setVoiceStatus('Micro refusé — autorise l\'accès dans le navigateur.');
+      } else if (e.error === 'audio-capture') {
+        this._listening = false;
+        this._setVoiceStatus('Aucun micro détecté.');
+      }
     };
-    rec.onend = () => { this._listening = false; this._updateMic(); };
+    rec.onend = () => {
+      // Tant que l'utilisateur veut écouter, on relance (le navigateur a coupé sur silence).
+      if (this._listening) {
+        if (this._voiceFinal && !/\s$/.test(this._voiceFinal)) this._voiceFinal += ' ';
+        try { rec.start(); return; } catch (_) { this._listening = false; }
+      }
+      this._updateMic();
+    };
     this._rec = rec;
     this._listening = true;
     this._updateMic();
-    this._setVoiceStatus('🔴 Écoute… parle, puis appuie pour arrêter.');
+    this._setVoiceStatus('🔴 Écoute en continu… ré-appuie sur le micro quand tu as fini.');
     try { rec.start(); } catch (_) { this._listening = false; this._updateMic(); }
   },
 
   _stopVoice() {
-    if (this._rec && this._listening) { try { this._rec.stop(); } catch (_) {} }
+    // Signale l'intention d'arrêter AVANT de couper, pour que onend ne relance pas l'écoute.
     this._listening = false;
+    if (this._rec) { try { this._rec.stop(); } catch (_) {} }
     this._updateMic();
+    this._setVoiceStatus('');
   },
 
   _updateMic() {
     const btn = document.getElementById('assistant-mic');
     if (btn) btn.classList.toggle('listening', this._listening);
-    if (!this._listening) this._setVoiceStatus('');
   },
 
   _setVoiceStatus(msg) {
