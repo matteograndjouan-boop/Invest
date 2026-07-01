@@ -9847,30 +9847,65 @@ const Assistant = {
       return { iso: this._isoOf(d), span: [m.index, m.index + m[0].length], unresolved: false };
     }
 
+    // Formats numériques (espaces/points/collé/scindé) : peuvent apparaître dans le MÊME
+    // texte qu'un montant à virgule (ex. « 18,28 27 06 2026 »). Piège : avec un motif jour/mois
+    // générique (\d{1,2}), la fin du montant (« 28 ») et le début de la date (« 27 ») formeraient
+    // un faux match « 28 27 » (jour=28, mois=27) — et un jour/mois regex-générique qui matche
+    // syntaxiquement bloque tout match ultérieur (JS ne revient pas en arrière sur un match
+    // global déjà consommé, même invalidé après coup). Solution : le jour (1-31) et le mois
+    // (1-12) sont des ALTERNATIVES NUMÉRIQUES explicites dans le motif lui-même, donc « 27 »
+    // en position mois ne matche tout simplement pas — le moteur regex saute alors tout seul
+    // au bon endroit (jour=27, mois=06) sans validation a posteriori.
+    const DAY = '(?:3[01]|[12][0-9]|0[1-9]|[1-9])';  // 1-31 ; combinaisons à 2 chiffres avant le repli à 1
+    const MON = '(?:1[0-2]|0[1-9]|[1-9])';           // 1-12 ; idem : 2 chiffres avant le repli à 1
+    const DAY2 = '(?:0[1-9]|[12][0-9]|3[01])';   // 01-31 EXACTEMENT 2 chiffres (formats collés)
+    const MON2 = '(?:0[1-9]|1[0-2])';            // 01-12 EXACTEMENT 2 chiffres (formats collés)
+    const firstValid = (re, build) => {
+      for (const mm of low.matchAll(re)) {
+        const r = build(mm);
+        if (r) return { iso: this._isoOf(r), span: [mm.index, mm.index + mm[0].length], unresolved: false };
+      }
+      return null;
+    };
+
     // Date numérique JJ/MM[/AAAA] (séparateur / ou - uniquement : le point reste
     // réservé aux montants).
-    m = low.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
-    if (m) {
-      const day = parseInt(m[1]), mon = parseInt(m[2]);
-      if (day >= 1 && day <= 31 && mon >= 1 && mon <= 12) {
-        let year = m[3] ? parseInt(m[3]) : today.getFullYear();
-        if (year < 100) year += 2000;
-        const d = this._settleYear(year, mon, day, !!m[3]);
-        return { iso: this._isoOf(d), span: [m.index, m.index + m[0].length], unresolved: false };
-      }
-    }
+    let found = firstValid(new RegExp('\\b(' + DAY + ')[\\/\\-](' + MON + ')(?:[\\/\\-](\\d{2,4}))?\\b', 'g'), mm => {
+      let year = mm[3] ? parseInt(mm[3]) : today.getFullYear();
+      if (year < 100) year += 2000;
+      return this._settleYear(year, parseInt(mm[2]), parseInt(mm[1]), !!mm[3]);
+    });
+    if (found) return found;
 
     // Date numérique à espaces « 27 06 2026 » (fréquent à la dictée) : année obligatoire
-    // pour la distinguer d'un montant, jour ≤ 31 et mois ≤ 12 validés.
-    m = low.match(/\b(\d{1,2})\s+(\d{1,2})\s+(\d{2,4})\b/);
-    if (m) {
-      const day = parseInt(m[1]), mon = parseInt(m[2]);
-      if (day >= 1 && day <= 31 && mon >= 1 && mon <= 12) {
-        let year = parseInt(m[3]); if (year < 100) year += 2000;
-        const d = this._settleYear(year, mon, day, true);
-        return { iso: this._isoOf(d), span: [m.index, m.index + m[0].length], unresolved: false };
-      }
-    }
+    // pour la distinguer d'un montant. L'année peut être scindée en deux groupes de 2
+    // chiffres (« 27 06 20 26 ») : lecture « vingt vingt-six » fréquente en dictée.
+    found = firstValid(new RegExp('\\b(' + DAY + ')\\s+(' + MON + ')\\s+(\\d{2})\\s+(\\d{2})\\b', 'g'), mm => {
+      const year = parseInt(mm[3] + mm[4]);
+      return (year >= 2000 && year <= 2099) ? this._settleYear(year, parseInt(mm[2]), parseInt(mm[1]), true) : null;
+    });
+    if (found) return found;
+    found = firstValid(new RegExp('\\b(' + DAY + ')\\s+(' + MON + ')\\s+(\\d{2,4})\\b', 'g'), mm => {
+      let year = parseInt(mm[3]); if (year < 100) year += 2000;
+      return this._settleYear(year, parseInt(mm[2]), parseInt(mm[1]), true);
+    });
+    if (found) return found;
+
+    // Date numérique à points « 27.06.2026 » (convention FR courante) : année sur 4 chiffres
+    // exigée pour ne jamais confondre avec un montant (les montants n'ont qu'UNE décimale
+    // à point, jamais un 3e groupe de 4 chiffres).
+    found = firstValid(new RegExp('\\b(' + DAY + ')\\.(' + MON + ')\\.(\\d{4})\\b', 'g'), mm =>
+      this._settleYear(parseInt(mm[3]), parseInt(mm[2]), parseInt(mm[1]), true));
+    if (found) return found;
+
+    // Date numérique collée sans séparateur « 27062026 » (JJMMAAAA, 8 chiffres) : la
+    // reconnaissance vocale colle parfois les groupes dictés séparément. Jour/mois à largeur
+    // fixe (2 chiffres, zéro obligatoire) pour rester sans ambiguïté sans séparateur.
+    found = firstValid(new RegExp('(?<!\\d)(' + DAY2 + ')(' + MON2 + ')(\\d{4})(?!\\d)', 'g'), mm => {
+      const year = parseInt(mm[3]);
+      return (year >= 2000 && year <= 2099) ? this._settleYear(year, parseInt(mm[2]), parseInt(mm[1]), true) : null;
+    });
+    if (found) return found;
 
     // Jour de la semaine : « jeudi », « jeudi dernier/passé », « jeudi prochain ».
     const WD = { dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6 };
