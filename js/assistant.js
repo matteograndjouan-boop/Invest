@@ -550,6 +550,18 @@ const Assistant = {
       }
     }
 
+    // Date numérique à espaces « 27 06 2026 » (fréquent à la dictée) : année obligatoire
+    // pour la distinguer d'un montant, jour ≤ 31 et mois ≤ 12 validés.
+    m = low.match(/\b(\d{1,2})\s+(\d{1,2})\s+(\d{2,4})\b/);
+    if (m) {
+      const day = parseInt(m[1]), mon = parseInt(m[2]);
+      if (day >= 1 && day <= 31 && mon >= 1 && mon <= 12) {
+        let year = parseInt(m[3]); if (year < 100) year += 2000;
+        const d = this._settleYear(year, mon, day, true);
+        return { iso: this._isoOf(d), span: [m.index, m.index + m[0].length], unresolved: false };
+      }
+    }
+
     // Jour de la semaine : « jeudi », « jeudi dernier/passé », « jeudi prochain ».
     const WD = { dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6 };
     const wm = low.match(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/);
@@ -583,10 +595,22 @@ const Assistant = {
   _parseAmount(low, dateSpan) {
     let s = low;
     if (dateSpan) s = s.slice(0, dateSpan[0]) + ' '.repeat(dateSpan[1] - dateSpan[0]) + s.slice(dateSpan[1]);
+    // Classes construites en chaîne pour éviter les espaces insécables (nbsp) invisibles.
+    const SP = '[\\d.\\u00a0\\u202f ]';    // chiffres + séparateurs de milliers (espace/nbsp)
+    const DEC = '(?:[.,]\\s?\\d{1,2})?';   // décimales ; tolère un espace après la virgule (« 18, 28 »)
+    const CUR = '(?:€|euros?|eur\\b|balles?)';
+    // 1) Centimes dictés « 18 euros 28 », « 18 € et 28 », « 15 euros 50 » → 18,28. La date ayant
+    //    déjà été neutralisée ci-dessus, « 15 euros 12 juin » ne prend PAS « 12 » pour des centimes.
+    const cents = s.match(new RegExp('(\\d' + SP + '*)\\s*' + CUR + '\\s+(?:et\\s+)?(\\d{1,2})(?!\\s*\\d)', 'i'));
+    if (cents) {
+      const whole = this._toNumber(cents[1]);
+      if (whole != null) return { value: whole + parseInt(cents[2], 10) / 100, span: [cents.index, cents.index + cents[0].length] };
+    }
+    // 2) nombre + devise · 3) devise + nombre · 4) nombre seul
     const tries = [
-      /(\d[\d.   ]*(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\b|balles?)/i, // nombre + devise
-      /(?:€|euros?|eur\b|balles?)\s*(\d[\d.   ]*(?:[.,]\d{1,2})?)/i, // devise + nombre
-      /(?<![\w.,\/])(\d[\d.   ]*(?:[.,]\d{1,2})?)(?![\w.,\/])/,       // nombre seul
+      new RegExp('(\\d' + SP + '*' + DEC + ')\\s*' + CUR, 'i'),
+      new RegExp(CUR + '\\s*(\\d' + SP + '*' + DEC + ')', 'i'),
+      new RegExp('(?<![\\w.,\\/])(\\d' + SP + '*' + DEC + ')(?![\\w.,\\/])'),
     ];
     for (const re of tries) {
       const m = s.match(re);
