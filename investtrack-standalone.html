@@ -9583,15 +9583,35 @@ const Assistant = {
   // ou « Pierre et Vacances » seraient coupés en deux (« deux pour une »). Sinon (une seule
   // ligne tapée) on tolère virgule/et/puis/ensuite, en protégeant la virgule décimale (12,50).
   _splitSegments(text) {
+    let segs;
     if (/\n/.test(String(text))) {
-      return String(text).split(/\n+|\s*;\s*|\s+(?:puis|ensuite)\s+/i).map(s => s.trim()).filter(Boolean);
+      segs = String(text).split(/\n+|\s*;\s*|\s+(?:puis|ensuite)\s+/i).map(s => s.trim()).filter(Boolean);
+    } else {
+      const SENT = '\u0001';   // marqueur temporaire : protège les virgules décimales (12,50)
+      const masked = String(text).replace(/(\d)\s*,\s*(\d)/g, '$1' + SENT + '$2');
+      segs = masked
+        .split(/\s*(?:,|;|\bet\b|\bpuis\b|\bensuite\b)\s*/i)
+        .map(p => p.split(SENT).join(',').trim())
+        .filter(Boolean);
     }
-    const SENT = '\u0001';   // marqueur temporaire : protège les virgules décimales (12,50)
-    const masked = String(text).replace(/(\d)\s*,\s*(\d)/g, '$1' + SENT + '$2');
-    return masked
-      .split(/\s*(?:,|;|\bet\b|\bpuis\b|\bensuite\b)\s*/i)
-      .map(p => p.split(SENT).join(',').trim())
-      .filter(Boolean);
+    return this._mergeBareSegments(segs);
+  },
+
+  // Un segment sans date ET sans montant n'est pas une dépense à lui seul : c'est un nom de
+  // commerçant isolé par une virgule de pause orale (Chrome ponctue les pauses même DANS une
+  // même dictée, ex. « Monoprix, le 27062026 18,28€ » : sans ce rattachement, « Monoprix »
+  // serait perdu et l'autre segment garderait date+montant mais aucun libellé). On le rattache
+  // au segment SUIVANT (le nom précède en général ses détails) ou, en dernier recours (dernier
+  // segment sans suivant), au précédent — plutôt que de le jeter silencieusement.
+  _mergeBareSegments(segs) {
+    const isBare = s => { const p = this._parse(s); return !p.dateExplicit && p.amount == null; };
+    const out = [];
+    for (let i = 0; i < segs.length; i++) {
+      if (isBare(segs[i]) && i < segs.length - 1) { segs[i + 1] = segs[i] + ' ' + segs[i + 1]; continue; }
+      if (isBare(segs[i]) && out.length) { out[out.length - 1] += ' ' + segs[i]; continue; }
+      out.push(segs[i]);
+    }
+    return out;
   },
 
   async _toMulti(text) {
@@ -9955,7 +9975,11 @@ const Assistant = {
     const tries = [
       new RegExp('(\\d' + SP + '*' + DEC + ')\\s*' + CUR, 'i'),
       new RegExp(CUR + '\\s*(\\d' + SP + '*' + DEC + ')', 'i'),
-      new RegExp('(?<![\\w.,\\/])(\\d' + SP + '*' + DEC + ')(?![\\w.,\\/])'),
+      // Repli « nombre seul » : ne doit pas s'arrêter au milieu d'un token plus long (donc
+      // rejette \w/virgule/slash juste après) — mais un point final de PHRASE (fréquent en fin
+      // de dictée, ex. « 32,90. ») n'est pas un point décimal tant qu'aucun chiffre ne suit :
+      // seul « .<chiffre> » doit être rejeté (continuation du nombre), pas un point isolé.
+      new RegExp('(?<![\\w.,\\/])(\\d' + SP + '*' + DEC + ')(?![\\w\\/,])(?!\\.\\d)'),
     ];
     for (const re of tries) {
       const m = s.match(re);
