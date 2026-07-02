@@ -1,30 +1,32 @@
 :root {
+  /* Thème sombre — palette imposée (fond/sidebar/cards/texte/bordure/accent) */
   --primary: #6c63ff;
-  --primary-dark: #5a52e0;
-  --primary-light: #ede9ff;
-  --success: #16c098;
-  --success-bg: #d8f5ee;
-  --danger: #e24b4a;
-  --danger-bg: #fdeaea;
-  --warning: #ef9f27;
-  --warning-bg: #faeeda;
-  --info: #378add;
-  --info-bg: #e6f1fb;
-  --bg: #f0eef8;
-  --surface: #ffffff;
-  --border: #ececf3;
-  --text: #0f0e17;
-  --text-muted: #6b6880;
-  --text3: #a09db8;
-  --ink: #0f0e17;
-  --sidebar-bg: #0f0e17;
+  --primary-dark: #8b83ff;
+  --primary-light: #221f42;
+  --success: #00b37e;
+  --success-bg: rgba(0,179,126,0.14);
+  --danger: #e53e3e;
+  --danger-bg: rgba(229,62,62,0.14);
+  --warning: #d97706;
+  --warning-bg: rgba(217,119,6,0.16);
+  --info: #4a99e0;
+  --info-bg: rgba(74,153,224,0.14);
+  --bg: #0d0f1f;
+  --surface: #131525;
+  --surface-alt: rgba(255,255,255,0.035);
+  --border: rgba(255,255,255,0.06);
+  --text: #ffffff;
+  --text-muted: #3a3d5a;
+  --text3: #6b6e8f;
+  --ink: #ffffff;
+  --sidebar-bg: #0a0c1a;
   --sidebar-text: #8884a8;
   --sidebar-active: #6c63ff;
   --sidebar-hover: rgba(255,255,255,0.06);
   --radius: 18px;
   --radius-sm: 12px;
-  --shadow: 0 2px 12px rgba(15,14,23,.05);
-  --shadow-md: 0 10px 32px rgba(15,14,23,.10);
+  --shadow: 0 2px 12px rgba(0,0,0,.35);
+  --shadow-md: 0 10px 32px rgba(0,0,0,.45);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1239,6 +1241,20 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 /* flux-kpi-card kept for backward compat — styles are now global on .kpi-card */
 .flux-kpi-card { }
 
+/* ---- Flux : bande dégradée en haut des 4 cartes KPI (remplace le liseré gauche) ---- */
+/* Spécificité .kpi-card.flux-kpi-card (2 classes) : au moins égale à .kpi-card.primary/
+   .success/.danger (2 classes aussi) pour être sûr de l'emporter sur le liseré gauche
+   d'origine. #flux-kpi-solde-card ciblée par id EN PLUS : sa classe "flux-kpi-card" est
+   perdue quand Flux.js réassigne son className (succès/danger selon le signe du solde). */
+.kpi-card.flux-kpi-card, #flux-kpi-solde-card { border-left-color: transparent !important; }
+.flux-kpi-card::before, #flux-kpi-solde-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.kpi-card.flux-kpi-card.success::before  { background: linear-gradient(90deg, #00b37e, #4ade80); }  /* Revenus */
+.kpi-card.flux-kpi-card.danger::before   { background: linear-gradient(90deg, #e53e3e, #fc8181); }  /* Dépenses */
+#flux-kpi-solde-card::before              { background: linear-gradient(90deg, #6c63ff, #a09bff); }  /* Solde net (pas de classe stable : succès/danger togglés en JS) */
+.kpi-card.flux-kpi-card.primary::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }  /* Taux d'épargne */
+
 /* ---- Flux Category Pills ---- */
 .flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; align-items: center; }
 .flux-pill {
@@ -1281,11 +1297,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 
 /* ---- Flux Charts Row ---- */
 .flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start; }
-.flux-donut-wrap { display: flex; gap: 1rem; align-items: center; }
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 200px; }
+.flux-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.flux-donut-wrap .chart-container { width: 100%; max-width: 220px; }
 
 /* ---- Donut Custom Legend ---- */
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
+.donut-legend { width: 100%; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
 
 .dl-item {
   padding: 7px 8px 6px;
@@ -1313,7 +1329,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 #flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
 #flux-summary-tbody .srow:last-child td { border-bottom: none; }
 #flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
-#flux-summary-tbody .srow:hover td { background: rgba(0,0,0,0.025); }
+#flux-summary-tbody .srow:hover td { background: rgba(255,255,255,0.03); }
 #flux-summary-tbody .srow:hover { border-left-color: var(--rc, var(--primary)); }
 
 /* Label column */
@@ -1777,7 +1793,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 
 /* ---- Design refresh : style « soft dashboard » (réf. clair/lavande) ---- */
 /* Cartes flottantes sans liseré : ombre douce sur fond lavande */
-.kpi-card, .chart-card, .card, .insight-item { border-color: transparent; }
+.kpi-card, .chart-card, .card, .insight-item { border-color: var(--border); }
 .kpi-card { padding: 20px 22px; }
 .chart-card, .card { padding: 22px; }
 /* Boutons : présence douce et coins arrondis cohérents */

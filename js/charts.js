@@ -17,6 +17,21 @@ const Charts = {
     return chart;
   },
 
+  // Dégradé vertical scriptable (recette standard Chart.js v4) : couleur `top` en haut de
+  // la zone de tracé, `bottom` en bas. Renvoie null au tout premier passage de mise en page
+  // (chartArea pas encore connu) — Chart.js rappelle alors la fonction automatiquement.
+  _vGrad(top, bottom) {
+    return (context) => {
+      const { chart } = context;
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return null;
+      const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, top);
+      g.addColorStop(1, bottom);
+      return g;
+    };
+  },
+
   _fmt(v) {
     const fmt = (n) => {
       const s = n.toFixed(1);
@@ -32,7 +47,7 @@ const Charts = {
     return {
       beginAtZero: true,
       ticks: { callback: (v) => Charts._fmt(v), color: '#9ca3af', font: { size: 11 } },
-      grid: { color: 'rgba(0,0,0,0.05)' },
+      grid: { color: 'rgba(255,255,255,0.06)' },
       border: { display: false },
       ...extra,
     };
@@ -49,10 +64,10 @@ const Charts = {
 
   _tip(extra = {}) {
     return {
-      backgroundColor: 'rgba(17,24,39,0.92)',
-      titleColor: '#f9fafb',
-      bodyColor: '#d1d5db',
-      borderColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: 'rgba(19,21,37,0.96)',
+      titleColor: '#ffffff',
+      bodyColor: '#c7c9dd',
+      borderColor: 'rgba(255,255,255,0.10)',
       borderWidth: 1,
       padding: 10,
       cornerRadius: 8,
@@ -70,7 +85,7 @@ const Charts = {
         font: { size: 12 },
         usePointStyle: true,
         pointStyle: 'circle',
-        color: '#6b7280',
+        color: '#9497b8',
         ...extra,
       },
     };
@@ -289,11 +304,13 @@ const Charts = {
   },
 
   fluxBar(labels, revData, depData, soldeData, activeCategory) {
+    // Barres en dégradé vertical (vif en haut, sombre en bas), coins arrondis côté haut
+    // uniquement (borderSkipped par défaut = base), sans bordure (pas de liseré/glow).
     const barDatasets = activeCategory
-      ? [{ label: activeCategory, data: depData, backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 5, type: 'bar' }]
+      ? [{ label: activeCategory, data: depData, backgroundColor: this._vGrad('#a09bff', '#6c63ff'), borderWidth: 0, borderRadius: 6, type: 'bar' }]
       : [
-          { label: 'Revenus', data: revData, backgroundColor: 'rgba(16,185,129,0.72)', borderColor: '#10b981', borderWidth: 1, borderRadius: 5, type: 'bar' },
-          { label: 'Dépenses', data: depData, backgroundColor: 'rgba(239,68,68,0.72)', borderColor: '#ef4444', borderWidth: 1, borderRadius: 5, type: 'bar' },
+          { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#4ade80', '#00b37e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+          { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#fc8181', '#e53e3e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
         ];
 
     const soldeDataset = soldeData ? {
@@ -342,14 +359,17 @@ const Charts = {
     this.create('chart-flux-donut', {
       type: 'doughnut',
       data: {
+        // Bordure = couleur des cartes (pas blanc) : sépare les segments par un fin liseré
+        // qui se fond dans le fond de la carte au lieu d'un anneau blanc qui « brille ».
         labels,
-        datasets: [{ data, backgroundColor: bgColors, borderWidth: borderWidths, borderColor: '#fff', offset: offsets }],
+        datasets: [{ data, backgroundColor: bgColors, borderWidth: borderWidths, borderColor: '#131525', offset: offsets }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        cutout: '42%',   // anneau plus épais qu'avant (défaut Chart.js non précisé ~50% : plus petit = plus épais)
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
         onClick: onClickFn
           ? (event, elements) => {
