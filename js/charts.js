@@ -342,14 +342,16 @@ const Charts = {
     });
   },
 
-  fluxDonut(labels, data, activeLabels, onClickFn) {
+  // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
+  // (Flux._getCatColor, couleur stable par catégorie) plutôt que calculée ici par position,
+  // pour qu'une catégorie garde toujours la même couleur quel que soit son rang.
+  fluxDonut(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
-    const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
     const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
 
     const bgColors = labels.map((label, i) => {
-      const c = BASE_COLORS[i % BASE_COLORS.length];
+      const c = colors[i];
       if (!hasFilter || isActive(label)) return c;
       return c + '38';
     });
@@ -387,14 +389,15 @@ const Charts = {
   // Dépenses par catégorie en barres : mêmes données et la même logique de surbrillance/
   // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
   // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
-  fluxCategoryBar(labels, data, activeLabels, onClickFn) {
+  // `colors` : même contrat que fluxDonut (une couleur stable par label, fournie par
+  // Flux._getCatColor) — pas de calcul par position ici.
+  fluxCategoryBar(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
-    const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
     const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
 
     const bgColors = labels.map((label, i) => {
-      const c = BASE_COLORS[i % BASE_COLORS.length];
+      const c = colors[i];
       return (!hasFilter || isActive(label)) ? c : c + '38';
     });
 
