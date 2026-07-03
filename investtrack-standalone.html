@@ -1910,7 +1910,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   transition: transform .15s, box-shadow .15s, border-color .15s;
 }
 .category-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
   background: var(--cat-bar, var(--primary)); border-radius: var(--radius) var(--radius) 0 0;
 }
 .category-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(15,14,23,.09); }
@@ -1954,15 +1954,20 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .cat-hist-mini { border: none; background: var(--primary-light); color: var(--primary-dark); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
 .cat-obsolete-badge { background: var(--danger-bg); color: var(--danger); font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
 
-/* Sous-catégories en pastilles (chips), au lieu d'une liste à puces — même DOM
-   (sub-row/sub-dot/sub-txt généré par categories.js), seul l'habillage change ici :
-   sub-dot masqué, sub-row devient une pastille arrondie qui s'enroule (flex-wrap). */
-.subs { display: flex; flex-wrap: wrap; gap: 7px; }
+/* Sous-catégories en pastilles (chips) dans un encadré dédié, au lieu d'une liste à
+   puces — même DOM (sub-row/sub-dot/sub-txt généré par categories.js), seul l'habillage
+   change ici : sub-dot masqué, .subs devient un panneau bordé, sub-row une pastille
+   teintée de la couleur de la catégorie (--cat-dot, déjà calculée par carte). */
+.subs {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  padding: 12px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--border);
+}
 .sub-row {
   display: inline-flex; align-items: center; max-width: 100%;
-  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  font-size: 12px; font-weight: 600; color: var(--cat-dot, var(--text-muted));
   padding: 6px 13px; border-radius: 999px;
-  background: var(--bg); border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--cat-dot, var(--border));
   transition: border-color .12s, color .12s;
 }
 .sub-dot { display: none; }
