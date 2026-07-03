@@ -303,17 +303,17 @@ const Charts = {
     });
   },
 
-  fluxBar(labels, revData, depData, soldeData, activeCategory) {
-    // Barres en dégradé vertical (vif en haut, sombre en bas), coins arrondis côté haut
-    // uniquement (borderSkipped par défaut = base), sans bordure (pas de liseré/glow).
-    const barDatasets = activeCategory
-      ? [{ label: activeCategory, data: depData, backgroundColor: this._vGrad('#a09bff', '#6c63ff'), borderWidth: 0, borderRadius: 6, type: 'bar' }]
-      : [
-          { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#4ade80', '#00b37e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
-          { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#fc8181', '#e53e3e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
-        ];
+  // Toujours Revenus vs Dépenses (+ Solde net) : ne dépend QUE de la période, jamais du
+  // filtre de catégorie (celui-ci ne pilote que le nouveau graphique par catégorie et le
+  // donut/tableau). Barres en dégradé vertical (vif en haut, sombre en bas), coins arrondis
+  // côté haut uniquement (borderSkipped par défaut = base), sans bordure (pas de glow).
+  fluxBar(labels, revData, depData, soldeData) {
+    const barDatasets = [
+      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#4ade80', '#00b37e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#fc8181', '#e53e3e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+    ];
 
-    const soldeDataset = soldeData ? {
+    const soldeDataset = {
       label: 'Solde net',
       data: soldeData,
       type: 'line',
@@ -326,18 +326,18 @@ const Charts = {
       fill: false,
       tension: 0.35,
       yAxisID: 'y',
-    } : null;
+    };
 
     this.create('chart-flux-bar', {
       type: 'bar',
-      data: { labels, datasets: soldeDataset ? [...barDatasets, soldeDataset] : barDatasets },
+      data: { labels, datasets: [...barDatasets, soldeDataset] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: this._leg('top'),
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: this._yAxis({ beginAtZero: !!activeCategory }), x: this._xAxis() },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -384,108 +384,36 @@ const Charts = {
     });
   },
 
-  // Simple bar for filtered category view
-  fluxMonthly(labels, depData, revData, activeCategory) {
-    this.create('chart-flux-monthly', {
+  // Dépenses par catégorie en barres : mêmes données et la même logique de surbrillance/
+  // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
+  // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
+  fluxCategoryBar(labels, data, activeLabels, onClickFn) {
+    if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
+    const BASE_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'];
+    const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
+    const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
+
+    const bgColors = labels.map((label, i) => {
+      const c = BASE_COLORS[i % BASE_COLORS.length];
+      return (!hasFilter || isActive(label)) ? c : c + '38';
+    });
+
+    this.create('chart-flux-cat-bar', {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: activeCategory || 'Dépenses',
-          data: depData,
-          backgroundColor: activeCategory ? 'rgba(99,102,241,0.72)' : 'rgba(239,68,68,0.72)',
-          borderColor: activeCategory ? '#6366f1' : '#ef4444',
-          borderWidth: 1,
-          borderRadius: 5,
-        }],
-      },
+      data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, borderRadius: 6 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
         },
         scales: { y: this._yAxis(), x: this._xAxis() },
-      },
-    });
-  },
-
-  // Day-by-day bars + cumulative line for single-month view (no filter)
-  fluxMonthlyCumul(labels, depData, cumData) {
-    this.create('chart-flux-monthly', {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Dépenses du jour',
-            data: depData,
-            backgroundColor: 'rgba(239,68,68,0.5)',
-            borderColor: '#ef4444',
-            borderWidth: 1,
-            borderRadius: 4,
-            type: 'bar',
-          },
-          {
-            label: 'Cumul',
-            data: cumData,
-            type: 'line',
-            borderColor: '#6366f1',
-            backgroundColor: 'rgba(99,102,241,0.07)',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            fill: true,
-            tension: 0.4,
-          },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: this._leg('top'),
-          tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: this._yAxis(), x: this._xAxis() },
-      },
-    });
-  },
-
-  // Multi-month stacked bars by category (no filter active)
-  fluxMonthlyStacked(labels, catData) {
-    if (!catData.length) { this.destroy('chart-flux-monthly'); return; }
-    const datasets = catData.map(cat => ({
-      label: cat.name,
-      data: cat.values,
-      backgroundColor: cat.color + 'c0',
-      borderColor: cat.color,
-      borderWidth: 1,
-      stack: 'expenses',
-    }));
-
-    this.create('chart-flux-monthly', {
-      type: 'bar',
-      data: { labels, datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: this._leg('bottom', { font: { size: 11 }, padding: 10 }),
-          tooltip: {
-            ...this._tip(),
-            mode: 'index',
-            callbacks: {
-              label: (ctx) => ctx.raw > 0 ? ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` : null,
-              footer: (items) => {
-                const total = items.reduce((s, i) => s + i.raw, 0);
-                return total > 0 ? `Total : ${Utils.formatCurrency(total)}` : '';
-              },
-            },
-          },
-        },
-        scales: {
-          x: { ...this._xAxis(), stacked: true },
-          y: { ...this._yAxis(), stacked: true },
-        },
+        onClick: onClickFn
+          ? (event, elements) => { if (elements.length > 0) onClickFn(labels[elements[0].index]); else onClickFn(null); }
+          : undefined,
+        onHover: onClickFn
+          ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+          : undefined,
       },
     });
   },

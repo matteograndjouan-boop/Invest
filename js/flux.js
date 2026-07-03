@@ -153,13 +153,15 @@ const Flux = {
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     }
 
-    this._renderBarChart(allExpenses, allRevenues, catFilters);
-    this._renderDonut(expenses, catFilters);
-    this._renderMonthlyChart(allExpenses, allRevenues, catFilters);
+    this._renderBarChart(allExpenses, allRevenues);
+    this._renderDonut(catFilters);
+    this._renderCategoryBarChart(catFilters);
     this._renderSummaryTable(allExpenses, start, end, catFilters);
   },
 
-  _renderBarChart(allExpenses, allRevenues, catFilters) {
+  // Toujours Revenus vs Dépenses : ne suit QUE le filtre de période, jamais le filtre de
+  // catégorie (celui-ci pilote le graphique par catégorie, le donut et le tableau, pas celui-ci).
+  _renderBarChart(allExpenses, allRevenues) {
     const { start, end } = PeriodFilter.getDateRange();
 
     const months = [];
@@ -188,21 +190,19 @@ const Flux = {
     const depByMonth = months.map(m => {
       const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
       const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-      let exp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
-      if (catFilters.size) exp = exp.filter(ex => catFilters.has(ex.category));
-      return exp.reduce((sum, ex) => sum + ex.amount, 0);
+      return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
     });
 
     const soldeByMonth = revByMonth.map((r, i) => r - depByMonth[i]);
-    const catLabel = this._catLabel();
 
-    const titleEl = document.getElementById('flux-bar-title');
-    if (titleEl) titleEl.textContent = catFilters.size ? `Dépenses — ${catLabel}` : 'Revenus vs Dépenses';
-
-    Charts.fluxBar(labels, revByMonth, depByMonth, catFilters.size ? null : soldeByMonth, catLabel || null);
+    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth);
   },
 
-  _renderDonut(expenses, catFilters) {
+  // Répartition des dépenses de la période par catégorie (top 6 + « Autres ») — source
+  // commune au donut et au graphique en barres par catégorie : ils doivent toujours montrer
+  // exactement la même chose, jamais filtrée par catégorie (seule la période compte ici ;
+  // le filtre de catégorie ne sert qu'à la surbrillance/l'atténuation à l'affichage).
+  _categoryBreakdown() {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
@@ -216,6 +216,11 @@ const Flux = {
       const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
+    return { entries, total };
+  },
+
+  _renderDonut(catFilters) {
+    const { entries, total } = this._categoryBreakdown();
 
     Charts.fluxDonut(
       entries.map(([k]) => k),
@@ -250,101 +255,17 @@ const Flux = {
     }
   },
 
-  _renderMonthlyChart(allExpenses, allRevenues, catFilters) {
-    const { start, end } = PeriodFilter.getDateRange();
-    const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const labels = [];
-
-    const startD = new Date(start + 'T00:00:00');
-    const endD   = new Date(end   + 'T00:00:00');
-    const monthDiff =
-      (endD.getFullYear() - startD.getFullYear()) * 12 +
-      (endD.getMonth()    - startD.getMonth());
-
-    const catLabel = this._catLabel();
-    const periodLabel = PeriodFilter.getLabel();
-    const titleEl = document.getElementById('flux-monthly-title');
-
-    // When a category filter is active → simple bar for the selected category(ies)
-    if (catFilters.size) {
-      const depData = [];
-      if (monthDiff === 0) {
-        let cur = new Date(startD);
-        while (cur <= endD) {
-          const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-          labels.push(String(cur.getDate()));
-          depData.push(allExpenses.filter(e => e.date === day && catFilters.has(e.category)).reduce((s, e) => s + e.amount, 0));
-          cur.setDate(cur.getDate() + 1);
-        }
-      } else {
-        let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
-        while (cur <= endD) {
-          const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
-          const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
-          const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
-          const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-          labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
-          depData.push(allExpenses.filter(ex => catFilters.has(ex.category) && Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0));
-          cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
-        }
-      }
-      if (titleEl) titleEl.textContent = `Évolution — ${catLabel} · ${periodLabel}`;
-      Charts.fluxMonthly(labels, depData, null, catLabel);
-      return;
-    }
-
-    // No filter → stacked bars by category (multi-month) or simple dépenses bars (single month/day)
-    const cats = Storage.getCategories().map(c => c.name);
-    const catColors = cats.map((_, i) => this._BASE_COLORS[i % this._BASE_COLORS.length]);
-
-    if (monthDiff === 0) {
-      // Day-by-day view for single month: simple dépenses bar + cumulative line
-      const depData = [], cumData = [];
-      let cumul = 0;
-      let cur = new Date(startD);
-      while (cur <= endD) {
-        const day = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-        labels.push(String(cur.getDate()));
-        const dayDep = allExpenses.filter(e => e.date === day).reduce((s, e) => s + e.amount, 0);
-        depData.push(dayDep);
-        cumul += dayDep;
-        cumData.push(cumul);
-        cur.setDate(cur.getDate() + 1);
-      }
-      if (titleEl) titleEl.textContent = `Dépenses quotidiennes · ${periodLabel}`;
-      Charts.fluxMonthlyCumul(labels, depData, cumData);
-    } else {
-      // Multi-month: stacked by category
-      const catData = cats.map((name, ci) => ({ name, color: catColors[ci], values: [] }));
-      let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
-      while (cur <= endD) {
-        const m = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
-        const last = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
-        const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
-        const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-        labels.push(MONTHS_FR[cur.getMonth()] + ' ' + String(cur.getFullYear()).slice(2));
-        const monthExp = allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e);
-        // "Autres" bucket for expenses not in known categories
-        let othersTotal = 0;
-        const knownCatTotals = {};
-        monthExp.forEach(ex => {
-          if (cats.includes(ex.category)) {
-            knownCatTotals[ex.category] = (knownCatTotals[ex.category] || 0) + ex.amount;
-          } else {
-            othersTotal += ex.amount;
-          }
-        });
-        catData.forEach(cd => { cd.values.push(knownCatTotals[cd.name] || 0); });
-        if (othersTotal > 0) {
-          // add to last category or ignore — handled below
-        }
-        cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
-      }
-      // Only include categories that have at least one non-zero value
-      const activeCats = catData.filter(cd => cd.values.some(v => v > 0));
-      if (titleEl) titleEl.textContent = `Dépenses par catégorie · ${periodLabel}`;
-      Charts.fluxMonthlyStacked(labels, activeCats);
-    }
+  // Dépenses par catégorie en barres : mêmes données que le donut (_categoryBreakdown),
+  // juste une autre présentation. Relié aux mêmes filtres période+catégorie que le donut et
+  // le tableau (clic sur une barre = même bascule de filtre que clic sur un secteur/une ligne).
+  _renderCategoryBarChart(catFilters) {
+    const { entries } = this._categoryBreakdown();
+    Charts.fluxCategoryBar(
+      entries.map(([k]) => k),
+      entries.map(([, v]) => v),
+      catFilters,
+      (label) => this.toggleFilter(label)
+    );
   },
 
   toggleCatExpand(cat) {
