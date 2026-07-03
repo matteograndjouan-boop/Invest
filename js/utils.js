@@ -137,4 +137,19 @@ const Utils = {
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
     '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
   ],
+
+  CATEGORY_COLOR_OTHER: '#6b7280',
+
+  // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
+  // jamais par rang/montant/ordre d'apparition — sinon une même catégorie changerait de couleur
+  // d'une vue ou d'une période à l'autre. Seule source de vérité pour la couleur d'une catégorie,
+  // partagée par tout l'app (Flux, Catégories, Comparaisons, Dépenses/Revenus...).
+  // « Autres »/« Autre » (bucket agrégé de certains graphiques, n'existe pas comme vraie
+  // catégorie) reçoit un gris neutre dédié plutôt que de retomber arbitrairement sur la 1re.
+  getCategoryColor(catName) {
+    if (catName === 'Autres') return this.CATEGORY_COLOR_OTHER;
+    const cats = Storage.getCategories().map(c => c.name);
+    const idx = cats.indexOf(catName);
+    return this.CATEGORY_COLORS[(idx >= 0 ? idx : 0) % this.CATEGORY_COLORS.length];
+  },
 };

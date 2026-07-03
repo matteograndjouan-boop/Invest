@@ -43,7 +43,7 @@ const Categories = {
     const m = this._meta(cat.name);
     const icon = cat.icon || m.icon;
     const sc = m.scheme;
-    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-cnt:${sc.count}`;
     const n = cat.subcategories.length;
     const oldItems = this._oldItems(unit);   // anciens noms (versions datées ou alias)
     const openOld = this._openOld.has(cat.id);
@@ -132,7 +132,7 @@ const Categories = {
   // header dédié (🕘 Ancien nom) et lien « ↳ aujourd'hui : … » vers le nom actuel.
   _renderOldCard(it, primary) {
     const sc = this._meta(primary.name).scheme;   // couleur de la lignée = celle de l'active
-    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-cnt:${sc.count}`;
     const name = it.kind === 'version' ? it.v.name : it.name;
     const icon = it.kind === 'version' ? (it.v.icon || this._meta(name).icon) : this._meta(name).icon;
     const note = it.kind === 'version' ? (it.v.versionNote || 'Ancienne version datée')
@@ -209,43 +209,44 @@ const Categories = {
     this.render();
   },
 
-  // Palette de couleurs des cartes (barre du haut, pastille, fond d'icône, compteur).
-  _PALETTE: [
-    { bar: '#6c63ff,#9c95ff', dot: '#7f77dd', bg: '#ede9ff', count: '#6c63ff' },
-    { bar: '#1a9e6e,#5dcaa5', dot: '#1d9e75', bg: '#e1f5ee', count: '#0f6e56' },
-    { bar: '#ef9f27,#fac775', dot: '#ba7517', bg: '#faeeda', count: '#854f0b' },
-    { bar: '#378add,#85b7eb', dot: '#378add', bg: '#e6f1fb', count: '#185fa5' },
-    { bar: '#d4537e,#ed93b1', dot: '#d4537e', bg: '#fbeaf0', count: '#993556' },
-    { bar: '#e24b4a,#f09595', dot: '#e24b4a', bg: '#fcebeb', count: '#a32d2d' },
-    { bar: '#888780,#b4b2a9', dot: '#888780', bg: '#f1efe8', count: '#5f5e5a' },
-    { bar: '#7c4dff,#b39ddb', dot: '#7c4dff', bg: '#efe7ff', count: '#5e35b1' },
-  ],
-  // Icône + couleur par mots-clés du nom (repli : couleur stable par hash + 🏷️).
+  // Icône par mots-clés du nom (repli : 🏷️).
   _CATMETA: [
-    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒', p: 1 },
-    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌', p: 3 },
-    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠', p: 3 },
-    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️', p: 5 },
-    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯', p: 4 },
-    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️', p: 0 },
-    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶', p: 0 },
-    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷', p: 2 },
-    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰', p: 1 },
-    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦', p: 6 },
-    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️', p: 2 },
-    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️', p: 3 },
-    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓', p: 3 },
-    { kw: ['enfant', 'famille', 'bebe'], icon: '👶', p: 4 },
-    { kw: ['animal', 'chien', 'chat'], icon: '🐾', p: 2 },
-    { kw: ['cadeau'], icon: '🎁', p: 4 },
-    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾', p: 6 },
-    { kw: ['beaute', 'coiffure'], icon: '💄', p: 4 },
+    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒' },
+    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌' },
+    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠' },
+    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️' },
+    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯' },
+    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️' },
+    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶' },
+    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷' },
+    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰' },
+    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦' },
+    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️' },
+    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️' },
+    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓' },
+    { kw: ['enfant', 'famille', 'bebe'], icon: '👶' },
+    { kw: ['animal', 'chien', 'chat'], icon: '🐾' },
+    { kw: ['cadeau'], icon: '🎁' },
+    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾' },
+    { kw: ['beaute', 'coiffure'], icon: '💄' },
   ],
+  // Éclaircit une couleur hex vers le blanc (facteur 0..1) — dérive les nuances de la carte
+  // (ruban, texte du compteur) à partir de l'unique couleur d'identité de la catégorie, en
+  // restant lisible sur le fond sombre du thème.
+  _lighten(hex, pct) {
+    const c = parseInt(hex.slice(1), 16);
+    const mix = (shift) => { const v = (c >> shift) & 255; return Math.round(v + (255 - v) * pct); };
+    return '#' + [mix(16), mix(8), mix(0)].map(v => v.toString(16).padStart(2, '0')).join('');
+  },
+  // Icône par mots-clés ; couleur = Utils.getCategoryColor, seule source de vérité partagée
+  // avec Flux/Comparaisons/Dépenses/Revenus, pour qu'une catégorie ait toujours la même
+  // couleur partout dans l'app (plus de palette/hash indépendants ici).
   _meta(name) {
     const n = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme: this._PALETTE[m.p] };
-    let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
-    return { icon: '🏷️', scheme: this._PALETTE[h % this._PALETTE.length] };
+    const color = Utils.getCategoryColor(name);
+    const scheme = { bar: `${color},${this._lighten(color, 0.35)}`, dot: color, count: this._lighten(color, 0.4) };
+    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme };
+    return { icon: '🏷️', scheme };
   },
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },

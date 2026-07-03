@@ -208,7 +208,7 @@ const Charts = {
 
     this.create('chart-exp-category', {
       type: 'doughnut',
-      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map(k => Utils.getCategoryColor(k)), borderWidth: 2, borderColor: '#fff' }] },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
@@ -238,7 +238,7 @@ const Charts = {
 
     this.create('chart-rev-category', {
       type: 'doughnut',
-      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map(k => Utils.getCategoryColor(k)), borderWidth: 2, borderColor: '#fff' }] },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
@@ -343,7 +343,7 @@ const Charts = {
   },
 
   // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
-  // (Flux._getCatColor, couleur stable par catégorie) plutôt que calculée ici par position,
+  // (Utils.getCategoryColor, couleur stable par catégorie) plutôt que calculée ici par position,
   // pour qu'une catégorie garde toujours la même couleur quel que soit son rang.
   fluxDonut(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
@@ -390,7 +390,7 @@ const Charts = {
   // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
   // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
   // `colors` : même contrat que fluxDonut (une couleur stable par label, fournie par
-  // Flux._getCatColor) — pas de calcul par position ici.
+  // Utils.getCategoryColor) — pas de calcul par position ici.
   fluxCategoryBar(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;

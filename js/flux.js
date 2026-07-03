@@ -2,26 +2,12 @@ const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
   _expandedCats: new Set(),
-  _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
     });
     this._renderCatPills();
-  },
-
-  // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
-  // jamais par rang/montant — sinon une même catégorie changerait de couleur d'un mois à
-  // l'autre selon son classement (ex. donut/graphique par catégorie triés par montant
-  // décroissant). Même règle que le tableau, pour que toutes les vues Flux soient cohérentes.
-  // « Autres » (bucket agrégé du donut/graphique, n'existe pas dans les vraies catégories)
-  // reçoit un gris neutre dédié plutôt que de retomber arbitrairement sur la 1re catégorie.
-  _getCatColor(catName) {
-    if (catName === 'Autres') return this._BASE_COLORS[this._BASE_COLORS.length - 1];
-    const cats = Storage.getCategories().map(c => c.name);
-    const idx = cats.indexOf(catName);
-    return this._BASE_COLORS[(idx >= 0 ? idx : 0) % this._BASE_COLORS.length];
   },
 
   _renderCatPills() {
@@ -36,8 +22,8 @@ const Flux = {
     const allBtn = `<button class="flux-pill${allActive ? ' active' : ''}" onclick="Flux._clearFilters()">
       <span class="flux-pill-dot" style="background:${allActive ? '#fff' : 'var(--text-muted)'}"></span>Toutes
     </button>`;
-    const catBtns = cats.map((c, i) => {
-      const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+    const catBtns = cats.map((c) => {
+      const color = Utils.getCategoryColor(c);
       const isActive = active.has(c);
       const style = isActive ? `style="background:${color};border-color:${color}"` : '';
       return `<button class="flux-pill${isActive ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')" ${style}>
@@ -228,7 +214,7 @@ const Flux = {
 
   _renderDonut(catFilters) {
     const { entries, total } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => this._getCatColor(label));
+    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
 
     Charts.fluxDonut(
       entries.map(([k]) => k),
@@ -269,7 +255,7 @@ const Flux = {
   // le tableau (clic sur une barre = même bascule de filtre que clic sur un secteur/une ligne).
   _renderCategoryBarChart(catFilters) {
     const { entries } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => this._getCatColor(label));
+    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
     Charts.fluxCategoryBar(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
@@ -331,7 +317,7 @@ const Flux = {
       const pct    = total > 0 ? (g.amount / total * 100) : 0;
       const pctStr = pct.toFixed(1);
       const barW   = Math.min(100, pct).toFixed(1);
-      const color  = !showSub ? this._getCatColor(label) : '#6366f1';
+      const color  = !showSub ? Utils.getCategoryColor(label) : '#6366f1';
       const hex22  = color + '22';
 
       if (!showSub) {

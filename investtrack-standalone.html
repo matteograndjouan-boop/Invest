@@ -2989,6 +2989,21 @@ const Utils = {
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
     '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
   ],
+
+  CATEGORY_COLOR_OTHER: '#6b7280',
+
+  // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
+  // jamais par rang/montant/ordre d'apparition — sinon une même catégorie changerait de couleur
+  // d'une vue ou d'une période à l'autre. Seule source de vérité pour la couleur d'une catégorie,
+  // partagée par tout l'app (Flux, Catégories, Comparaisons, Dépenses/Revenus...).
+  // « Autres »/« Autre » (bucket agrégé de certains graphiques, n'existe pas comme vraie
+  // catégorie) reçoit un gris neutre dédié plutôt que de retomber arbitrairement sur la 1re.
+  getCategoryColor(catName) {
+    if (catName === 'Autres') return this.CATEGORY_COLOR_OTHER;
+    const cats = Storage.getCategories().map(c => c.name);
+    const idx = cats.indexOf(catName);
+    return this.CATEGORY_COLORS[(idx >= 0 ? idx : 0) % this.CATEGORY_COLORS.length];
+  },
 };
 
 </script>
@@ -3203,7 +3218,7 @@ const Charts = {
 
     this.create('chart-exp-category', {
       type: 'doughnut',
-      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map(k => Utils.getCategoryColor(k)), borderWidth: 2, borderColor: '#fff' }] },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
@@ -3233,7 +3248,7 @@ const Charts = {
 
     this.create('chart-rev-category', {
       type: 'doughnut',
-      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]), borderWidth: 2, borderColor: '#fff' }] },
+      data: { labels: keys, datasets: [{ data: Object.values(byCategory), backgroundColor: keys.map(k => Utils.getCategoryColor(k)), borderWidth: 2, borderColor: '#fff' }] },
       options: this._doughnutOptions(Utils.formatCurrency),
     });
   },
@@ -3338,7 +3353,7 @@ const Charts = {
   },
 
   // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
-  // (Flux._getCatColor, couleur stable par catégorie) plutôt que calculée ici par position,
+  // (Utils.getCategoryColor, couleur stable par catégorie) plutôt que calculée ici par position,
   // pour qu'une catégorie garde toujours la même couleur quel que soit son rang.
   fluxDonut(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
@@ -3385,7 +3400,7 @@ const Charts = {
   // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
   // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
   // `colors` : même contrat que fluxDonut (une couleur stable par label, fournie par
-  // Flux._getCatColor) — pas de calcul par position ici.
+  // Utils.getCategoryColor) — pas de calcul par position ici.
   fluxCategoryBar(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
@@ -4348,26 +4363,12 @@ const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
   _expandedCats: new Set(),
-  _BASE_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-flux').classList.contains('hidden')) this.render();
     });
     this._renderCatPills();
-  },
-
-  // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
-  // jamais par rang/montant — sinon une même catégorie changerait de couleur d'un mois à
-  // l'autre selon son classement (ex. donut/graphique par catégorie triés par montant
-  // décroissant). Même règle que le tableau, pour que toutes les vues Flux soient cohérentes.
-  // « Autres » (bucket agrégé du donut/graphique, n'existe pas dans les vraies catégories)
-  // reçoit un gris neutre dédié plutôt que de retomber arbitrairement sur la 1re catégorie.
-  _getCatColor(catName) {
-    if (catName === 'Autres') return this._BASE_COLORS[this._BASE_COLORS.length - 1];
-    const cats = Storage.getCategories().map(c => c.name);
-    const idx = cats.indexOf(catName);
-    return this._BASE_COLORS[(idx >= 0 ? idx : 0) % this._BASE_COLORS.length];
   },
 
   _renderCatPills() {
@@ -4382,8 +4383,8 @@ const Flux = {
     const allBtn = `<button class="flux-pill${allActive ? ' active' : ''}" onclick="Flux._clearFilters()">
       <span class="flux-pill-dot" style="background:${allActive ? '#fff' : 'var(--text-muted)'}"></span>Toutes
     </button>`;
-    const catBtns = cats.map((c, i) => {
-      const color = this._BASE_COLORS[i % this._BASE_COLORS.length];
+    const catBtns = cats.map((c) => {
+      const color = Utils.getCategoryColor(c);
       const isActive = active.has(c);
       const style = isActive ? `style="background:${color};border-color:${color}"` : '';
       return `<button class="flux-pill${isActive ? ' active' : ''}" onclick="Flux._togglePill('${c.replace(/'/g, "\\'")}')" ${style}>
@@ -4574,7 +4575,7 @@ const Flux = {
 
   _renderDonut(catFilters) {
     const { entries, total } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => this._getCatColor(label));
+    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
 
     Charts.fluxDonut(
       entries.map(([k]) => k),
@@ -4615,7 +4616,7 @@ const Flux = {
   // le tableau (clic sur une barre = même bascule de filtre que clic sur un secteur/une ligne).
   _renderCategoryBarChart(catFilters) {
     const { entries } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => this._getCatColor(label));
+    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
     Charts.fluxCategoryBar(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
@@ -4677,7 +4678,7 @@ const Flux = {
       const pct    = total > 0 ? (g.amount / total * 100) : 0;
       const pctStr = pct.toFixed(1);
       const barW   = Math.min(100, pct).toFixed(1);
-      const color  = !showSub ? this._getCatColor(label) : '#6366f1';
+      const color  = !showSub ? Utils.getCategoryColor(label) : '#6366f1';
       const hex22  = color + '22';
 
       if (!showSub) {
@@ -4748,8 +4749,6 @@ const Flux = {
 const Comparisons = {
   periodA: '',
   periodB: '',
-
-  _CAT_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
 
   _shortLabel(period) {
     const [y, m] = period.split('-').map(Number);
@@ -4864,7 +4863,6 @@ const Comparisons = {
       1
     );
 
-    const knownCats = Storage.getCategories().map(c => c.name);
     const rows = allCatsSorted.map(cat => {
       const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
       const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
@@ -4875,8 +4873,7 @@ const Comparisons = {
       const cls  = diff <= 0 ? 'positive' : 'negative';
       const sign = diff >= 0 ? '+' : '';
       const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
-      const catIdx = knownCats.indexOf(cat);
-      const color = this._CAT_COLORS[(catIdx >= 0 ? catIdx : allCatsSorted.indexOf(cat)) % this._CAT_COLORS.length];
+      const color = Utils.getCategoryColor(cat);
 
       return `<div class="cc-row">
         <div class="cc-side-a">
@@ -4950,7 +4947,7 @@ const Categories = {
     const m = this._meta(cat.name);
     const icon = cat.icon || m.icon;
     const sc = m.scheme;
-    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-cnt:${sc.count}`;
     const n = cat.subcategories.length;
     const oldItems = this._oldItems(unit);   // anciens noms (versions datées ou alias)
     const openOld = this._openOld.has(cat.id);
@@ -5039,7 +5036,7 @@ const Categories = {
   // header dédié (🕘 Ancien nom) et lien « ↳ aujourd'hui : … » vers le nom actuel.
   _renderOldCard(it, primary) {
     const sc = this._meta(primary.name).scheme;   // couleur de la lignée = celle de l'active
-    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-ico:${sc.bg};--cat-cnt:${sc.count}`;
+    const vars = `--cat-bar:linear-gradient(90deg,${sc.bar});--cat-dot:${sc.dot};--cat-cnt:${sc.count}`;
     const name = it.kind === 'version' ? it.v.name : it.name;
     const icon = it.kind === 'version' ? (it.v.icon || this._meta(name).icon) : this._meta(name).icon;
     const note = it.kind === 'version' ? (it.v.versionNote || 'Ancienne version datée')
@@ -5116,43 +5113,44 @@ const Categories = {
     this.render();
   },
 
-  // Palette de couleurs des cartes (barre du haut, pastille, fond d'icône, compteur).
-  _PALETTE: [
-    { bar: '#6c63ff,#9c95ff', dot: '#7f77dd', bg: '#ede9ff', count: '#6c63ff' },
-    { bar: '#1a9e6e,#5dcaa5', dot: '#1d9e75', bg: '#e1f5ee', count: '#0f6e56' },
-    { bar: '#ef9f27,#fac775', dot: '#ba7517', bg: '#faeeda', count: '#854f0b' },
-    { bar: '#378add,#85b7eb', dot: '#378add', bg: '#e6f1fb', count: '#185fa5' },
-    { bar: '#d4537e,#ed93b1', dot: '#d4537e', bg: '#fbeaf0', count: '#993556' },
-    { bar: '#e24b4a,#f09595', dot: '#e24b4a', bg: '#fcebeb', count: '#a32d2d' },
-    { bar: '#888780,#b4b2a9', dot: '#888780', bg: '#f1efe8', count: '#5f5e5a' },
-    { bar: '#7c4dff,#b39ddb', dot: '#7c4dff', bg: '#efe7ff', count: '#5e35b1' },
-  ],
-  // Icône + couleur par mots-clés du nom (repli : couleur stable par hash + 🏷️).
+  // Icône par mots-clés du nom (repli : 🏷️).
   _CATMETA: [
-    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒', p: 1 },
-    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌', p: 3 },
-    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠', p: 3 },
-    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️', p: 5 },
-    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯', p: 4 },
-    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️', p: 0 },
-    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶', p: 0 },
-    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷', p: 2 },
-    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰', p: 1 },
-    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦', p: 6 },
-    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️', p: 2 },
-    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️', p: 3 },
-    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓', p: 3 },
-    { kw: ['enfant', 'famille', 'bebe'], icon: '👶', p: 4 },
-    { kw: ['animal', 'chien', 'chat'], icon: '🐾', p: 2 },
-    { kw: ['cadeau'], icon: '🎁', p: 4 },
-    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾', p: 6 },
-    { kw: ['beaute', 'coiffure'], icon: '💄', p: 4 },
+    { kw: ['aliment', 'course', 'nourrit', 'epicerie'], icon: '🛒' },
+    { kw: ['transport', 'vehicul', 'voiture', 'bus', 'train', 'metro', 'mobilit'], icon: '🚌' },
+    { kw: ['logement', 'loyer', 'immobil', 'habitat'], icon: '🏠' },
+    { kw: ['sante', 'medical', 'medecin', 'pharmaci'], icon: '❤️' },
+    { kw: ['loisir', 'sortie', 'divertiss', 'sport', 'culture'], icon: '🎯' },
+    { kw: ['shopping', 'vetement', 'mode'], icon: '🛍️' },
+    { kw: ['abonnement', 'telephon', 'internet', 'stream'], icon: '📶' },
+    { kw: ['epargne', 'econom', 'invest', 'livret', 'placement'], icon: '🐷' },
+    { kw: ['revenu', 'salaire', 'paie', 'gain'], icon: '💰' },
+    { kw: ['divers', 'autre', 'frais', 'banqu'], icon: '📦' },
+    { kw: ['restau', 'resto', 'cafe'], icon: '🍽️' },
+    { kw: ['voyage', 'vacance', 'hotel'], icon: '✈️' },
+    { kw: ['educ', 'ecole', 'etude', 'formation'], icon: '🎓' },
+    { kw: ['enfant', 'famille', 'bebe'], icon: '👶' },
+    { kw: ['animal', 'chien', 'chat'], icon: '🐾' },
+    { kw: ['cadeau'], icon: '🎁' },
+    { kw: ['impot', 'taxe', 'assurance'], icon: '🧾' },
+    { kw: ['beaute', 'coiffure'], icon: '💄' },
   ],
+  // Éclaircit une couleur hex vers le blanc (facteur 0..1) — dérive les nuances de la carte
+  // (ruban, texte du compteur) à partir de l'unique couleur d'identité de la catégorie, en
+  // restant lisible sur le fond sombre du thème.
+  _lighten(hex, pct) {
+    const c = parseInt(hex.slice(1), 16);
+    const mix = (shift) => { const v = (c >> shift) & 255; return Math.round(v + (255 - v) * pct); };
+    return '#' + [mix(16), mix(8), mix(0)].map(v => v.toString(16).padStart(2, '0')).join('');
+  },
+  // Icône par mots-clés ; couleur = Utils.getCategoryColor, seule source de vérité partagée
+  // avec Flux/Comparaisons/Dépenses/Revenus, pour qu'une catégorie ait toujours la même
+  // couleur partout dans l'app (plus de palette/hash indépendants ici).
   _meta(name) {
     const n = String(name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme: this._PALETTE[m.p] };
-    let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
-    return { icon: '🏷️', scheme: this._PALETTE[h % this._PALETTE.length] };
+    const color = Utils.getCategoryColor(name);
+    const scheme = { bar: `${color},${this._lighten(color, 0.35)}`, dot: color, count: this._lighten(color, 0.4) };
+    for (const m of this._CATMETA) if (m.kw.some(k => n.includes(k))) return { icon: m.icon, scheme };
+    return { icon: '🏷️', scheme };
   },
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },

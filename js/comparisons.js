@@ -2,8 +2,6 @@ const Comparisons = {
   periodA: '',
   periodB: '',
 
-  _CAT_COLORS: ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#6b7280'],
-
   _shortLabel(period) {
     const [y, m] = period.split('-').map(Number);
     const MONTHS = ['jan.','fév.','mar.','avr.','mai','jun.','jul.','aoû.','sep.','oct.','nov.','déc.'];
@@ -117,7 +115,6 @@ const Comparisons = {
       1
     );
 
-    const knownCats = Storage.getCategories().map(c => c.name);
     const rows = allCatsSorted.map(cat => {
       const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
       const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
@@ -128,8 +125,7 @@ const Comparisons = {
       const cls  = diff <= 0 ? 'positive' : 'negative';
       const sign = diff >= 0 ? '+' : '';
       const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
-      const catIdx = knownCats.indexOf(cat);
-      const color = this._CAT_COLORS[(catIdx >= 0 ? catIdx : allCatsSorted.indexOf(cat)) % this._CAT_COLORS.length];
+      const color = Utils.getCategoryColor(cat);
 
       return `<div class="cc-row">
         <div class="cc-side-a">
