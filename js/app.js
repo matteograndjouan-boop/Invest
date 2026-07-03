@@ -96,7 +96,7 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
-    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep);
+    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevExp);
     this._renderFluxChart(expenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
