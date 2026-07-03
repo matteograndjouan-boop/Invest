@@ -1892,7 +1892,9 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    Onglet Catégories v2 — cartes colorées (maquette)
    ============================================================ */
 .cat-page-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
-.categories-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-items: start; }
+.categories-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .categories-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .categories-grid { grid-template-columns: 1fr; } }
 
 .category-card {
   background: var(--surface); border-radius: var(--radius);
