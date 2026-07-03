@@ -1,7 +1,6 @@
 const Categories = {
   _dnd: null,
   _editingCatId: null,        // catégorie en mode édition
-  _expanded: new Set(),       // catégories dont la liste de sous-catégories est dépliée
   _openOld: new Set(),        // catégories dont les anciens noms sont dépliés à droite (par id de la version active)
   _TYPES: [
     { key: 'expense',    label: 'Dépenses',      icon: '💳' },
@@ -64,14 +63,10 @@ const Categories = {
       </div>`;
 
     if (!editing) {
-      const expanded = this._expanded.has(cat.id);
-      const list = expanded ? cat.subcategories : cat.subcategories.slice(0, 3);
-      const shown = list.map(s => `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
-      let moreLink = '';
-      if (n > 3) moreLink = expanded
-        ? `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">▲ Réduire</div>`
-        : `<div class="more more-link" onclick="Categories._toggleExpand('${cat.id}')">+${n - 3} autre${n - 3 > 1 ? 's' : ''}</div>`;
-      const body = n ? `<div class="subs">${shown}</div>${moreLink}` : '<div class="subs-empty">Aucune sous-catégorie</div>';
+      // Cartes larges (4 par ligne) : toutes les sous-catégories tiennent d'un coup d'œil,
+      // plus besoin de tronquer à 3 + bouton déplier.
+      const shown = cat.subcategories.map(s => `<div class="sub-row"><span class="sub-dot"></span><span class="sub-txt" title="${s}">${s}</span></div>`).join('');
+      const body = n ? `<div class="subs">${shown}</div>` : '<div class="subs-empty">Aucune sous-catégorie</div>';
       const activeCard = `<div class="category-card${stackCls}${openOld ? ' old-open' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
         ${top}${body}
         <div class="card-footer"><button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button></div>
@@ -250,12 +245,6 @@ const Categories = {
 
   _startEdit(catId) { this._editingCatId = catId; this.render(); },
   _stopEdit()       { this._editingCatId = null;  this.render(); },
-
-  _toggleExpand(catId) {
-    if (this._expanded.has(catId)) this._expanded.delete(catId);
-    else this._expanded.add(catId);
-    this.render();
-  },
 
   // ---- Icône personnalisée d'une catégorie (mode édition) ----
   _ICON_CHOICES: ['🏷️','🛒','🍽️','🥖','☕','🍔','🍷','🛍️','👕','👟','💄','🏠','💡','🔥','🚰','🚌','🚆','🚗','✈️','⛽','❤️','💊','🦷','🏥','🎯','🎬','🎮','🎵','📚','🏋️','⚽','🐷','💰','💳','🏦','📈','🎁','🐾','👶','🎓','🧾','🛡️','📶','📱','💻','🌍','🎉','🔧','✂️','📦','💼','🌱','🧹','⚡'],
