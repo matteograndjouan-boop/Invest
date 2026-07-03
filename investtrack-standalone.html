@@ -1303,7 +1303,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-multi-btn.active { border-style: solid; background: var(--primary); border-color: var(--primary); color: #fff; }
 
 /* ---- Flux Charts Row ---- */
-.flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: start; }
+/* align-items: stretch (défaut grid) : la colonne gauche s'étire à la hauteur du donut
+   (la plus grande des deux), pour que le graphique par catégorie comble l'espace restant. */
+.flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.flux-charts-col { display: flex; flex-direction: column; gap: 1rem; min-height: 0; }
+.flux-catbar-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.flux-catbar-card .chart-container { flex: 1; height: auto; min-height: 140px; }
+.flux-catbar-card .chart-container canvas { max-height: none; }
 .flux-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
 .flux-donut-wrap .chart-container { width: 100%; max-width: 220px; }
 
@@ -2330,9 +2336,15 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
         </div>
         <div id="flux-cat-pills" class="flux-cat-pills"></div>
         <div class="flux-charts-row">
-          <div class="chart-card">
-            <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
-            <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
+          <div class="flux-charts-col">
+            <div class="chart-card">
+              <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
+              <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
+            </div>
+            <div class="chart-card flux-catbar-card">
+              <h3>Dépenses par catégorie</h3>
+              <div class="chart-container"><canvas id="chart-flux-cat-bar"></canvas></div>
+            </div>
           </div>
           <div class="chart-card">
             <h3>Répartition des dépenses</h3>
@@ -2341,10 +2353,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
               <div id="flux-donut-legend" class="donut-legend"></div>
             </div>
           </div>
-        </div>
-        <div class="chart-card mt-md">
-          <h3>Dépenses par catégorie</h3>
-          <div class="chart-container" style="height:200px"><canvas id="chart-flux-cat-bar"></canvas></div>
         </div>
         <div class="card mt-md">
           <div class="card-header-row">
