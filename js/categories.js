@@ -56,10 +56,16 @@ const Categories = {
       ? `<button class="cat-stack-badge${openOld ? ' open' : ''}" onclick="Categories._toggleOld('${cat.id}')" title="Anciens noms — afficher / masquer">🕘 ${oldItems.length}<span class="cat-stack-chev">${openOld ? '▾' : '▸'}</span></button>` : '';
     // Effet « pile » seulement quand c'est replié (laisse deviner qu'il y a des cartes derrière).
     const stackCls = (oldItems.length && !openOld) ? ' has-versions' : '';
+    // Hors édition : le compteur laisse place à un bouton Modifier (icône seule) dans l'en-tête —
+    // le bouton pleine largeur du pied de carte disparaît (plus de place vide en dessous des
+    // pastilles). En édition, le compteur reste (on est déjà dans l'édition, inutile d'y remener).
+    const topRight = editing
+      ? `<span class="cat-count">${n}</span>`
+      : `${oldBadge}<button class="cat-edit-btn" onclick="Categories._startEdit('${cat.id}')" title="Modifier">✎</button>`;
     const top = `
       <div class="card-top" onmousedown="Categories._dndStart(event,'cat','${cat.id}',null)" ontouchstart="Categories._dndStart(event,'cat','${cat.id}',null)" title="Glisser pour réordonner ou changer de type">
         <div class="cat-left">${iconHtml}<span class="cat-name" title="${cat.name}">${cat.name}</span></div>
-        <div class="cat-top-right">${!editing ? oldBadge : ''}<span class="cat-count">${n}</span></div>
+        <div class="cat-top-right">${topRight}</div>
       </div>`;
 
     if (!editing) {
@@ -69,7 +75,6 @@ const Categories = {
       const body = n ? `<div class="subs">${shown}</div>` : '<div class="subs-empty">Aucune sous-catégorie</div>';
       const activeCard = `<div class="category-card${stackCls}${openOld ? ' old-open' : ''}" data-cat-id="${cat.id}" id="cat-${cat.id}" style="${vars}">
         ${top}${body}
-        <div class="card-footer"><button class="btn-edit" onclick="Categories._startEdit('${cat.id}')">✎ Modifier</button></div>
       </div>`;
       // Quand c'est déplié, les anciens noms suivent la carte active dans la grille (donc à sa droite).
       return activeCard + (openOld ? this._renderOldCards(unit, oldItems) : '');

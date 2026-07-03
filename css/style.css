@@ -1944,6 +1944,14 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .cat-name { font-size: 15px; font-weight: 700; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-top-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .cat-count { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--bg); color: var(--cat-cnt, var(--text-muted)); }
+.cat-edit-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; font-size: 12px; line-height: 1;
+  border: none; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary-dark);
+  cursor: pointer; flex-shrink: 0; transition: background .12s, color .12s;
+}
+.cat-edit-btn:hover { background: var(--primary); color: #fff; }
 .cat-hist-mini { border: none; background: var(--primary-light); color: var(--primary-dark); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
 .cat-obsolete-badge { background: var(--danger-bg); color: var(--danger); font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
 
@@ -1955,7 +1963,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .sub-row {
   display: inline-flex; align-items: center; max-width: 100%;
   font-size: 12px; font-weight: 600; color: var(--text-muted);
-  padding: 6px 13px; border-radius: 999px;
+  padding: 6px 13px; border-radius: 8px;
   background: var(--bg); border: 1px solid var(--border);
   transition: border-color .12s, color .12s;
 }
@@ -1964,14 +1972,12 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .more {
   display: inline-flex; align-items: center;
   font-size: 12px; font-weight: 700; color: var(--text3);
-  padding: 6px 13px; border-radius: 999px; border: 1px dashed var(--border);
+  padding: 6px 13px; border-radius: 8px; border: 1px dashed var(--border);
   transition: border-color .12s, color .12s;
 }
 .subs-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0; }
 
 .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-.btn-edit { font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-light); border: none; border-radius: 50px; padding: 6px 14px; cursor: pointer; transition: background .12s; }
-.btn-edit:hover { background: var(--primary); color: #fff; }
 .btn-del { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--text3); padding: 5px 8px; border-radius: 8px; transition: all .12s; }
 .btn-del:hover { color: var(--danger); background: var(--danger-bg); }
 
