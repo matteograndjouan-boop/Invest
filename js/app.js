@@ -340,6 +340,10 @@ function navigateTo(sectionId) {
   document.body.setAttribute('data-view', sectionId);
   const pfContainer = document.getElementById('period-filter-container');
   if (pfContainer) pfContainer.style.display = ['flux', 'budget', 'comparisons'].includes(sectionId) ? '' : 'none';
+  // Referme le panneau replié et rafraîchit son libellé (change de sens sur Comparaisons —
+  // voir PeriodFilter._triggerLabel) à chaque changement d'onglet.
+  PeriodFilter._closePanel();
+  PeriodFilter._refreshTrigger();
 
   // Render the appropriate section
   switch (sectionId) {

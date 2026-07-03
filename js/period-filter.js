@@ -3,6 +3,7 @@ const PeriodFilter = {
   _listeners: [],
   _dropdownYear: null,
   _dropdownOpen: false,
+  _panelOpen: false,
 
   get() {
     const saved = Storage.get(this._STORAGE_KEY);
@@ -71,6 +72,17 @@ const PeriodFilter = {
     }
   },
 
+  // Texte du déclencheur compact : sur Comparaisons, le sélecteur mois/trimestre/... est masqué
+  // (CSS body[data-view="comparisons"]) car cet onglet a ses 2 propres sélecteurs de période —
+  // afficher le libellé de période globale y serait trompeur, donc on montre le mode de date à
+  // la place (seul réglage encore pertinent dans le panneau sur cet onglet).
+  _triggerLabel() {
+    if (document.body.getAttribute('data-view') === 'comparisons') {
+      return Storage.getDateMode() === 'effective' ? 'Date effective' : 'Date transaction';
+    }
+    return this.getLabel();
+  },
+
   onChange(cb) { this._listeners.push(cb); },
   _notify() { this._listeners.forEach(cb => { try { cb(); } catch(e) { console.error(e); } }); },
 
@@ -119,36 +131,55 @@ const PeriodFilter = {
     const e = document.getElementById('date-mode-effective');
     if (t) t.classList.toggle('active', mode === 'transaction');
     if (e) e.classList.toggle('active', mode === 'effective');
+    this._refreshTrigger();
   },
 
+  // Déclencheur compact (juste la période en cours) : le panneau complet — jusqu'ici affiché en
+  // permanence en pleine largeur — ne s'affiche plus qu'au clic, replié par défaut pour ne pas
+  // encombrer le haut de page.
   _buildHTML() {
     return `
-      <div class="period-filter">
-        <span class="period-filter-label">Période :</span>
-        <div class="period-type-btns">
-          <button class="period-type-btn" data-type="month">Mois</button>
-          <button class="period-type-btn" data-type="quarter">Trimestre</button>
-          <button class="period-type-btn" data-type="semester">Semestre</button>
-          <button class="period-type-btn" data-type="year">Année</button>
-          <button class="period-type-btn" data-type="range">Plage libre</button>
-        </div>
-        <div class="period-nav" id="period-nav-row">
-          <button class="period-arrow" id="period-prev">&#8592;</button>
-          <div class="period-label-wrap">
-            <button class="period-label-btn" id="period-label-btn"></button>
-            <div class="period-dropdown hidden" id="period-dropdown"></div>
+      <div class="period-compact">
+        <button class="period-trigger" id="period-trigger">
+          <span class="period-trigger-ico">📅</span>
+          <span id="period-trigger-label"></span>
+          <span class="period-trigger-chev">▾</span>
+        </button>
+        <div class="period-panel hidden" id="period-panel">
+          <div class="period-filter">
+            <span class="period-filter-label">Période :</span>
+            <div class="period-type-btns">
+              <button class="period-type-btn" data-type="month">Mois</button>
+              <button class="period-type-btn" data-type="quarter">Trimestre</button>
+              <button class="period-type-btn" data-type="semester">Semestre</button>
+              <button class="period-type-btn" data-type="year">Année</button>
+              <button class="period-type-btn" data-type="range">Plage libre</button>
+            </div>
+            <div class="period-nav" id="period-nav-row">
+              <button class="period-arrow" id="period-prev">&#8592;</button>
+              <div class="period-label-wrap">
+                <button class="period-label-btn" id="period-label-btn"></button>
+                <div class="period-dropdown hidden" id="period-dropdown"></div>
+              </div>
+              <button class="period-arrow" id="period-next">&#8594;</button>
+            </div>
+            <div class="date-mode-toggle">
+              <span class="date-mode-label">Date :</span>
+              <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
+              <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
+            </div>
           </div>
-          <button class="period-arrow" id="period-next">&#8594;</button>
-        </div>
-        <div class="date-mode-toggle">
-          <span class="date-mode-label">Date :</span>
-          <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
-          <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
         </div>
       </div>`;
   },
 
   _bindEvents() {
+    document.getElementById('period-trigger').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._panelOpen ? this._closePanel() : this._openPanel();
+    });
+    document.getElementById('period-panel').addEventListener('click', e => e.stopPropagation());
+
     document.querySelectorAll('.period-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = { ...this.get() };
@@ -174,11 +205,24 @@ const PeriodFilter = {
       this._dropdownOpen ? this._closeDropdown() : this._openDropdown();
     });
 
-    document.addEventListener('click', () => this._closeDropdown());
+    document.addEventListener('click', () => { this._closeDropdown(); this._closePanel(); });
     document.getElementById('period-dropdown').addEventListener('click', e => e.stopPropagation());
 
     // Hide arrows in range mode
     this._updateArrows();
+  },
+
+  _openPanel() {
+    document.getElementById('period-panel')?.classList.remove('hidden');
+    document.getElementById('period-trigger')?.classList.add('active');
+    this._panelOpen = true;
+  },
+
+  _closePanel() {
+    document.getElementById('period-panel')?.classList.add('hidden');
+    document.getElementById('period-trigger')?.classList.remove('active');
+    this._panelOpen = false;
+    this._closeDropdown();
   },
 
   _openDropdown() {
@@ -303,7 +347,13 @@ const PeriodFilter = {
   _updateLabel() {
     const btn = document.getElementById('period-label-btn');
     if (btn) btn.textContent = this.getLabel() + ' ▾';
+    this._refreshTrigger();
     this._updateAll();
+  },
+
+  _refreshTrigger() {
+    const el = document.getElementById('period-trigger-label');
+    if (el) el.textContent = this._triggerLabel();
   },
 
   _updateAll() {

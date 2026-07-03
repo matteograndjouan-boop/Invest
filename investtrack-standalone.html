@@ -812,19 +812,30 @@ input:focus:not(:focus-visible) { outline: none; }
   .cc-name { max-width: 60px; }
 }
 
-/* ---- Period Filter (barre globale en haut du contenu) ---- */
-.global-period-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 10px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
+/* ---- Period Filter (déclencheur compact en haut à droite du contenu) ---- */
+.global-period-bar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.period-compact { position: relative; }
+.period-trigger {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.8125rem; font-weight: 600;
+  cursor: pointer; transition: background .15s, border-color .15s, color .15s;
 }
-.period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; width: 100%; }
+.period-trigger:hover, .period-trigger.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.period-trigger-ico { font-size: 0.85rem; }
+.period-trigger-chev { font-size: 0.65rem; color: var(--text-muted); transition: transform .15s; }
+.period-trigger.active .period-trigger-chev { transform: rotate(180deg); color: var(--primary); }
+.period-panel {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  max-width: min(480px, calc(100vw - 48px));
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.2); z-index: 1000; padding: 12px 14px;
+  animation: dropInRight 0.12s ease;
+}
+.period-panel.hidden { display: none; }
+@keyframes dropInRight { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
+.period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .period-filter-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 .period-type-btns { display: flex; gap: 6px; }
 .period-type-btn {
@@ -3498,6 +3509,7 @@ const PeriodFilter = {
   _listeners: [],
   _dropdownYear: null,
   _dropdownOpen: false,
+  _panelOpen: false,
 
   get() {
     const saved = Storage.get(this._STORAGE_KEY);
@@ -3566,6 +3578,17 @@ const PeriodFilter = {
     }
   },
 
+  // Texte du déclencheur compact : sur Comparaisons, le sélecteur mois/trimestre/... est masqué
+  // (CSS body[data-view="comparisons"]) car cet onglet a ses 2 propres sélecteurs de période —
+  // afficher le libellé de période globale y serait trompeur, donc on montre le mode de date à
+  // la place (seul réglage encore pertinent dans le panneau sur cet onglet).
+  _triggerLabel() {
+    if (document.body.getAttribute('data-view') === 'comparisons') {
+      return Storage.getDateMode() === 'effective' ? 'Date effective' : 'Date transaction';
+    }
+    return this.getLabel();
+  },
+
   onChange(cb) { this._listeners.push(cb); },
   _notify() { this._listeners.forEach(cb => { try { cb(); } catch(e) { console.error(e); } }); },
 
@@ -3614,36 +3637,55 @@ const PeriodFilter = {
     const e = document.getElementById('date-mode-effective');
     if (t) t.classList.toggle('active', mode === 'transaction');
     if (e) e.classList.toggle('active', mode === 'effective');
+    this._refreshTrigger();
   },
 
+  // Déclencheur compact (juste la période en cours) : le panneau complet — jusqu'ici affiché en
+  // permanence en pleine largeur — ne s'affiche plus qu'au clic, replié par défaut pour ne pas
+  // encombrer le haut de page.
   _buildHTML() {
     return `
-      <div class="period-filter">
-        <span class="period-filter-label">Période :</span>
-        <div class="period-type-btns">
-          <button class="period-type-btn" data-type="month">Mois</button>
-          <button class="period-type-btn" data-type="quarter">Trimestre</button>
-          <button class="period-type-btn" data-type="semester">Semestre</button>
-          <button class="period-type-btn" data-type="year">Année</button>
-          <button class="period-type-btn" data-type="range">Plage libre</button>
-        </div>
-        <div class="period-nav" id="period-nav-row">
-          <button class="period-arrow" id="period-prev">&#8592;</button>
-          <div class="period-label-wrap">
-            <button class="period-label-btn" id="period-label-btn"></button>
-            <div class="period-dropdown hidden" id="period-dropdown"></div>
+      <div class="period-compact">
+        <button class="period-trigger" id="period-trigger">
+          <span class="period-trigger-ico">📅</span>
+          <span id="period-trigger-label"></span>
+          <span class="period-trigger-chev">▾</span>
+        </button>
+        <div class="period-panel hidden" id="period-panel">
+          <div class="period-filter">
+            <span class="period-filter-label">Période :</span>
+            <div class="period-type-btns">
+              <button class="period-type-btn" data-type="month">Mois</button>
+              <button class="period-type-btn" data-type="quarter">Trimestre</button>
+              <button class="period-type-btn" data-type="semester">Semestre</button>
+              <button class="period-type-btn" data-type="year">Année</button>
+              <button class="period-type-btn" data-type="range">Plage libre</button>
+            </div>
+            <div class="period-nav" id="period-nav-row">
+              <button class="period-arrow" id="period-prev">&#8592;</button>
+              <div class="period-label-wrap">
+                <button class="period-label-btn" id="period-label-btn"></button>
+                <div class="period-dropdown hidden" id="period-dropdown"></div>
+              </div>
+              <button class="period-arrow" id="period-next">&#8594;</button>
+            </div>
+            <div class="date-mode-toggle">
+              <span class="date-mode-label">Date :</span>
+              <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
+              <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
+            </div>
           </div>
-          <button class="period-arrow" id="period-next">&#8594;</button>
-        </div>
-        <div class="date-mode-toggle">
-          <span class="date-mode-label">Date :</span>
-          <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
-          <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
         </div>
       </div>`;
   },
 
   _bindEvents() {
+    document.getElementById('period-trigger').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._panelOpen ? this._closePanel() : this._openPanel();
+    });
+    document.getElementById('period-panel').addEventListener('click', e => e.stopPropagation());
+
     document.querySelectorAll('.period-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = { ...this.get() };
@@ -3669,11 +3711,24 @@ const PeriodFilter = {
       this._dropdownOpen ? this._closeDropdown() : this._openDropdown();
     });
 
-    document.addEventListener('click', () => this._closeDropdown());
+    document.addEventListener('click', () => { this._closeDropdown(); this._closePanel(); });
     document.getElementById('period-dropdown').addEventListener('click', e => e.stopPropagation());
 
     // Hide arrows in range mode
     this._updateArrows();
+  },
+
+  _openPanel() {
+    document.getElementById('period-panel')?.classList.remove('hidden');
+    document.getElementById('period-trigger')?.classList.add('active');
+    this._panelOpen = true;
+  },
+
+  _closePanel() {
+    document.getElementById('period-panel')?.classList.add('hidden');
+    document.getElementById('period-trigger')?.classList.remove('active');
+    this._panelOpen = false;
+    this._closeDropdown();
   },
 
   _openDropdown() {
@@ -3798,7 +3853,13 @@ const PeriodFilter = {
   _updateLabel() {
     const btn = document.getElementById('period-label-btn');
     if (btn) btn.textContent = this.getLabel() + ' ▾';
+    this._refreshTrigger();
     this._updateAll();
+  },
+
+  _refreshTrigger() {
+    const el = document.getElementById('period-trigger-label');
+    if (el) el.textContent = this._triggerLabel();
   },
 
   _updateAll() {
@@ -10257,7 +10318,7 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
-    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevDep);
+    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevExp);
     this._renderFluxChart(expenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
@@ -10501,6 +10562,10 @@ function navigateTo(sectionId) {
   document.body.setAttribute('data-view', sectionId);
   const pfContainer = document.getElementById('period-filter-container');
   if (pfContainer) pfContainer.style.display = ['flux', 'budget', 'comparisons'].includes(sectionId) ? '' : 'none';
+  // Referme le panneau replié et rafraîchit son libellé (change de sens sur Comparaisons —
+  // voir PeriodFilter._triggerLabel) à chaque changement d'onglet.
+  PeriodFilter._closePanel();
+  PeriodFilter._refreshTrigger();
 
   // Render the appropriate section
   switch (sectionId) {
