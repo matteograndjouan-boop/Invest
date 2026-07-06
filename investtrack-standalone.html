@@ -6071,7 +6071,24 @@ const Budget = {
     // cette version) = pas de restriction de date, actif depuis toujours.
     if (theme.monthlyAmount == null) theme.monthlyAmount = theme.planned || 0;
     if (theme.startDate === undefined) theme.startDate = null;
+    // Périodicité de saisie — sert juste à ré-afficher le bon montant/période dans le
+    // formulaire d'édition (le calcul lui-même n'utilise que monthlyAmount) ; absente pour les
+    // budgets créés avant cette fonctionnalité -> Mensuel.
+    if (theme.inputPeriodMonths == null) theme.inputPeriodMonths = 1;
+    if (theme.inputAmount == null) theme.inputAmount = theme.monthlyAmount;
     return theme;
+  },
+
+  _PERIODS: [
+    { months: 1, label: 'Mensuel' },
+    { months: 3, label: 'Trimestriel' },
+    { months: 6, label: 'Semestriel' },
+    { months: 12, label: 'Annuel' },
+  ],
+  _periodOptions(selectedMonths) {
+    return this._PERIODS.map(p =>
+      `<option value="${p.months}" ${p.months === selectedMonths ? 'selected' : ''}>${p.label}</option>`
+    ).join('');
   },
 
   _computeSpent(theme, expenses) {
@@ -6480,11 +6497,13 @@ const Budget = {
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie *</label>
           <select name="category" required>${cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
-        <div class="form-group form-full"><label>Montant mensuel (€) *</label>
-          <input name="monthlyAmount" type="number" step="1" min="0" required placeholder="ex: 400"></div>
+        <div class="form-group"><label>Montant (€) *</label>
+          <input name="amount" type="number" step="1" min="0" required placeholder="ex: 400"></div>
+        <div class="form-group"><label>Périodicité *</label>
+          <select name="periodMonths">${this._periodOptions(1)}</select></div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${today}">
-          <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant mensuel, à partir de cette date.</p></div>
+          <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant (ramené au mois), à partir de cette date.</p></div>
         <div class="form-group form-full"><label>Couleur</label>
           <div class="color-picker-row">${this._colorPicker(this._THEME_COLORS[0])}</div></div>
       </div>
@@ -6499,8 +6518,10 @@ const Budget = {
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie</label>
           <input type="text" value="${theme.name}" disabled style="opacity:0.6"></div>
-        <div class="form-group form-full"><label>Montant mensuel (€) *</label>
-          <input name="monthlyAmount" type="number" step="1" min="0" value="${theme.monthlyAmount || 0}" required></div>
+        <div class="form-group"><label>Montant (€) *</label>
+          <input name="amount" type="number" step="1" min="0" value="${theme.inputAmount || 0}" required></div>
+        <div class="form-group"><label>Périodicité *</label>
+          <select name="periodMonths">${this._periodOptions(theme.inputPeriodMonths)}</select></div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${theme.startDate || ''}">
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
@@ -6517,12 +6538,16 @@ const Budget = {
     event.preventDefault();
     const fd = new FormData(event.target);
     const category = fd.get('category');
+    const amount = parseFloat(fd.get('amount')) || 0;
+    const periodMonths = parseInt(fd.get('periodMonths'), 10) || 1;
     const themes = Storage.getBudgetThemes();
     themes.push({
       id: 'theme_' + Date.now(),
       name: category,
       color: fd.get('color'),
-      monthlyAmount: parseFloat(fd.get('monthlyAmount')) || 0,
+      monthlyAmount: amount / periodMonths,
+      inputAmount: amount,
+      inputPeriodMonths: periodMonths,
       startDate: fd.get('startDate') || null,
       categories: [category],
     });
@@ -6537,9 +6562,13 @@ const Budget = {
     const themes = Storage.getBudgetThemes();
     const theme  = themes.find(t => t.id === id);
     if (!theme) return;
-    theme.monthlyAmount = parseFloat(fd.get('monthlyAmount')) || 0;
-    theme.startDate     = fd.get('startDate') || null;
-    theme.color         = fd.get('color') || theme.color;
+    const amount = parseFloat(fd.get('amount')) || 0;
+    const periodMonths = parseInt(fd.get('periodMonths'), 10) || 1;
+    theme.monthlyAmount     = amount / periodMonths;
+    theme.inputAmount       = amount;
+    theme.inputPeriodMonths = periodMonths;
+    theme.startDate         = fd.get('startDate') || null;
+    theme.color             = fd.get('color') || theme.color;
     Storage.saveBudgetThemes(themes);
     Modal.close();
     if (this._currentThemeId === id) this._renderDetail(id);
@@ -6574,7 +6603,9 @@ const Budget = {
     const suggested = Math.ceil(sum / 3);
     const themes = Storage.getBudgetThemes();
     const t = themes.find(t => t.id === id);
-    if (t) { t.monthlyAmount = suggested; Storage.saveBudgetThemes(themes); }
+    // Réinitialise aussi la périodicité de saisie à Mensuel : la suggestion est une moyenne
+    // mensuelle, pour que le formulaire d'édition réaffiche ensuite le bon montant/période.
+    if (t) { t.monthlyAmount = suggested; t.inputAmount = suggested; t.inputPeriodMonths = 1; Storage.saveBudgetThemes(themes); }
     this._renderDetail(id);
   },
 };
