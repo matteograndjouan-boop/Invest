@@ -1343,12 +1343,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-bar-card { display: flex; flex-direction: column; }
 .flux-bar-card .chart-container { flex: 1; height: auto; min-height: 180px; }
 .flux-bar-card .chart-container canvas { max-height: none; }
-.flux-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; height: 100%; }
-.flux-donut-wrap .chart-container { width: 100%; max-width: 200px; }
+/* Donut à gauche, légende à droite (plus de place pour les noms qu'en 2 colonnes en dessous). */
+.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; gap: 1rem; height: 100%; }
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 180px; }
 
 /* ---- Donut Custom Legend ---- */
-/* Toujours en 2 colonnes compactes ; juste pastille + nom + pourcentage, pas de barre/montant. */
-.donut-legend { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; min-width: 0; overflow: hidden; }
+/* Juste pastille + nom + pourcentage, pas de barre/montant. */
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
 
 .dl-item {
   display: flex; align-items: center; gap: 7px;
