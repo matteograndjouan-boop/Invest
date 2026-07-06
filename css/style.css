@@ -300,6 +300,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .mode-tab.active { color: var(--text); border-bottom-color: var(--primary); }
 .mode-tab-ico { font-size: 1rem; }
 
+/* Utilitaire générique manquant jusqu'ici : seules des variantes composées existaient
+   (.section.hidden, .modal-overlay.hidden, .period-panel.hidden, .period-dropdown.hidden),
+   donc classList.add('hidden') seul — utilisé par la plupart des états vides (Positions, Flux,
+   Revenus, Dépenses, Comparaisons, Budget, Données) et par la vue détail de Budget/son bouton
+   Retour — ne masquait jamais réellement l'élément. !important : classe utilitaire, doit
+   toujours l'emporter quelle que soit la spécificité des autres classes de l'élément. */
+.hidden { display: none !important; }
+
 /* ---- Sections ---- */
 .section { display: block; }
 .section.hidden { display: none; }
