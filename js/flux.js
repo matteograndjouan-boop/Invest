@@ -148,7 +148,7 @@ const Flux = {
 
     this._renderBarChart(allExpenses, allRevenues);
     this._renderDonut(catFilters);
-    this._renderCategoryBarChart(catFilters);
+    this._renderCategoryCards(catFilters);
     this._renderSummaryTable(allExpenses, start, end, catFilters);
   },
 
@@ -165,6 +165,13 @@ const Flux = {
       months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
+
+    // Plus la période affiche de mois, plus les barres ont besoin de largeur face au donut
+    // (1 mois = 2 barres ; 4+ mois commencent à être serrés) — le donut ne descend jamais
+    // sous 35 %.
+    const donutPct = months.length <= 1 ? 55 : months.length <= 3 ? 45 : 35;
+    const chartsRow = document.getElementById('flux-charts-row');
+    if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
 
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = months.map(m => {
@@ -227,42 +234,47 @@ const Flux = {
     const legend = document.getElementById('flux-donut-legend');
     if (legend) {
       if (!entries.length) { legend.innerHTML = ''; return; }
+      // Toujours en 2 colonnes ; juste pastille + nom + pourcentage, pas de barre/montant.
       legend.innerHTML = entries.map(([label, value], i) => {
         const pct = total > 0 ? (value / total * 100) : 0;
         const pctStr = pct.toFixed(1);
-        const barW = Math.min(100, pct).toFixed(1);
         const color = colors[i];
         const isActive = catFilters.size > 0 && catFilters.has(label);
         const isFiltered = catFilters.size > 0 && !catFilters.has(label);
         const safeName = label.replace(/'/g, "\\'");
         return `<div class="dl-item${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--ic:${color}" onclick="Flux.toggleFilter('${safeName}')">
-          <div class="dl-top">
-            <span class="dl-dot" style="background:${color}"></span>
-            <span class="dl-name">${label}</span>
-            <span class="dl-pct">${pctStr}%</span>
-          </div>
-          <div class="dl-bottom">
-            <div class="dl-bar-bg"><div class="dl-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-            <span class="dl-val">${Utils.formatCurrency(value)}</span>
-          </div>
+          <span class="dl-dot" style="background:${color}"></span>
+          <span class="dl-name">${label}</span>
+          <span class="dl-pct">${pctStr}%</span>
         </div>`;
       }).join('');
     }
   },
 
-  // Dépenses par catégorie en barres : mêmes données que le donut (_categoryBreakdown),
-  // juste une autre présentation. Relié aux mêmes filtres période+catégorie que le donut et
-  // le tableau (clic sur une barre = même bascule de filtre que clic sur un secteur/une ligne).
-  _renderCategoryBarChart(catFilters) {
+  // Dépenses par catégorie en cartes : mêmes données que le donut (_categoryBreakdown), une
+  // carte par catégorie (icône, nom, montant, barre proportionnelle au MAX de la période — pas
+  // au total — pour bien visualiser l'écart relatif entre catégories). Reliée aux mêmes filtres
+  // que le donut/tableau (clic = même bascule de filtre).
+  _renderCategoryCards(catFilters) {
+    const container = document.getElementById('flux-cat-cards');
+    if (!container) return;
     const { entries } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
-    Charts.fluxCategoryBar(
-      entries.map(([k]) => k),
-      entries.map(([, v]) => v),
-      colors,
-      catFilters,
-      (label) => this.toggleFilter(label)
-    );
+    if (!entries.length) { container.innerHTML = ''; return; }
+
+    const max = Math.max(...entries.map(([, v]) => v));
+    container.innerHTML = entries.map(([label, value]) => {
+      const color = Utils.getCategoryColor(label);
+      const icon = Categories._meta(label).icon;
+      const barW = max > 0 ? (value / max * 100).toFixed(1) : 0;
+      const isActive = catFilters.size > 0 && catFilters.has(label);
+      const isFiltered = catFilters.size > 0 && !catFilters.has(label);
+      const safeName = label.replace(/'/g, "\\'");
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+        <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
+        <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
+        <div class="fcc-bar-bg"><div class="fcc-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+      </div>`;
+    }).join('');
   },
 
   toggleCatExpand(cat) {

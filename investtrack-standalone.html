@@ -1334,21 +1334,19 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-multi-btn.active { border-style: solid; background: var(--primary); border-color: var(--primary); color: #fff; }
 
 /* ---- Flux Charts Row ---- */
-/* align-items: stretch (défaut grid) : la colonne gauche s'étire à la hauteur du donut
-   (la plus grande des deux), pour que le graphique par catégorie comble l'espace restant. */
-.flux-charts-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-.flux-charts-col { display: flex; flex-direction: column; gap: 1rem; min-height: 0; }
-.flux-catbar-card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.flux-catbar-card .chart-container { flex: 1; height: auto; min-height: 140px; }
-.flux-catbar-card .chart-container canvas { max-height: none; }
-.flux-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+/* grid-template-columns ajusté en JS selon le nombre de mois affichés (Flux._renderBarChart) :
+   1 mois → 45/55, 2-3 mois → 55/45, 4+ mois → 65/35 (le donut ne descend jamais sous 35 %). */
+.flux-charts-row { display: grid; grid-template-columns: 45fr 55fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.flux-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; height: 100%; }
 .flux-donut-wrap .chart-container { width: 100%; max-width: 220px; }
 
 /* ---- Donut Custom Legend ---- */
-.donut-legend { width: 100%; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
+/* Toujours en 2 colonnes compactes ; juste pastille + nom + pourcentage, pas de barre/montant. */
+.donut-legend { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; min-width: 0; overflow: hidden; }
 
 .dl-item {
-  padding: 7px 8px 6px;
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 8px;
   border-radius: 8px;
   border-left: 3px solid transparent;
   cursor: pointer;
@@ -1358,16 +1356,30 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .dl-item.active { background: var(--surface-alt); border-left-color: var(--ic); }
 .dl-item.dimmed { opacity: 0.38; }
 .dl-item.dimmed:hover { opacity: 1; }
-
-.dl-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
 .dl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .dl-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl-pct { font-size: 14px; font-weight: 800; color: var(--ic); white-space: nowrap; flex-shrink: 0; }
+.dl-pct { font-size: 13px; font-weight: 800; color: var(--ic); white-space: nowrap; flex-shrink: 0; }
 
-.dl-bottom { display: flex; align-items: center; gap: 8px; padding-left: 16px; }
-.dl-bar-bg { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.dl-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
-.dl-val { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+/* ---- Flux Dépenses par catégorie (cartes) ---- */
+.flux-cat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.flux-cat-card {
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, opacity 0.14s;
+}
+.flux-cat-card:hover { border-color: var(--primary); }
+.flux-cat-card.active { border-color: var(--primary); background: var(--primary-light); }
+.flux-cat-card.dimmed { opacity: 0.4; }
+.flux-cat-card.dimmed:hover { opacity: 1; }
+.fcc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.fcc-ico { font-size: 18px; }
+.fcc-name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.fcc-bar-bg { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.fcc-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
 
 /* ---- Flux Summary Table ---- */
 #flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
@@ -2356,16 +2368,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           </div>
         </div>
         <div id="flux-cat-pills" class="flux-cat-pills"></div>
-        <div class="flux-charts-row">
-          <div class="flux-charts-col">
-            <div class="chart-card">
-              <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
-              <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
-            </div>
-            <div class="chart-card flux-catbar-card">
-              <h3>Dépenses par catégorie</h3>
-              <div class="chart-container"><canvas id="chart-flux-cat-bar"></canvas></div>
-            </div>
+        <div class="flux-charts-row" id="flux-charts-row">
+          <div class="chart-card">
+            <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
+            <div class="chart-container" style="height:240px"><canvas id="chart-flux-bar"></canvas></div>
           </div>
           <div class="chart-card">
             <h3>Répartition des dépenses</h3>
@@ -2374,6 +2380,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
               <div id="flux-donut-legend" class="donut-legend"></div>
             </div>
           </div>
+        </div>
+        <div class="chart-card mt-md">
+          <h3>Dépenses par catégorie</h3>
+          <div id="flux-cat-cards" class="flux-cat-cards"></div>
         </div>
         <div class="card mt-md">
           <div class="card-header-row">
@@ -3322,8 +3332,8 @@ const Charts = {
   // côté haut uniquement (borderSkipped par défaut = base), sans bordure (pas de glow).
   fluxBar(labels, revData, depData, soldeData) {
     const barDatasets = [
-      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#4ade80', '#00b37e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
-      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#fc8181', '#e53e3e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#00b37e', '#004d35'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#e53e3e', '#5a0f0f'), borderWidth: 0, borderRadius: 6, type: 'bar' },
     ];
 
     const soldeDataset = {
@@ -3391,41 +3401,6 @@ const Charts = {
               if (elements.length > 0) onClickFn(labels[elements[0].index]);
               else onClickFn(null);
             }
-          : undefined,
-        onHover: onClickFn
-          ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
-          : undefined,
-      },
-    });
-  },
-
-  // Dépenses par catégorie en barres : mêmes données et la même logique de surbrillance/
-  // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
-  // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
-  // `colors` : même contrat que fluxDonut (une couleur stable par label, fournie par
-  // Utils.getCategoryColor) — pas de calcul par position ici.
-  fluxCategoryBar(labels, data, colors, activeLabels, onClickFn) {
-    if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
-    const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
-    const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
-
-    const bgColors = labels.map((label, i) => {
-      const c = colors[i];
-      return (!hasFilter || isActive(label)) ? c : c + '38';
-    });
-
-    this.create('chart-flux-cat-bar', {
-      type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, borderRadius: 6 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: this._yAxis(), x: this._xAxis() },
-        onClick: onClickFn
-          ? (event, elements) => { if (elements.length > 0) onClickFn(labels[elements[0].index]); else onClickFn(null); }
           : undefined,
         onHover: onClickFn
           ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
@@ -4562,7 +4537,7 @@ const Flux = {
 
     this._renderBarChart(allExpenses, allRevenues);
     this._renderDonut(catFilters);
-    this._renderCategoryBarChart(catFilters);
+    this._renderCategoryCards(catFilters);
     this._renderSummaryTable(allExpenses, start, end, catFilters);
   },
 
@@ -4579,6 +4554,13 @@ const Flux = {
       months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
+
+    // Plus la période affiche de mois, plus les barres ont besoin de largeur face au donut
+    // (1 mois = 2 barres ; 4+ mois commencent à être serrés) — le donut ne descend jamais
+    // sous 35 %.
+    const donutPct = months.length <= 1 ? 55 : months.length <= 3 ? 45 : 35;
+    const chartsRow = document.getElementById('flux-charts-row');
+    if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
 
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = months.map(m => {
@@ -4641,42 +4623,47 @@ const Flux = {
     const legend = document.getElementById('flux-donut-legend');
     if (legend) {
       if (!entries.length) { legend.innerHTML = ''; return; }
+      // Toujours en 2 colonnes ; juste pastille + nom + pourcentage, pas de barre/montant.
       legend.innerHTML = entries.map(([label, value], i) => {
         const pct = total > 0 ? (value / total * 100) : 0;
         const pctStr = pct.toFixed(1);
-        const barW = Math.min(100, pct).toFixed(1);
         const color = colors[i];
         const isActive = catFilters.size > 0 && catFilters.has(label);
         const isFiltered = catFilters.size > 0 && !catFilters.has(label);
         const safeName = label.replace(/'/g, "\\'");
         return `<div class="dl-item${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--ic:${color}" onclick="Flux.toggleFilter('${safeName}')">
-          <div class="dl-top">
-            <span class="dl-dot" style="background:${color}"></span>
-            <span class="dl-name">${label}</span>
-            <span class="dl-pct">${pctStr}%</span>
-          </div>
-          <div class="dl-bottom">
-            <div class="dl-bar-bg"><div class="dl-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-            <span class="dl-val">${Utils.formatCurrency(value)}</span>
-          </div>
+          <span class="dl-dot" style="background:${color}"></span>
+          <span class="dl-name">${label}</span>
+          <span class="dl-pct">${pctStr}%</span>
         </div>`;
       }).join('');
     }
   },
 
-  // Dépenses par catégorie en barres : mêmes données que le donut (_categoryBreakdown),
-  // juste une autre présentation. Relié aux mêmes filtres période+catégorie que le donut et
-  // le tableau (clic sur une barre = même bascule de filtre que clic sur un secteur/une ligne).
-  _renderCategoryBarChart(catFilters) {
+  // Dépenses par catégorie en cartes : mêmes données que le donut (_categoryBreakdown), une
+  // carte par catégorie (icône, nom, montant, barre proportionnelle au MAX de la période — pas
+  // au total — pour bien visualiser l'écart relatif entre catégories). Reliée aux mêmes filtres
+  // que le donut/tableau (clic = même bascule de filtre).
+  _renderCategoryCards(catFilters) {
+    const container = document.getElementById('flux-cat-cards');
+    if (!container) return;
     const { entries } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
-    Charts.fluxCategoryBar(
-      entries.map(([k]) => k),
-      entries.map(([, v]) => v),
-      colors,
-      catFilters,
-      (label) => this.toggleFilter(label)
-    );
+    if (!entries.length) { container.innerHTML = ''; return; }
+
+    const max = Math.max(...entries.map(([, v]) => v));
+    container.innerHTML = entries.map(([label, value]) => {
+      const color = Utils.getCategoryColor(label);
+      const icon = Categories._meta(label).icon;
+      const barW = max > 0 ? (value / max * 100).toFixed(1) : 0;
+      const isActive = catFilters.size > 0 && catFilters.has(label);
+      const isFiltered = catFilters.size > 0 && !catFilters.has(label);
+      const safeName = label.replace(/'/g, "\\'");
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+        <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
+        <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
+        <div class="fcc-bar-bg"><div class="fcc-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+      </div>`;
+    }).join('');
   },
 
   toggleCatExpand(cat) {

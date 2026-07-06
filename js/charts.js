@@ -309,8 +309,8 @@ const Charts = {
   // côté haut uniquement (borderSkipped par défaut = base), sans bordure (pas de glow).
   fluxBar(labels, revData, depData, soldeData) {
     const barDatasets = [
-      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#4ade80', '#00b37e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
-      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#fc8181', '#e53e3e'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#00b37e', '#004d35'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#e53e3e', '#5a0f0f'), borderWidth: 0, borderRadius: 6, type: 'bar' },
     ];
 
     const soldeDataset = {
@@ -378,41 +378,6 @@ const Charts = {
               if (elements.length > 0) onClickFn(labels[elements[0].index]);
               else onClickFn(null);
             }
-          : undefined,
-        onHover: onClickFn
-          ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
-          : undefined,
-      },
-    });
-  },
-
-  // Dépenses par catégorie en barres : mêmes données et la même logique de surbrillance/
-  // atténuation que fluxDonut (le camembert), juste en abscisse au lieu d'anneau. Clic sur
-  // une barre = même filtre que clic sur un secteur du donut ou une ligne du tableau.
-  // `colors` : même contrat que fluxDonut (une couleur stable par label, fournie par
-  // Utils.getCategoryColor) — pas de calcul par position ici.
-  fluxCategoryBar(labels, data, colors, activeLabels, onClickFn) {
-    if (!labels.length) { this.destroy('chart-flux-cat-bar'); return; }
-    const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
-    const isActive = (l) => activeLabels instanceof Set ? activeLabels.has(l) : l === activeLabels;
-
-    const bgColors = labels.map((label, i) => {
-      const c = colors[i];
-      return (!hasFilter || isActive(label)) ? c : c + '38';
-    });
-
-    this.create('chart-flux-cat-bar', {
-      type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 0, borderRadius: 6 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: this._yAxis(), x: this._xAxis() },
-        onClick: onClickFn
-          ? (event, elements) => { if (elements.length > 0) onClickFn(labels[elements[0].index]); else onClickFn(null); }
           : undefined,
         onHover: onClickFn
           ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
