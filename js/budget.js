@@ -20,7 +20,11 @@ const Budget = {
         if (theme.planned == null) theme.planned = theme.items.reduce((s, i) => s + (i.planned || 0), 0);
       } else { theme.categories = []; }
     }
-    if (theme.planned == null) theme.planned = 0;
+    // Le montant mensuel fixe est la référence ; l'ancien "planned" (montant fixe, non lié à
+    // la période) migre tel quel comme valeur mensuelle. startDate absente (budgets créés avant
+    // cette version) = pas de restriction de date, actif depuis toujours.
+    if (theme.monthlyAmount == null) theme.monthlyAmount = theme.planned || 0;
+    if (theme.startDate === undefined) theme.startDate = null;
     return theme;
   },
 
@@ -28,6 +32,36 @@ const Budget = {
     const cats = theme.categories || [];
     if (!cats.length) return 0;
     return expenses.filter(e => cats.includes(e.category)).reduce((s, e) => s + e.amount, 0);
+  },
+
+  // [start,end] correspond-il à un nombre entier de mois calendaires (start = 1er du mois,
+  // end = dernier jour d'un mois) ? Renvoie ce nombre de mois, sinon null (période partielle).
+  _wholeMonthsSpan(start, end) {
+    const [sy, sm, sd] = start.split('-').map(Number);
+    if (sd !== 1) return null;
+    const [ey, em, ed] = end.split('-').map(Number);
+    if (ed !== new Date(ey, em, 0).getDate()) return null;
+    return (ey - sy) * 12 + (em - sm) + 1;
+  },
+
+  // Montant prévu pour une plage de dates donnée : montant mensuel × nombre de mois si la
+  // plage (une fois recadrée sur la date de début du budget) couvre des mois calendaires
+  // entiers, sinon prorata au jour (montant mensuel ÷ 30 × nombre de jours) — cas d'une plage
+  // libre non alignée sur des mois, ou d'un budget démarré en cours de période.
+  _plannedForRange(monthlyAmount, rangeStart, rangeEnd, budgetStartDate) {
+    if (!monthlyAmount || !rangeStart || !rangeEnd) return 0;
+    const effStart = (budgetStartDate && budgetStartDate > rangeStart) ? budgetStartDate : rangeStart;
+    if (effStart > rangeEnd) return 0;
+    const months = this._wholeMonthsSpan(effStart, rangeEnd);
+    if (months !== null) return monthlyAmount * months;
+    const days = Math.round((new Date(rangeEnd + 'T00:00:00') - new Date(effStart + 'T00:00:00')) / 86400000) + 1;
+    return monthlyAmount / 30 * days;
+  },
+
+  // Montant prévu pour la période actuellement sélectionnée dans le filtre global.
+  _plannedForPeriod(theme) {
+    const { start, end } = PeriodFilter.getDateRange();
+    return this._plannedForRange(theme.monthlyAmount || 0, start, end, theme.startDate);
   },
 
   _prevPeriod() {
@@ -92,12 +126,13 @@ const Budget = {
     if (emptyEl) emptyEl.classList.add('hidden');
 
     // Overview KPIs
-    const totalPlanned = themes.reduce((s, t) => s + (t.planned || 0), 0);
+    const totalPlanned = themes.reduce((s, t) => s + this._plannedForPeriod(t), 0);
     const totalSpent   = themes.reduce((s, t) => s + this._computeSpent(t, expenses), 0);
     const totalRemain  = totalPlanned - totalSpent;
     const overCount    = themes.filter(t => {
+      const pl = this._plannedForPeriod(t);
       const sp = this._computeSpent(t, expenses);
-      return (t.planned || 0) > 0 && sp > t.planned;
+      return pl > 0 && sp > pl;
     }).length;
     const globalPct = totalPlanned > 0 ? Math.min(100, totalSpent / totalPlanned * 100) : 0;
     const globalColor = globalPct >= 100 ? '#ef4444' : globalPct >= 80 ? '#f59e0b' : '#10b981';
@@ -135,7 +170,7 @@ const Budget = {
     if (cardsGrid) {
       cardsGrid.innerHTML = themes.map(theme => {
         const spent   = this._computeSpent(theme, expenses);
-        const planned = theme.planned || 0;
+        const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
         const color   = theme.color || '#6366f1';
         const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
@@ -223,7 +258,7 @@ const Budget = {
     const allExpenses    = Storage.getExpenses();
     const periodExpenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     const spent   = this._computeSpent(theme, periodExpenses);
-    const planned = theme.planned || 0;
+    const planned = this._plannedForPeriod(theme);
     const remain  = planned - spent;
     const pct     = planned > 0 ? spent / planned * 100 : 0;
     const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
@@ -301,19 +336,23 @@ const Budget = {
     // Breakdown
     this._renderBreakdown(id, theme, periodExpenses);
 
-    // History chart
+    // History chart — le prévu de chaque mois passé est recalculé individuellement (recadré sur
+    // theme.startDate), pas simplement répété : un budget démarré récemment n'a rien de prévu
+    // sur les mois avant son démarrage.
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const histLabels = [], histData = [];
+    const histLabels = [], histData = [], histPlanned = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-      const mExp = allExpenses.filter(e => Utils.getExpenseDate(e) >= `${m}-01` && Utils.getExpenseDate(e) <= `${m}-${String(last).padStart(2,'0')}`);
+      const mStart = `${m}-01`, mEnd = `${m}-${String(last).padStart(2,'0')}`;
+      const mExp = allExpenses.filter(e => Utils.getExpenseDate(e) >= mStart && Utils.getExpenseDate(e) <= mEnd);
       histLabels.push(MONTHS_FR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
       histData.push(this._computeSpent(theme, mExp));
+      histPlanned.push(this._plannedForRange(theme.monthlyAmount || 0, mStart, mEnd, theme.startDate));
     }
-    Charts.budgetHistory(histLabels, histData, color, planned);
+    Charts.budgetHistory(histLabels, histData, color, histPlanned);
   },
 
   _renderBreakdown(id, theme, periodExpenses) {
@@ -390,12 +429,16 @@ const Budget = {
     if (!cats.length) return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
       Toutes tes catégories ont déjà un budget.<br><small>Crée d'abord de nouvelles catégories dans Données › Catégories.</small>
       <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div></div>`;
+    const today = new Date().toISOString().slice(0, 10);
     return `<form onsubmit="Budget.saveTheme(event)">
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie *</label>
           <select name="category" required>${cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
-        <div class="form-group form-full"><label>Montant prévu (€) *</label>
-          <input name="planned" type="number" step="1" min="0" required placeholder="ex: 400"></div>
+        <div class="form-group form-full"><label>Montant mensuel (€) *</label>
+          <input name="monthlyAmount" type="number" step="1" min="0" required placeholder="ex: 400"></div>
+        <div class="form-group form-full"><label>Date de début</label>
+          <input name="startDate" type="date" value="${today}">
+          <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant mensuel, à partir de cette date.</p></div>
         <div class="form-group form-full"><label>Couleur</label>
           <div class="color-picker-row">${this._colorPicker(this._THEME_COLORS[0])}</div></div>
       </div>
@@ -410,8 +453,11 @@ const Budget = {
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie</label>
           <input type="text" value="${theme.name}" disabled style="opacity:0.6"></div>
-        <div class="form-group form-full"><label>Montant prévu (€) *</label>
-          <input name="planned" type="number" step="1" min="0" value="${theme.planned || 0}" required></div>
+        <div class="form-group form-full"><label>Montant mensuel (€) *</label>
+          <input name="monthlyAmount" type="number" step="1" min="0" value="${theme.monthlyAmount || 0}" required></div>
+        <div class="form-group form-full"><label>Date de début</label>
+          <input name="startDate" type="date" value="${theme.startDate || ''}">
+          <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
         <div class="form-group form-full"><label>Couleur</label>
           <div class="color-picker-row">${this._colorPicker(theme.color || this._THEME_COLORS[0])}</div></div>
       </div>
@@ -426,7 +472,14 @@ const Budget = {
     const fd = new FormData(event.target);
     const category = fd.get('category');
     const themes = Storage.getBudgetThemes();
-    themes.push({ id: 'theme_' + Date.now(), name: category, color: fd.get('color'), planned: parseFloat(fd.get('planned')) || 0, categories: [category], items: [] });
+    themes.push({
+      id: 'theme_' + Date.now(),
+      name: category,
+      color: fd.get('color'),
+      monthlyAmount: parseFloat(fd.get('monthlyAmount')) || 0,
+      startDate: fd.get('startDate') || null,
+      categories: [category],
+    });
     Storage.saveBudgetThemes(themes);
     Modal.close();
     this._renderList();
@@ -438,8 +491,9 @@ const Budget = {
     const themes = Storage.getBudgetThemes();
     const theme  = themes.find(t => t.id === id);
     if (!theme) return;
-    theme.planned = parseFloat(fd.get('planned')) || 0;
-    theme.color   = fd.get('color') || theme.color;
+    theme.monthlyAmount = parseFloat(fd.get('monthlyAmount')) || 0;
+    theme.startDate     = fd.get('startDate') || null;
+    theme.color         = fd.get('color') || theme.color;
     Storage.saveBudgetThemes(themes);
     Modal.close();
     if (this._currentThemeId === id) this._renderDetail(id);
@@ -474,7 +528,7 @@ const Budget = {
     const suggested = Math.ceil(sum / 3);
     const themes = Storage.getBudgetThemes();
     const t = themes.find(t => t.id === id);
-    if (t) { t.planned = suggested; Storage.saveBudgetThemes(themes); }
+    if (t) { t.monthlyAmount = suggested; Storage.saveBudgetThemes(themes); }
     this._renderDetail(id);
   },
 };

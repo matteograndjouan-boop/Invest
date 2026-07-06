@@ -368,19 +368,22 @@ const Charts = {
     });
   },
 
-  budgetHistory(labels, data, color, planned) {
+  // `plannedArr` : un montant prévu par mois (recadré sur la date de début du budget), pas une
+  // valeur unique répétée — un budget démarré récemment n'a rien de prévu sur les mois avant.
+  budgetHistory(labels, data, color, plannedArr) {
+    const hasPlanned = plannedArr.some(v => v > 0);
     const datasets = [{
       label: 'Dépenses réelles',
       data,
       borderColor: color || '#6366f1',
       backgroundColor: (color || '#6366f1') + '22',
       fill: true, tension: 0.4, pointRadius: 5,
-      pointBackgroundColor: data.map(v => planned > 0 && v > planned ? '#ef4444' : color || '#6366f1'),
+      pointBackgroundColor: data.map((v, i) => (plannedArr[i] > 0 && v > plannedArr[i]) ? '#ef4444' : color || '#6366f1'),
     }];
-    if (planned > 0) {
+    if (hasPlanned) {
       datasets.push({
         label: 'Budget prévu',
-        data: labels.map(() => planned),
+        data: plannedArr,
         borderColor: '#e5e7eb',
         borderDash: [6, 4],
         borderWidth: 2,
@@ -395,7 +398,7 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: planned ? this._leg('top') : { display: false },
+          legend: hasPlanned ? this._leg('top') : { display: false },
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
         scales: { y: this._yAxis(), x: this._xAxis() },

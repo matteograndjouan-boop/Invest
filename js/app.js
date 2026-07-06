@@ -117,16 +117,21 @@ const Dashboard = {
 
     const insights = [];
 
-    // Budget overruns
+    // Budget overruns — le prévu du mois courant est recalculé (montant mensuel recadré sur
+    // la date de début du budget), pas lu tel quel : il dépend maintenant du mois, pas fixe.
+    const monthStart = `${month}-01`;
+    const monthEnd   = `${month}-${String(new Date(my, mm, 0).getDate()).padStart(2, '0')}`;
     const themes = Storage.getBudgetThemes();
-    themes.forEach(theme => {
+    themes.forEach(raw => {
+      const theme = Budget._migrate({ ...raw });
       const spent = monthExp.filter(e => e.category === theme.name).reduce((s, e) => s + e.amount, 0);
-      if (!theme.planned) return;
-      const pct = spent / theme.planned;
+      const planned = Budget._plannedForRange(theme.monthlyAmount || 0, monthStart, monthEnd, theme.startDate);
+      if (!planned) return;
+      const pct = spent / planned;
       if (pct >= 1) {
-        insights.push({ type: 'danger', icon: '⚠️', title: `Budget « ${theme.name} » dépassé`, desc: `${Utils.formatCurrency(spent)} sur ${Utils.formatCurrency(theme.planned)} prévu (${Math.round(pct * 100)}%)` });
+        insights.push({ type: 'danger', icon: '⚠️', title: `Budget « ${theme.name} » dépassé`, desc: `${Utils.formatCurrency(spent)} sur ${Utils.formatCurrency(planned)} prévu (${Math.round(pct * 100)}%)` });
       } else if (pct >= 0.85) {
-        insights.push({ type: 'warning', icon: '🔶', title: `« ${theme.name} » presque atteint`, desc: `${Math.round(pct * 100)}% du budget — ${Utils.formatCurrency(theme.planned - spent)} restant` });
+        insights.push({ type: 'warning', icon: '🔶', title: `« ${theme.name} » presque atteint`, desc: `${Math.round(pct * 100)}% du budget — ${Utils.formatCurrency(planned - spent)} restant` });
       }
     });
 
