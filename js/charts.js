@@ -259,46 +259,28 @@ const Charts = {
     });
   },
 
-  comparisonButterfly(expA, expB, periodA, periodB) {
-    const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
-    if (!allCategories.length) { this.destroy('chart-comparison'); return; }
-
-    const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
-    const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
-    const labelA = Utils.getMonthLabel(periodA);
-    const labelB = Utils.getMonthLabel(periodB);
+  // Barres groupées par catégorie (période A / période B), catégories en abscisse — mêmes
+  // couleurs que les panneaux de périodes au-dessus (indigo = A, ambre = B).
+  comparisonBarByCategory(labels, dataA, dataB, labelA, labelB) {
+    if (!labels.length) { this.destroy('chart-comparison'); return; }
 
     this.create('chart-comparison', {
       type: 'bar',
       data: {
-        labels: allCategories,
+        labels,
         datasets: [
-          { label: labelA, data: dataA.map(v => -v), backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
-          { label: labelB, data: dataB, backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
+          { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 },
+          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 4 },
         ],
       },
       options: {
-        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: this._leg('top'),
-          tooltip: {
-            ...this._tip(),
-            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}` },
-          },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          x: {
-            ticks: { callback: (v) => Charts._fmt(Math.abs(v)), color: '#9ca3af', font: { size: 11 } },
-            grid: {
-              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-              lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
-            },
-            border: { display: false },
-          },
-          y: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },

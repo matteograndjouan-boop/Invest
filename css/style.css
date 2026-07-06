@@ -787,50 +787,12 @@ input:focus:not(:focus-visible) { outline: none; }
 .comp-delta-pct { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; }
 .comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-top: 6px; }
 
-/* ---- Category comparison list ---- */
-.cc-header-row {
-  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
-  padding: 8px 16px; border-bottom: 2px solid var(--border);
-}
-.cc-head { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
-.cc-head-a { text-align: right; padding-right: 12px; }
-.cc-head-mid { text-align: center; }
-.cc-head-b { text-align: left; padding-left: 12px; }
-.cc-head-delta { text-align: center; }
-
-.cc-row {
-  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
-  align-items: center; padding: 11px 16px;
-  border-bottom: 1px solid var(--border); transition: background 0.12s;
-}
-.cc-row:last-child { border-bottom: none; }
-.cc-row:hover { background: var(--surface-alt); }
-
-.cc-side-a { display: flex; align-items: center; gap: 9px; flex-direction: row-reverse; }
-.cc-side-b { display: flex; align-items: center; gap: 9px; }
-.cc-bar-wrap { flex: 1; height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
-.cc-fill-a { height: 9px; border-radius: 5px; margin-left: auto; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
-.cc-fill-b { height: 9px; border-radius: 5px; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
-.cc-amt { font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-.cc-amt-a { color: #6366f1; }
-.cc-amt-b { color: #f59e0b; }
-
-.cc-name-col { display: flex; align-items: center; justify-content: center; gap: 7px; }
-.cc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.cc-name { font-size: 12px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
-
-.cc-delta { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.cc-delta-arrow { font-size: 13px; line-height: 1; }
-.cc-delta-amt { font-size: 11px; font-weight: 800; white-space: nowrap; }
-.cc-delta-pct { font-size: 10px; font-weight: 600; opacity: 0.8; }
-.cc-delta.positive { color: #10b981; }
-.cc-delta.negative { color: #ef4444; }
+/* ---- Category comparison table ---- */
+.cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 
 @media (max-width: 700px) {
   .comp-panel-row { grid-template-columns: 1fr; }
   .comp-center-col { padding: 0; }
-  .cc-header-row, .cc-row { grid-template-columns: 1fr 100px 1fr 60px; }
-  .cc-name { max-width: 60px; }
 }
 
 /* ---- Period Filter (déclencheur compact en haut à droite du contenu) ---- */

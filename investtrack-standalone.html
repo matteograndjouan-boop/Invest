@@ -307,6 +307,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .mode-tab.active { color: var(--text); border-bottom-color: var(--primary); }
 .mode-tab-ico { font-size: 1rem; }
 
+/* Utilitaire générique manquant jusqu'ici : seules des variantes composées existaient
+   (.section.hidden, .modal-overlay.hidden, .period-panel.hidden, .period-dropdown.hidden),
+   donc classList.add('hidden') seul — utilisé par la plupart des états vides (Positions, Flux,
+   Revenus, Dépenses, Comparaisons, Budget, Données) et par la vue détail de Budget/son bouton
+   Retour — ne masquait jamais réellement l'élément. !important : classe utilitaire, doit
+   toujours l'emporter quelle que soit la spécificité des autres classes de l'élément. */
+.hidden { display: none !important; }
+
 /* ---- Sections ---- */
 .section { display: block; }
 .section.hidden { display: none; }
@@ -786,50 +794,12 @@ input:focus:not(:focus-visible) { outline: none; }
 .comp-delta-pct { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; }
 .comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-top: 6px; }
 
-/* ---- Category comparison list ---- */
-.cc-header-row {
-  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
-  padding: 8px 16px; border-bottom: 2px solid var(--border);
-}
-.cc-head { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
-.cc-head-a { text-align: right; padding-right: 12px; }
-.cc-head-mid { text-align: center; }
-.cc-head-b { text-align: left; padding-left: 12px; }
-.cc-head-delta { text-align: center; }
-
-.cc-row {
-  display: grid; grid-template-columns: 1fr 140px 1fr 80px;
-  align-items: center; padding: 11px 16px;
-  border-bottom: 1px solid var(--border); transition: background 0.12s;
-}
-.cc-row:last-child { border-bottom: none; }
-.cc-row:hover { background: var(--surface-alt); }
-
-.cc-side-a { display: flex; align-items: center; gap: 9px; flex-direction: row-reverse; }
-.cc-side-b { display: flex; align-items: center; gap: 9px; }
-.cc-bar-wrap { flex: 1; height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
-.cc-fill-a { height: 9px; border-radius: 5px; margin-left: auto; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
-.cc-fill-b { height: 9px; border-radius: 5px; min-width: 3px; transition: width 0.35s; opacity: 0.8; }
-.cc-amt { font-size: 13px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-.cc-amt-a { color: #6366f1; }
-.cc-amt-b { color: #f59e0b; }
-
-.cc-name-col { display: flex; align-items: center; justify-content: center; gap: 7px; }
-.cc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.cc-name { font-size: 12px; font-weight: 700; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
-
-.cc-delta { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.cc-delta-arrow { font-size: 13px; line-height: 1; }
-.cc-delta-amt { font-size: 11px; font-weight: 800; white-space: nowrap; }
-.cc-delta-pct { font-size: 10px; font-weight: 600; opacity: 0.8; }
-.cc-delta.positive { color: #10b981; }
-.cc-delta.negative { color: #ef4444; }
+/* ---- Category comparison table ---- */
+.cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 
 @media (max-width: 700px) {
   .comp-panel-row { grid-template-columns: 1fr; }
   .comp-center-col { padding: 0; }
-  .cc-header-row, .cc-row { grid-template-columns: 1fr 100px 1fr 60px; }
-  .cc-name { max-width: 60px; }
 }
 
 /* ---- Period Filter (déclencheur compact en haut à droite du contenu) ---- */
@@ -2583,21 +2553,29 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           </div>
         </div>
 
-        <!-- Butterfly chart -->
+        <!-- Barres par catégorie -->
         <div class="chart-card mt-md">
-          <h3>Répartition par catégorie — vue comparative</h3>
+          <h3>Dépenses par catégorie</h3>
           <div class="chart-container" style="height:300px"><canvas id="chart-comparison"></canvas></div>
         </div>
 
-        <!-- Visual category list -->
+        <!-- Tableau récapitulatif -->
         <div class="card mt-md">
-          <div class="cc-header-row">
-            <div class="cc-head cc-head-a" id="cc-head-a">—</div>
-            <div class="cc-head cc-head-mid">Catégorie</div>
-            <div class="cc-head cc-head-b" id="cc-head-b">—</div>
-            <div class="cc-head cc-head-delta">Évolution</div>
+          <h3>Tableau récapitulatif</h3>
+          <div class="table-wrapper">
+            <table class="data-table summary-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th class="text-right" id="cc-th-a">—</th>
+                  <th class="text-right" id="cc-th-b">—</th>
+                  <th class="text-right">Différence</th>
+                  <th class="text-right">Variation</th>
+                </tr>
+              </thead>
+              <tbody id="comp-cat-tbody"></tbody>
+            </table>
           </div>
-          <div id="comp-cat-list"></div>
           <div id="comp-empty" class="empty-state hidden"><p>Aucune dépense pour ces périodes.</p></div>
         </div>
       </section>
@@ -3289,46 +3267,28 @@ const Charts = {
     });
   },
 
-  comparisonButterfly(expA, expB, periodA, periodB) {
-    const allCategories = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])].sort();
-    if (!allCategories.length) { this.destroy('chart-comparison'); return; }
-
-    const dataA = allCategories.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
-    const dataB = allCategories.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0));
-    const labelA = Utils.getMonthLabel(periodA);
-    const labelB = Utils.getMonthLabel(periodB);
+  // Barres groupées par catégorie (période A / période B), catégories en abscisse — mêmes
+  // couleurs que les panneaux de périodes au-dessus (indigo = A, ambre = B).
+  comparisonBarByCategory(labels, dataA, dataB, labelA, labelB) {
+    if (!labels.length) { this.destroy('chart-comparison'); return; }
 
     this.create('chart-comparison', {
       type: 'bar',
       data: {
-        labels: allCategories,
+        labels,
         datasets: [
-          { label: labelA, data: dataA.map(v => -v), backgroundColor: 'rgba(99,102,241,0.75)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
-          { label: labelB, data: dataB, backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
+          { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 },
+          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 4 },
         ],
       },
       options: {
-        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: this._leg('top'),
-          tooltip: {
-            ...this._tip(),
-            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(Math.abs(ctx.raw))}` },
-          },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: {
-          x: {
-            ticks: { callback: (v) => Charts._fmt(Math.abs(v)), color: '#9ca3af', font: { size: 11 } },
-            grid: {
-              color: (ctx) => ctx.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-              lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1,
-            },
-            border: { display: false },
-          },
-          y: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
-        },
+        scales: { y: this._yAxis(), x: this._xAxis() },
       },
     });
   },
@@ -4843,11 +4803,6 @@ const Comparisons = {
     if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
     const deltaLabel = document.getElementById('comp-delta-label');
     if (deltaLabel) deltaLabel.textContent = `${this._shortLabel(this.periodB)} vs ${this._shortLabel(this.periodA)}`;
-    const headA = document.getElementById('cc-head-a');
-    const headB = document.getElementById('cc-head-b');
-    if (headA) headA.textContent = `← ${this._shortLabel(this.periodA)}`;
-    if (headB) headB.textContent = `${this._shortLabel(this.periodB)} →`;
-
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
     const diff   = totalB - totalA;
@@ -4874,8 +4829,8 @@ const Comparisons = {
     if (iconEl) iconEl.textContent = diff > 0 ? '↑' : diff < 0 ? '↓' : '⟺';
     if (cardEl) cardEl.className   = 'comp-delta-card ' + (diff <= 0 ? 'good' : 'bad');
 
-    this._renderCatList(expA, expB, totalA, totalB);
-    Charts.comparisonButterfly(expA, expB, this.periodA, this.periodB);
+    this._renderCatTable(expA, expB);
+    this._renderCatChart(expA, expB);
   },
 
   _renderPanelStats(containerId, expenses, total) {
@@ -4893,62 +4848,64 @@ const Comparisons = {
     `;
   },
 
-  _renderCatList(expA, expB, totalA, totalB) {
-    const container = document.getElementById('comp-cat-list');
-    const empty     = document.getElementById('comp-empty');
-    if (!container) return;
-
+  // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des
+  // catégories (Storage.getCategories()) puis les éventuelles orphelines (renommées/supprimées).
+  // Source commune au graphique en barres et au tableau récapitulatif.
+  _categoryRows(expA, expB) {
     const allCats = [...new Set([...expA.map(e => e.category), ...expB.map(e => e.category)])];
-    const allCatsSorted = Storage.getCategories().map(c => c.name).filter(n => allCats.includes(n))
-      .concat(allCats.filter(n => !Storage.getCategories().map(c => c.name).includes(n)));
+    const known = Storage.getCategories().map(c => c.name);
+    const sorted = known.filter(n => allCats.includes(n)).concat(allCats.filter(n => !known.includes(n)));
 
-    if (!allCatsSorted.length) {
-      container.innerHTML = '';
+    return sorted.map(cat => {
+      const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
+      const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
+      const diff = amtB - amtA;
+      const pct  = amtA > 0 ? (diff / amtA * 100) : (amtB > 0 ? 100 : 0);
+      return { cat, amtA, amtB, diff, pct };
+    });
+  },
+
+  _renderCatChart(expA, expB) {
+    const rows = this._categoryRows(expA, expB);
+    Charts.comparisonBarByCategory(
+      rows.map(r => r.cat),
+      rows.map(r => r.amtA),
+      rows.map(r => r.amtB),
+      this._shortLabel(this.periodA),
+      this._shortLabel(this.periodB)
+    );
+  },
+
+  _renderCatTable(expA, expB) {
+    const tbody = document.getElementById('comp-cat-tbody');
+    const empty = document.getElementById('comp-empty');
+    const thA   = document.getElementById('cc-th-a');
+    const thB   = document.getElementById('cc-th-b');
+    if (!tbody) return;
+
+    if (thA) thA.textContent = this._shortLabel(this.periodA);
+    if (thB) thB.textContent = this._shortLabel(this.periodB);
+
+    const rows = this._categoryRows(expA, expB);
+    if (!rows.length) {
+      tbody.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
-    const maxVal = Math.max(
-      ...allCatsSorted.map(cat => expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)),
-      ...allCatsSorted.map(cat => expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)),
-      1
-    );
-
-    const rows = allCatsSorted.map(cat => {
-      const amtA = expA.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
-      const amtB = expB.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0);
-      const diff = amtB - amtA;
-      const pct  = amtA > 0 ? (diff / amtA * 100) : (amtB > 0 ? 100 : 0);
-      const barA = (amtA / maxVal * 100).toFixed(1);
-      const barB = (amtB / maxVal * 100).toFixed(1);
-      const cls  = diff <= 0 ? 'positive' : 'negative';
-      const sign = diff >= 0 ? '+' : '';
-      const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
+    tbody.innerHTML = rows.map(({ cat, amtA, amtB, diff, pct }) => {
       const color = Utils.getCategoryColor(cat);
-
-      return `<div class="cc-row">
-        <div class="cc-side-a">
-          <span class="cc-amt cc-amt-a">${amtA > 0 ? Utils.formatCurrency(amtA) : '—'}</span>
-          <div class="cc-bar-wrap"><div class="cc-fill-a" style="width:${barA}%;background:${color}"></div></div>
-        </div>
-        <div class="cc-name-col">
-          <span class="cc-dot" style="background:${color}"></span>
-          <span class="cc-name">${cat}</span>
-        </div>
-        <div class="cc-side-b">
-          <div class="cc-bar-wrap"><div class="cc-fill-b" style="width:${barB}%;background:${color}"></div></div>
-          <span class="cc-amt cc-amt-b">${amtB > 0 ? Utils.formatCurrency(amtB) : '—'}</span>
-        </div>
-        <div class="cc-delta ${cls}">
-          <span class="cc-delta-arrow">${arrow}</span>
-          <span class="cc-delta-amt">${amtA > 0 || amtB > 0 ? sign + Utils.formatCurrency(Math.abs(diff)) : '—'}</span>
-          ${amtA > 0 ? `<span class="cc-delta-pct">${sign}${pct.toFixed(0)}%</span>` : ''}
-        </div>
-      </div>`;
-    });
-
-    container.innerHTML = rows.join('');
+      const cls   = diff <= 0 ? 'positive' : 'negative';
+      const sign  = diff > 0 ? '+' : diff < 0 ? '-' : '';
+      return `<tr>
+        <td><span class="cc-dot" style="background:${color}"></span>${cat}</td>
+        <td class="text-right">${amtA > 0 ? Utils.formatCurrency(amtA) : '—'}</td>
+        <td class="text-right">${amtB > 0 ? Utils.formatCurrency(amtB) : '—'}</td>
+        <td class="text-right ${cls}">${amtA > 0 || amtB > 0 ? sign + Utils.formatCurrency(Math.abs(diff)) : '—'}</td>
+        <td class="text-right ${cls}">${amtA > 0 ? sign + Math.abs(pct).toFixed(1) + '%' : '—'}</td>
+      </tr>`;
+    }).join('');
   },
 };
 

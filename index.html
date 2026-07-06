@@ -455,21 +455,29 @@
           </div>
         </div>
 
-        <!-- Butterfly chart -->
+        <!-- Barres par catégorie -->
         <div class="chart-card mt-md">
-          <h3>Répartition par catégorie — vue comparative</h3>
+          <h3>Dépenses par catégorie</h3>
           <div class="chart-container" style="height:300px"><canvas id="chart-comparison"></canvas></div>
         </div>
 
-        <!-- Visual category list -->
+        <!-- Tableau récapitulatif -->
         <div class="card mt-md">
-          <div class="cc-header-row">
-            <div class="cc-head cc-head-a" id="cc-head-a">—</div>
-            <div class="cc-head cc-head-mid">Catégorie</div>
-            <div class="cc-head cc-head-b" id="cc-head-b">—</div>
-            <div class="cc-head cc-head-delta">Évolution</div>
+          <h3>Tableau récapitulatif</h3>
+          <div class="table-wrapper">
+            <table class="data-table summary-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th class="text-right" id="cc-th-a">—</th>
+                  <th class="text-right" id="cc-th-b">—</th>
+                  <th class="text-right">Différence</th>
+                  <th class="text-right">Variation</th>
+                </tr>
+              </thead>
+              <tbody id="comp-cat-tbody"></tbody>
+            </table>
           </div>
-          <div id="comp-cat-list"></div>
           <div id="comp-empty" class="empty-state hidden"><p>Aucune dépense pour ces périodes.</p></div>
         </div>
       </section>
