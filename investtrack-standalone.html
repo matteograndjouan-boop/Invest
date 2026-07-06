@@ -4593,18 +4593,22 @@ const Flux = {
     Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth);
   },
 
-  // Répartition des dépenses de la période par catégorie (top 6 + « Autres ») — source
-  // commune au donut et au graphique en barres par catégorie : ils doivent toujours montrer
-  // exactement la même chose, jamais filtrée par catégorie (seule la période compte ici ;
-  // le filtre de catégorie ne sert qu'à la surbrillance/l'atténuation à l'affichage).
-  _categoryBreakdown() {
+  // Dépenses de la période groupées par catégorie, triées par montant décroissant — brut,
+  // sans regroupement (une entrée par catégorie ayant une dépense, jamais filtré par
+  // catégorie : seule la période compte ici). Source commune à _categoryBreakdown (donut,
+  // qui y ajoute le regroupement top 6 + « Autres ») et aux cartes (qui veulent tout voir).
+  _categoryTotals() {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
     Storage.getExpenses()
       .filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
+    return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  },
 
-    let entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  // Répartition pour le donut : top 6 + « Autres » (au-delà, le camembert devient illisible).
+  _categoryBreakdown() {
+    let entries = this._categoryTotals();
     const total = entries.reduce((s, [, v]) => s + v, 0);
 
     if (entries.length > 6) {
@@ -4646,14 +4650,15 @@ const Flux = {
     }
   },
 
-  // Dépenses par catégorie en cartes : mêmes données que le donut (_categoryBreakdown), une
-  // carte par catégorie (icône, nom, montant, barre proportionnelle au MAX de la période — pas
-  // au total — pour bien visualiser l'écart relatif entre catégories). Reliée aux mêmes filtres
-  // que le donut/tableau (clic = même bascule de filtre).
+  // Dépenses par catégorie en cartes : toutes les catégories ayant une dépense sur la période
+  // (_categoryTotals, PAS le regroupement top 6 + « Autres » du donut — ce dernier reste
+  // réservé au camembert), une carte par catégorie (icône, nom, montant, barre proportionnelle
+  // au MAX de la période — pas au total). Reliée aux mêmes filtres que le donut/tableau (clic =
+  // même bascule de filtre).
   _renderCategoryCards(catFilters) {
     const container = document.getElementById('flux-cat-cards');
     if (!container) return;
-    const { entries } = this._categoryBreakdown();
+    const entries = this._categoryTotals();
     if (!entries.length) { container.innerHTML = ''; return; }
 
     const max = Math.max(...entries.map(([, v]) => v));
