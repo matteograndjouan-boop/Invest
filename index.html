@@ -24,40 +24,9 @@
       </div>
 
       <nav class="sidebar-nav">
-        <!-- Investments mode nav -->
-        <div id="nav-investments-group" style="display:none">
-          <a href="#" class="nav-item" data-section="portfolio">
-            <span class="nav-icon">◈</span><span>Portefeuille</span>
-          </a>
-          <a href="#" class="nav-item" data-section="positions">
-            <span class="nav-icon">≡</span><span>Positions</span>
-          </a>
-        </div>
-
-        <!-- Expenses mode nav -->
-        <div id="nav-expenses-group">
-          <a href="#" class="nav-item active" data-section="flux">
-            <span class="nav-icon">💸</span><span>Flux</span>
-          </a>
-          <a href="#" class="nav-item" data-section="comparisons">
-            <span class="nav-icon">⚖️</span><span>Comparaisons</span>
-          </a>
-          <a href="#" class="nav-item" data-section="budget">
-            <span class="nav-icon">🎯</span><span>Budget</span>
-          </a>
-        </div>
-
-        <!-- Données mode nav -->
-        <div id="nav-donnees-group" style="display:none">
-          <a href="#" class="nav-item active" data-section="donnees">
-            <span class="nav-icon">📋</span><span>Toutes les données</span>
-          </a>
-          <a href="#" class="nav-item" data-section="categories">
-            <span class="nav-icon">🏷️</span><span>Catégories</span>
-          </a>
-        </div>
-
-        <!-- Always visible -->
+        <!-- Les sections propres à chaque mode (Portefeuille/Positions, Flux/Comparaisons/
+             Budget, Toutes les données/Catégories) sont maintenant des onglets en haut du
+             contenu (#mode-tabs-container, généré par renderModeTabs dans app.js) -->
         <div class="nav-divider"></div>
         <div class="nav-section-label">Général</div>
         <a href="#" class="nav-item" data-section="dashboard">
@@ -80,6 +49,9 @@
 
     <!-- Main Content -->
     <main class="main-content">
+
+      <!-- Onglets du mode courant (généré par app.js selon APP_MODES) -->
+      <div id="mode-tabs-container" class="mode-tabs"></div>
 
       <!-- Global Period Filter Bar -->
       <div id="period-filter-container" class="global-period-bar"></div>

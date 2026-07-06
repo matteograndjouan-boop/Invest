@@ -270,40 +270,64 @@ const Dashboard = {
 
 const APP_MODES = {
   investments: {
-    sections: ['portfolio', 'positions'],
-    navGroupId: 'nav-investments-group',
+    label: 'Investissements', icon: '📈',
+    sections: [
+      { id: 'portfolio', label: 'Portefeuille', icon: '◈' },
+      { id: 'positions', label: 'Positions', icon: '≡' },
+    ],
     default: 'portfolio',
   },
   expenses: {
-    sections: ['flux', 'comparisons', 'budget'],
-    navGroupId: 'nav-expenses-group',
+    label: 'Dépenses', icon: '💳',
+    sections: [
+      { id: 'flux', label: 'Flux', icon: '💸' },
+      { id: 'comparisons', label: 'Comparaisons', icon: '⚖️' },
+      { id: 'budget', label: 'Budget', icon: '🎯' },
+    ],
     default: 'flux',
   },
   donnees: {
-    sections: ['donnees', 'categories'],
-    navGroupId: 'nav-donnees-group',
+    label: 'Données', icon: '🗃️',
+    sections: [
+      { id: 'donnees', label: 'Toutes les données', icon: '📋' },
+      { id: 'categories', label: 'Catégories', icon: '🏷️' },
+    ],
     default: 'donnees',
   },
 };
 
 let currentMode = 'expenses';
 
-function switchMode(mode) {
-  currentMode = mode;
+// Mode propriétaire d'une section (pour retrouver ses onglets même en y arrivant autrement que
+// par le sélecteur de mode) ; null pour les sections "Général" (dashboard, patrimony), qui
+// n'appartiennent à aucun mode et n'ont donc pas d'onglets.
+function modeForSection(sectionId) {
+  return Object.keys(APP_MODES).find(m => APP_MODES[m].sections.some(s => s.id === sectionId)) || null;
+}
 
-  // Update mode buttons
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
+// Onglets du mode en haut du contenu (remplacent l'ancienne liste de nav-item par mode dans la
+// barre latérale) : masqués sur les pages "Général".
+function renderModeTabs(mode, activeSectionId) {
+  const container = document.getElementById('mode-tabs-container');
+  if (!container) return;
+  const cfg = APP_MODES[mode];
+  if (!cfg) { container.innerHTML = ''; container.style.display = 'none'; return; }
+
+  container.style.display = '';
+  const tabs = cfg.sections.map(s => `
+    <button class="mode-tab${s.id === activeSectionId ? ' active' : ''}" data-section="${s.id}">
+      <span class="mode-tab-ico">${s.icon}</span>${s.label}
+    </button>`).join('');
+  container.innerHTML = `
+    <div class="mode-tabs-crumb">${cfg.icon} ${cfg.label}</div>
+    <div class="mode-tabs-row">${tabs}</div>`;
+  container.querySelectorAll('.mode-tab').forEach(btn => {
+    btn.addEventListener('click', () => navigateTo(btn.dataset.section));
   });
+}
 
-  // Show/hide nav groups
-  document.getElementById('nav-investments-group').style.display = mode === 'investments' ? '' : 'none';
-  document.getElementById('nav-expenses-group').style.display = mode === 'expenses' ? '' : 'none';
-  document.getElementById('nav-donnees-group').style.display = mode === 'donnees' ? '' : 'none';
-
-  // Navigate to first section of mode
-  const firstSection = APP_MODES[mode].default;
-  navigateTo(firstSection);
+function switchMode(mode) {
+  navigateTo(APP_MODES[mode].default);
 }
 
 function navigateTo(sectionId) {
@@ -323,6 +347,16 @@ function navigateTo(sectionId) {
   };
 
   const htmlSectionId = sectionMap[sectionId] || sectionId;
+
+  // Détermine le mode propriétaire de cette section (null = page "Général", hors mode) et
+  // synchronise le sélecteur de mode + les onglets du haut en conséquence, même si on arrive
+  // ici par un onglet ou un lien direct plutôt que par le sélecteur de mode lui-même.
+  const mode = modeForSection(sectionId);
+  if (mode) currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === currentMode);
+  });
+  renderModeTabs(mode, sectionId);
 
   // Update active nav item
   document.querySelectorAll('.nav-item').forEach(el => {
@@ -446,11 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('rev-filter-cat').addEventListener('change', () => Revenues.render());
 
 
-  // Initialize: show nav groups correctly, then navigate to default
-  document.getElementById('nav-investments-group').style.display = 'none';
-  document.getElementById('nav-expenses-group').style.display = '';
-
-  // Default mode is Dépenses, show expenses section
+  // Default mode is Dépenses, show expenses section (navigateTo synchronise lui-même le
+  // sélecteur de mode et les onglets du haut)
   navigateTo('flux');
 });
 

@@ -280,6 +280,26 @@ input:focus:not(:focus-visible) { outline: none; }
   background: var(--bg);
 }
 
+/* ---- Onglets de mode (en haut du contenu, remplacent l'ancienne liste de nav-item par mode
+   dans la barre latérale — voir renderModeTabs dans app.js) ---- */
+.mode-tabs { margin-bottom: 20px; }
+.mode-tabs-crumb {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;
+}
+.mode-tabs-row { display: flex; gap: 26px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mode-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 0 10px; margin-bottom: -1px;
+  border: none; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--text-muted);
+  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  transition: color .15s, border-color .15s; white-space: nowrap;
+}
+.mode-tab:hover { color: var(--text); }
+.mode-tab.active { color: var(--text); border-bottom-color: var(--primary); }
+.mode-tab-ico { font-size: 1rem; }
+
 /* ---- Sections ---- */
 .section { display: block; }
 .section.hidden { display: none; }
