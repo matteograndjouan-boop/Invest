@@ -560,7 +560,7 @@
           <h1>Données</h1>
           <div class="header-actions" id="donnees-header-actions">
             <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
-            <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>
+            <button class="btn-danger-soft" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">Supprimer</button>
           </div>
         </div>
         <div class="donnees-toolbar">
@@ -614,7 +614,7 @@
             <div class="cat-page-sub" id="cat-subtitle"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser</button>
+            <button class="btn-danger-soft" onclick="Categories.resetToDefaults()">↺ Réinitialiser</button>
             <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
           </div>
         </div>

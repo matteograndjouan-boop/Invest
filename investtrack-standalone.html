@@ -17,6 +17,7 @@
   --success: #00b37e;
   --success-bg: rgba(0,179,126,0.14);
   --danger: #f56565;
+  --danger-dark: #dc2626;
   --danger-bg: rgba(229,62,62,0.14);
   --warning: #d97706;
   --warning-bg: rgba(217,119,6,0.16);
@@ -584,7 +585,10 @@ input:focus:not(:focus-visible) { outline: none; }
 .data-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--bg); }
-.actions-cell { white-space: nowrap; }
+/* overflow/text-overflow explicites : .donnees-table td tronque le texte en ellipse par
+   défaut (colonne "Actions" à 6% de large) — ça coupait le 2e bouton icône au lieu de
+   simplement le laisser déborder proprement. */
+.actions-cell { white-space: nowrap; overflow: visible !important; text-overflow: clip !important; }
 
 /* ---- Buttons ---- */
 .btn-primary {
@@ -616,16 +620,37 @@ input:focus:not(:focus-visible) { outline: none; }
   padding: 8px 16px; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background .15s; white-space: nowrap;
 }
-.btn-danger:hover { background: #dc2626; }
+.btn-danger:hover { background: var(--danger-dark); }
 .btn-danger:disabled { background: var(--danger); opacity: 0.45; cursor: not-allowed; }
 
-.btn-icon {
-  background: none; border: none; cursor: pointer;
-  padding: 4px 6px; border-radius: 4px; font-size: 14px;
-  transition: background .15s;
+/* Suppression discrète, pilule teintée (montant/champ inline, panneau d'édition) : moins
+   agressive qu'un .btn-danger plein, mais sans ambiguïté sur l'action. Un seul recette
+   partagée par Catégories/Budget/Import bancaire/Données, plutôt qu'un style par écran. */
+.btn-danger-soft {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--danger); background: var(--danger-bg);
+  border: none; border-radius: 999px;
+  padding: 7px 15px; cursor: pointer;
+  transition: background .15s, color .15s;
 }
-.btn-icon:hover { background: var(--bg); }
-.btn-icon.btn-danger:hover { background: var(--danger-bg); }
+.btn-danger-soft:hover { background: var(--danger); color: #fff; }
+.btn-danger-soft svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* Icône inline (crayon Modifier / poubelle Supprimer) : même carcasse pour les deux, carré
+   fixe centré — sinon l'emoji ✏️ et l'icône SVG poubelle ne s'alignent pas dans la ligne. */
+.btn-icon {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  padding: 0; border-radius: 8px; font-size: 14px;
+  color: var(--text-muted);
+  transition: background .15s, color .15s;
+}
+.btn-icon:hover { background: var(--bg); color: var(--text); }
+.btn-icon.btn-danger { background: none; color: var(--text-muted); }
+.btn-icon.btn-danger:hover { background: var(--danger-bg); color: var(--danger); }
+.btn-icon svg { width: 16px; height: 16px; }
 
 /* ---- Badges ---- */
 .badge {
@@ -774,6 +799,25 @@ input:focus:not(:focus-visible) { outline: none; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
 .form-group input:disabled { background: var(--bg); cursor: not-allowed; }
 .form-group textarea { resize: vertical; }
+
+/* Champs date, partout dans l'app (même hors .form-group : tableau bancaire, plage libre du
+   filtre de période...) — même carcasse que les autres champs, sinon un <input type="date">
+   nu retombe sur le rendu par défaut du navigateur (pas de fond/bordure). L'icône calendrier
+   elle-même suit color-scheme: dark (voir :root) et reste donc claire/visible. */
+input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+input[type="date"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; border-radius: 4px; }
+input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--surface-alt); }
 
 .form-actions {
   display: flex;
@@ -1159,7 +1203,7 @@ input:focus:not(:focus-visible) { outline: none; }
 .cat-alias-empty { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
 .cat-alias-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px 3px 12px; font-size: 0.78rem; }
 .cat-alias-chip button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.72rem; padding: 0; line-height: 1; }
-.cat-alias-chip button:hover { color: #b91c1c; }
+.cat-alias-chip button:hover { color: var(--danger); }
 .category-card-header {
   display: flex;
   align-items: center;
@@ -1218,12 +1262,6 @@ input:focus:not(:focus-visible) { outline: none; }
 }
 .subcat-handle:active { cursor: grabbing; }
 .subcat-name { flex: 1; font-size: 0.875rem; }
-.subcat-delete-btn {
-  background: none; border: none; cursor: pointer; padding: 2px 5px;
-  color: var(--danger, #ef4444); font-size: 0.8rem; border-radius: 4px; flex-shrink: 0;
-  line-height: 1;
-}
-.subcat-delete-btn:hover { background: var(--danger-bg, #fee2e2); }
 .cat-edit-footer {
   display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--border); background: var(--bg);
@@ -1610,28 +1648,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 .pos-row td { vertical-align: middle; }
 
-/* ---- Budget card delete ---- */
-.budget-theme-card { position: relative; }
-.budget-card-delete {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(239,68,68,0.1);
-  color: var(--danger);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
-  z-index: 2;
-  padding: 0;
-}
-.budget-theme-card:hover .budget-card-delete { opacity: 1; }
-.budget-card-delete:hover { background: var(--danger); color: #fff; }
-
 /* ---- Mapping Wizard ---- */
 .mapping-wizard { display: flex; flex-direction: column; gap: 16px; }
 .mapping-top-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1857,8 +1873,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subcat-handle { font-size: 15px; color: #c4c8da; transition: color .15s; }
 .subcat-item:hover .subcat-handle { color: var(--primary); }
 .subcat-name { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subcat-delete-btn { color: var(--text-muted); border-radius: 8px; padding: 4px 7px; transition: all .15s; }
-.subcat-delete-btn:hover { background: var(--danger-bg); color: var(--danger); }
 
 .cat-edit-footer { gap: 8px; padding: 10px 14px; background: var(--bg); }
 .cat-edit-footer .btn-sm { flex: 1; min-width: 120px; }
@@ -1871,7 +1885,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-primary, .btn-secondary { border-radius: 999px; padding: 9px 18px; }
 .btn-sm { border-radius: 999px; padding: 6px 14px; }
 .btn-danger { border-radius: 999px; }
-.btn-icon { border-radius: 10px; transition: background .15s, color .15s; }
 
 /* ============================================================
    Barre latérale sombre (maquette v2) — surcharges sur thème clair
@@ -1974,8 +1987,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subs-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0; }
 
 .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-.btn-del { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--text3); padding: 5px 8px; border-radius: 8px; transition: all .12s; }
-.btn-del:hover { color: var(--danger); background: var(--danger-bg); }
 
 .edit-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .btn-rename { font-size: 12px; font-weight: 600; padding: 6px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 50px; cursor: pointer; color: var(--text); white-space: nowrap; transition: all .12s; }
@@ -1985,12 +1996,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subcat-item.sub-edit:last-child { border-bottom: none; }
 .subcat-item.sub-edit:hover { background: var(--bg); }
 .subcat-item.sub-edit:active { cursor: grabbing; }
-.sub-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 0 6px; line-height: 1; border-radius: 6px; }
-.sub-x:hover { color: var(--danger); }
+.sub-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; width: 22px; height: 22px; border-radius: 6px; line-height: 1; transition: background .12s, color .12s; }
+.sub-x:hover { color: var(--danger); background: var(--danger-bg); }
 .btn-addsub { font-size: 12px; font-weight: 600; color: var(--primary); background: none; border: 1px dashed rgba(108,99,255,.35); border-radius: 50px; padding: 7px 14px; cursor: pointer; margin-top: 10px; width: 100%; transition: background .12s; }
 .btn-addsub:hover { background: var(--primary-light); }
 .edit-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-.btn-delfull { font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-bg); border: none; border-radius: 50px; padding: 7px 15px; cursor: pointer; }
 .btn-done { font-size: 12px; font-weight: 600; padding: 7px 17px; background: var(--primary); color: #fff; border: none; border-radius: 50px; cursor: pointer; }
 .btn-done:hover { background: var(--primary-dark); }
 
@@ -2056,8 +2066,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .ver-old-note { font-size: 11px; color: var(--text3); font-style: italic; margin-bottom: 12px; }
 .ver-old-samesubs { font-size: 11.5px; color: var(--text-muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; }
 .ver-old-footer { margin-top: 12px; }
-.ver-old-del { color: var(--text-muted); }
-.ver-old-del:hover { color: var(--danger); }
 
 /* Carte active dépliée : accent à droite qui « relie » visuellement aux anciens noms. */
 .category-card.old-open { box-shadow: inset -4px 0 0 var(--cat-dot, var(--primary)), 0 8px 30px rgba(15,14,23,.08); }
@@ -2627,7 +2635,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           <h1>Données</h1>
           <div class="header-actions" id="donnees-header-actions">
             <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
-            <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>
+            <button class="btn-danger-soft" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">Supprimer</button>
           </div>
         </div>
         <div class="donnees-toolbar">
@@ -2681,7 +2689,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             <div class="cat-page-sub" id="cat-subtitle"></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-secondary btn-sm" onclick="Categories.resetToDefaults()" style="color:var(--danger);border-color:var(--danger)">↺ Réinitialiser</button>
+            <button class="btn-danger-soft" onclick="Categories.resetToDefaults()">↺ Réinitialiser</button>
             <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
           </div>
         </div>
@@ -2868,6 +2876,13 @@ const Storage = {
 </script>
 <script>
 const Utils = {
+  // Icône poubelle unique (trait, pas d'emoji) — tous les boutons "supprimer" de l'app la
+  // partagent, pour une apparence homogène quel que soit l'écran/la police d'emoji.
+  // width/height explicites (16px) en plus du viewBox : un <svg> sans attribut de taille
+  // dans une chaîne HTML brute se comporte comme un <img> sans dimensions et peut s'afficher
+  // énorme (fallback navigateur ~300×150) tant qu'aucune règle CSS locale ne le contraint.
+  ICON_TRASH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   },
@@ -4139,7 +4154,7 @@ const Investments = {
         </td>
         <td class="actions-cell">
           <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
-          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
+          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
         </td>
       </tr>`;
     }).join('');
@@ -4302,7 +4317,7 @@ const Expenses = {
       <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>
     </tr>`).join('');
   },
@@ -4463,7 +4478,7 @@ const Revenues = {
       <td><strong class="positive">${Utils.formatCurrency(rev.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Revenues.edit('${rev.id}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>
     </tr>`).join('');
   },
@@ -5181,7 +5196,7 @@ const Categories = {
       <div class="subs subcat-list" data-cat-id="${cat.id}">${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}</div>
       <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
       <div class="edit-footer">
-        <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+        <button class="btn-danger-soft" onclick="Categories.deleteCategory('${cat.id}')">${Utils.ICON_TRASH} Supprimer</button>
         <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
       </div>
     </div>`;
@@ -5232,8 +5247,8 @@ const Categories = {
       body = `<div class="ver-old-samesubs">↔ Mêmes sous-catégories que « ${primary.name} »</div>`;
     }
     const del = it.kind === 'version'
-      ? `<button class="btn-edit ver-old-del" onclick="Categories._delVersion('${primary.lineage}','${it.v.id}')" title="Supprimer cette version datée">🗑 Supprimer la version</button>`
-      : `<button class="btn-edit ver-old-del" onclick="Categories._histRemove('${primary.id}',${it.idx})" title="Retirer cet ancien nom">🗑 Retirer ce nom</button>`;
+      ? `<button class="btn-danger-soft" onclick="Categories._delVersion('${primary.lineage}','${it.v.id}')" title="Supprimer cette version datée">${Utils.ICON_TRASH} Supprimer la version</button>`
+      : `<button class="btn-danger-soft" onclick="Categories._histRemove('${primary.id}',${it.idx})" title="Retirer cet ancien nom">${Utils.ICON_TRASH} Retirer ce nom</button>`;
     return `<div class="category-card cat-ver-old" style="${vars}">
       <div class="ver-old-flag">🕘 Ancien nom</div>
       <div class="card-top ver-old-top">
@@ -5553,7 +5568,7 @@ const Categories = {
     if (!cat) return;
     const aliases = cat.aliases || [];
     const chips = aliases.length
-      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i},true)" title="Retirer">✕</button></span>`).join(' ')
+      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i},true)" title="Retirer">×</button></span>`).join(' ')
       : '<span class="cat-alias-empty">Aucun ancien nom déclaré pour l\'instant.</span>';
     Modal.open(`Historique de « ${cat.name} »`, `
       <p class="rename-hint" style="margin-bottom:12px">Déclare les <strong>anciens noms</strong> de cette catégorie. À l'import, une dépense étiquetée (ou devinée) avec l'un de ces noms sera automatiquement classée dans « ${cat.name} » (et plus dans « Abonnements »).</p>
@@ -5920,14 +5935,14 @@ const DataEntry = {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn" style="display:none"></button>
         <button class="btn-secondary btn-sm" onclick="DataEntry.toggleSelectionMode()">✕ Annuler</button>
-        <button class="btn-secondary btn-sm" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">Tout supprimer (${total})</button>
+        <button class="btn-danger-soft" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">${Utils.ICON_TRASH} Tout supprimer (${total})</button>
         <button class="btn-danger btn-sm" id="donnees-delete-sel-btn" ${n === 0 ? 'disabled' : ''} onclick="DataEntry.deleteSelected()">
-          ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
+          ${Utils.ICON_TRASH} ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
         </button>`;
     } else {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
-        <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>`;
+        <button class="btn-danger-soft" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">${Utils.ICON_TRASH} Supprimer</button>`;
       // Re-bind add button
       document.getElementById('add-donnees-btn')?.addEventListener('click', () => this.openAddForm());
     }
@@ -6020,6 +6035,10 @@ const DataEntry = {
   },
 
   render() {
+    // La barre d'actions (Ajouter/Supprimer) n'est sinon jamais générée avant la première
+    // action utilisateur — le bouton statique de index.html restait alors affiché tel quel
+    // (ancien style, jamais mis à jour) à chaque arrivée sur l'onglet.
+    this._updateHeaderButtons();
     const search = (document.getElementById('donnees-search')?.value || '').toLowerCase().trim();
     const typeFilter = document.getElementById('donnees-filter-type')?.value || '';
     const catFilter = document.getElementById('donnees-filter-cat')?.value || '';
@@ -6084,7 +6103,7 @@ const DataEntry = {
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-icon-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>`;
 
       return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}"
@@ -6704,7 +6723,7 @@ const Budget = {
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="Budget.deleteTheme('${theme.id}')">🗑 Supprimer</button>
+        <button type="button" class="btn-danger-soft" onclick="Budget.deleteTheme('${theme.id}')">${Utils.ICON_TRASH} Supprimer</button>
         <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button type="submit" class="btn-primary">Enregistrer</button>
       </div></form>`;
@@ -6838,7 +6857,7 @@ const Patrimony = {
         <div class="pat-item-actions">
           <span class="pat-item-value ${isLiability ? 'negative' : ''}">${Utils.formatCurrency(item.value)}</span>
           <button class="btn-icon" onclick="Patrimony.edit('${item.id}')" title="Modifier">✏️</button>
-          <button class="btn-icon btn-danger" onclick="Patrimony.delete('${item.id}')" title="Supprimer">🗑️</button>
+          <button class="btn-icon btn-danger" onclick="Patrimony.delete('${item.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
         </div>
       </div>`).join('');
 
@@ -7955,11 +7974,11 @@ const BankImport = {
 
       </div>
       <div class="form-actions" style="margin-top:20px;flex-wrap:wrap;gap:8px">
-        <button class="btn-sm" style="color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;margin-right:auto"
+        <button class="btn-danger-soft" style="margin-right:auto"
           onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
-          🗑 Vider le cache Gemini
+          ${Utils.ICON_TRASH} Vider le cache Gemini
         </button>
-        ${(geminiKey || claudeKey) ? '<button class="btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="BankImport._clearAllKeys()">Effacer les clés</button>' : ''}
+        ${(geminiKey || claudeKey) ? `<button class="btn-danger-soft" onclick="BankImport._clearAllKeys()">${Utils.ICON_TRASH} Effacer les clés</button>` : ''}
         <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
       </div>
@@ -7993,12 +8012,12 @@ const BankImport = {
         <span class="catmap-from" title="${this._esc(e.original || k)}">${this._esc(e.original || k)}</span>
         <span class="catmap-arrow">→</span>
         <select class="select-input catmap-sel" onchange="BankImport._catMapAction(${idx},'set',this.value)">${opts}</select>
-        <button class="btn-icon-sm" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">🗑</button>
+        <button class="btn-icon btn-danger" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">${Utils.ICON_TRASH}</button>
       </div>`;
     }).join('');
     return `<div class="catmap-rows">${rows}</div>
-      <button class="btn-sm" style="margin-top:8px;color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:4px 10px;border-radius:6px;cursor:pointer"
-        onclick="if(confirm('Oublier toutes les correspondances de catégories mémorisées ?')){GeminiCat.clearCatMapCache();const l=document.getElementById('catmap-list');if(l)l.innerHTML=BankImport._catMapListHTML();}">Tout oublier</button>`;
+      <button class="btn-danger-soft" style="margin-top:8px"
+        onclick="if(confirm('Oublier toutes les correspondances de catégories mémorisées ?')){GeminiCat.clearCatMapCache();const l=document.getElementById('catmap-list');if(l)l.innerHTML=BankImport._catMapListHTML();}">${Utils.ICON_TRASH} Tout oublier</button>`;
   },
 
   _catMapAction(idx, action, value) {

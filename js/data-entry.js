@@ -65,14 +65,14 @@ const DataEntry = {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn" style="display:none"></button>
         <button class="btn-secondary btn-sm" onclick="DataEntry.toggleSelectionMode()">✕ Annuler</button>
-        <button class="btn-secondary btn-sm" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">Tout supprimer (${total})</button>
+        <button class="btn-danger-soft" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">${Utils.ICON_TRASH} Tout supprimer (${total})</button>
         <button class="btn-danger btn-sm" id="donnees-delete-sel-btn" ${n === 0 ? 'disabled' : ''} onclick="DataEntry.deleteSelected()">
-          ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
+          ${Utils.ICON_TRASH} ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
         </button>`;
     } else {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
-        <button class="btn-secondary" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">🗑️ Supprimer</button>`;
+        <button class="btn-danger-soft" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">${Utils.ICON_TRASH} Supprimer</button>`;
       // Re-bind add button
       document.getElementById('add-donnees-btn')?.addEventListener('click', () => this.openAddForm());
     }
@@ -165,6 +165,10 @@ const DataEntry = {
   },
 
   render() {
+    // La barre d'actions (Ajouter/Supprimer) n'est sinon jamais générée avant la première
+    // action utilisateur — le bouton statique de index.html restait alors affiché tel quel
+    // (ancien style, jamais mis à jour) à chaque arrivée sur l'onglet.
+    this._updateHeaderButtons();
     const search = (document.getElementById('donnees-search')?.value || '').toLowerCase().trim();
     const typeFilter = document.getElementById('donnees-filter-type')?.value || '';
     const catFilter = document.getElementById('donnees-filter-cat')?.value || '';
@@ -229,7 +233,7 @@ const DataEntry = {
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-icon-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>`;
 
       return `<tr class="donnees-row${isSelected ? ' selected' : ''}${sel ? ' selectable' : ''}" data-key="${key}"

@@ -77,7 +77,7 @@ const Expenses = {
       <td><strong>${Utils.formatCurrency(exp.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Expenses.edit('${exp.id}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="Expenses.delete('${exp.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>
     </tr>`).join('');
   },

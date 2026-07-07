@@ -96,7 +96,7 @@ const Categories = {
       <div class="subs subcat-list" data-cat-id="${cat.id}">${subEdit || '<div class="subs-empty">Aucune sous-catégorie</div>'}</div>
       <button class="btn-addsub" onclick="Categories._openAddSubcatModal('${cat.id}')">＋ Sous-catégorie</button>
       <div class="edit-footer">
-        <button class="btn-delfull" onclick="Categories.deleteCategory('${cat.id}')">🗑 Supprimer</button>
+        <button class="btn-danger-soft" onclick="Categories.deleteCategory('${cat.id}')">${Utils.ICON_TRASH} Supprimer</button>
         <button class="btn-done" onclick="Categories._stopEdit()">✓ Terminer</button>
       </div>
     </div>`;
@@ -147,8 +147,8 @@ const Categories = {
       body = `<div class="ver-old-samesubs">↔ Mêmes sous-catégories que « ${primary.name} »</div>`;
     }
     const del = it.kind === 'version'
-      ? `<button class="btn-edit ver-old-del" onclick="Categories._delVersion('${primary.lineage}','${it.v.id}')" title="Supprimer cette version datée">🗑 Supprimer la version</button>`
-      : `<button class="btn-edit ver-old-del" onclick="Categories._histRemove('${primary.id}',${it.idx})" title="Retirer cet ancien nom">🗑 Retirer ce nom</button>`;
+      ? `<button class="btn-danger-soft" onclick="Categories._delVersion('${primary.lineage}','${it.v.id}')" title="Supprimer cette version datée">${Utils.ICON_TRASH} Supprimer la version</button>`
+      : `<button class="btn-danger-soft" onclick="Categories._histRemove('${primary.id}',${it.idx})" title="Retirer cet ancien nom">${Utils.ICON_TRASH} Retirer ce nom</button>`;
     return `<div class="category-card cat-ver-old" style="${vars}">
       <div class="ver-old-flag">🕘 Ancien nom</div>
       <div class="card-top ver-old-top">
@@ -468,7 +468,7 @@ const Categories = {
     if (!cat) return;
     const aliases = cat.aliases || [];
     const chips = aliases.length
-      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i},true)" title="Retirer">✕</button></span>`).join(' ')
+      ? aliases.map((a, i) => `<span class="cat-alias-chip">${a}<button onclick="Categories._histRemove('${catId}',${i},true)" title="Retirer">×</button></span>`).join(' ')
       : '<span class="cat-alias-empty">Aucun ancien nom déclaré pour l\'instant.</span>';
     Modal.open(`Historique de « ${cat.name} »`, `
       <p class="rename-hint" style="margin-bottom:12px">Déclare les <strong>anciens noms</strong> de cette catégorie. À l'import, une dépense étiquetée (ou devinée) avec l'un de ces noms sera automatiquement classée dans « ${cat.name} » (et plus dans « Abonnements »).</p>

@@ -92,11 +92,11 @@ const BankImport = {
 
       </div>
       <div class="form-actions" style="margin-top:20px;flex-wrap:wrap;gap:8px">
-        <button class="btn-sm" style="color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;margin-right:auto"
+        <button class="btn-danger-soft" style="margin-right:auto"
           onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
-          🗑 Vider le cache Gemini
+          ${Utils.ICON_TRASH} Vider le cache Gemini
         </button>
-        ${(geminiKey || claudeKey) ? '<button class="btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="BankImport._clearAllKeys()">Effacer les clés</button>' : ''}
+        ${(geminiKey || claudeKey) ? `<button class="btn-danger-soft" onclick="BankImport._clearAllKeys()">${Utils.ICON_TRASH} Effacer les clés</button>` : ''}
         <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
       </div>
@@ -130,12 +130,12 @@ const BankImport = {
         <span class="catmap-from" title="${this._esc(e.original || k)}">${this._esc(e.original || k)}</span>
         <span class="catmap-arrow">→</span>
         <select class="select-input catmap-sel" onchange="BankImport._catMapAction(${idx},'set',this.value)">${opts}</select>
-        <button class="btn-icon-sm" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">🗑</button>
+        <button class="btn-icon btn-danger" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">${Utils.ICON_TRASH}</button>
       </div>`;
     }).join('');
     return `<div class="catmap-rows">${rows}</div>
-      <button class="btn-sm" style="margin-top:8px;color:var(--text-muted);border:1px solid var(--border);background:transparent;padding:4px 10px;border-radius:6px;cursor:pointer"
-        onclick="if(confirm('Oublier toutes les correspondances de catégories mémorisées ?')){GeminiCat.clearCatMapCache();const l=document.getElementById('catmap-list');if(l)l.innerHTML=BankImport._catMapListHTML();}">Tout oublier</button>`;
+      <button class="btn-danger-soft" style="margin-top:8px"
+        onclick="if(confirm('Oublier toutes les correspondances de catégories mémorisées ?')){GeminiCat.clearCatMapCache();const l=document.getElementById('catmap-list');if(l)l.innerHTML=BankImport._catMapListHTML();}">${Utils.ICON_TRASH} Tout oublier</button>`;
   },
 
   _catMapAction(idx, action, value) {

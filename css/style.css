@@ -10,6 +10,7 @@
   --success: #00b37e;
   --success-bg: rgba(0,179,126,0.14);
   --danger: #f56565;
+  --danger-dark: #dc2626;
   --danger-bg: rgba(229,62,62,0.14);
   --warning: #d97706;
   --warning-bg: rgba(217,119,6,0.16);
@@ -577,7 +578,10 @@ input:focus:not(:focus-visible) { outline: none; }
 .data-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--bg); }
-.actions-cell { white-space: nowrap; }
+/* overflow/text-overflow explicites : .donnees-table td tronque le texte en ellipse par
+   défaut (colonne "Actions" à 6% de large) — ça coupait le 2e bouton icône au lieu de
+   simplement le laisser déborder proprement. */
+.actions-cell { white-space: nowrap; overflow: visible !important; text-overflow: clip !important; }
 
 /* ---- Buttons ---- */
 .btn-primary {
@@ -609,16 +613,37 @@ input:focus:not(:focus-visible) { outline: none; }
   padding: 8px 16px; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background .15s; white-space: nowrap;
 }
-.btn-danger:hover { background: #dc2626; }
+.btn-danger:hover { background: var(--danger-dark); }
 .btn-danger:disabled { background: var(--danger); opacity: 0.45; cursor: not-allowed; }
 
-.btn-icon {
-  background: none; border: none; cursor: pointer;
-  padding: 4px 6px; border-radius: 4px; font-size: 14px;
-  transition: background .15s;
+/* Suppression discrète, pilule teintée (montant/champ inline, panneau d'édition) : moins
+   agressive qu'un .btn-danger plein, mais sans ambiguïté sur l'action. Un seul recette
+   partagée par Catégories/Budget/Import bancaire/Données, plutôt qu'un style par écran. */
+.btn-danger-soft {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--danger); background: var(--danger-bg);
+  border: none; border-radius: 999px;
+  padding: 7px 15px; cursor: pointer;
+  transition: background .15s, color .15s;
 }
-.btn-icon:hover { background: var(--bg); }
-.btn-icon.btn-danger:hover { background: var(--danger-bg); }
+.btn-danger-soft:hover { background: var(--danger); color: #fff; }
+.btn-danger-soft svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* Icône inline (crayon Modifier / poubelle Supprimer) : même carcasse pour les deux, carré
+   fixe centré — sinon l'emoji ✏️ et l'icône SVG poubelle ne s'alignent pas dans la ligne. */
+.btn-icon {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  padding: 0; border-radius: 8px; font-size: 14px;
+  color: var(--text-muted);
+  transition: background .15s, color .15s;
+}
+.btn-icon:hover { background: var(--bg); color: var(--text); }
+.btn-icon.btn-danger { background: none; color: var(--text-muted); }
+.btn-icon.btn-danger:hover { background: var(--danger-bg); color: var(--danger); }
+.btn-icon svg { width: 16px; height: 16px; }
 
 /* ---- Badges ---- */
 .badge {
@@ -767,6 +792,25 @@ input:focus:not(:focus-visible) { outline: none; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
 .form-group input:disabled { background: var(--bg); cursor: not-allowed; }
 .form-group textarea { resize: vertical; }
+
+/* Champs date, partout dans l'app (même hors .form-group : tableau bancaire, plage libre du
+   filtre de période...) — même carcasse que les autres champs, sinon un <input type="date">
+   nu retombe sur le rendu par défaut du navigateur (pas de fond/bordure). L'icône calendrier
+   elle-même suit color-scheme: dark (voir :root) et reste donc claire/visible. */
+input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+input[type="date"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; border-radius: 4px; }
+input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--surface-alt); }
 
 .form-actions {
   display: flex;
@@ -1152,7 +1196,7 @@ input:focus:not(:focus-visible) { outline: none; }
 .cat-alias-empty { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
 .cat-alias-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px 3px 12px; font-size: 0.78rem; }
 .cat-alias-chip button { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 0.72rem; padding: 0; line-height: 1; }
-.cat-alias-chip button:hover { color: #b91c1c; }
+.cat-alias-chip button:hover { color: var(--danger); }
 .category-card-header {
   display: flex;
   align-items: center;
@@ -1211,12 +1255,6 @@ input:focus:not(:focus-visible) { outline: none; }
 }
 .subcat-handle:active { cursor: grabbing; }
 .subcat-name { flex: 1; font-size: 0.875rem; }
-.subcat-delete-btn {
-  background: none; border: none; cursor: pointer; padding: 2px 5px;
-  color: var(--danger, #ef4444); font-size: 0.8rem; border-radius: 4px; flex-shrink: 0;
-  line-height: 1;
-}
-.subcat-delete-btn:hover { background: var(--danger-bg, #fee2e2); }
 .cat-edit-footer {
   display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--border); background: var(--bg);
@@ -1603,28 +1641,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 .pos-row td { vertical-align: middle; }
 
-/* ---- Budget card delete ---- */
-.budget-theme-card { position: relative; }
-.budget-card-delete {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(239,68,68,0.1);
-  color: var(--danger);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
-  z-index: 2;
-  padding: 0;
-}
-.budget-theme-card:hover .budget-card-delete { opacity: 1; }
-.budget-card-delete:hover { background: var(--danger); color: #fff; }
-
 /* ---- Mapping Wizard ---- */
 .mapping-wizard { display: flex; flex-direction: column; gap: 16px; }
 .mapping-top-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1850,8 +1866,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subcat-handle { font-size: 15px; color: #c4c8da; transition: color .15s; }
 .subcat-item:hover .subcat-handle { color: var(--primary); }
 .subcat-name { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subcat-delete-btn { color: var(--text-muted); border-radius: 8px; padding: 4px 7px; transition: all .15s; }
-.subcat-delete-btn:hover { background: var(--danger-bg); color: var(--danger); }
 
 .cat-edit-footer { gap: 8px; padding: 10px 14px; background: var(--bg); }
 .cat-edit-footer .btn-sm { flex: 1; min-width: 120px; }
@@ -1864,7 +1878,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-primary, .btn-secondary { border-radius: 999px; padding: 9px 18px; }
 .btn-sm { border-radius: 999px; padding: 6px 14px; }
 .btn-danger { border-radius: 999px; }
-.btn-icon { border-radius: 10px; transition: background .15s, color .15s; }
 
 /* ============================================================
    Barre latérale sombre (maquette v2) — surcharges sur thème clair
@@ -1967,8 +1980,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subs-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0; }
 
 .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-.btn-del { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--text3); padding: 5px 8px; border-radius: 8px; transition: all .12s; }
-.btn-del:hover { color: var(--danger); background: var(--danger-bg); }
 
 .edit-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .btn-rename { font-size: 12px; font-weight: 600; padding: 6px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 50px; cursor: pointer; color: var(--text); white-space: nowrap; transition: all .12s; }
@@ -1978,12 +1989,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .subcat-item.sub-edit:last-child { border-bottom: none; }
 .subcat-item.sub-edit:hover { background: var(--bg); }
 .subcat-item.sub-edit:active { cursor: grabbing; }
-.sub-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 0 6px; line-height: 1; border-radius: 6px; }
-.sub-x:hover { color: var(--danger); }
+.sub-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; width: 22px; height: 22px; border-radius: 6px; line-height: 1; transition: background .12s, color .12s; }
+.sub-x:hover { color: var(--danger); background: var(--danger-bg); }
 .btn-addsub { font-size: 12px; font-weight: 600; color: var(--primary); background: none; border: 1px dashed rgba(108,99,255,.35); border-radius: 50px; padding: 7px 14px; cursor: pointer; margin-top: 10px; width: 100%; transition: background .12s; }
 .btn-addsub:hover { background: var(--primary-light); }
 .edit-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-.btn-delfull { font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-bg); border: none; border-radius: 50px; padding: 7px 15px; cursor: pointer; }
 .btn-done { font-size: 12px; font-weight: 600; padding: 7px 17px; background: var(--primary); color: #fff; border: none; border-radius: 50px; cursor: pointer; }
 .btn-done:hover { background: var(--primary-dark); }
 
@@ -2049,8 +2059,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .ver-old-note { font-size: 11px; color: var(--text3); font-style: italic; margin-bottom: 12px; }
 .ver-old-samesubs { font-size: 11.5px; color: var(--text-muted); background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; }
 .ver-old-footer { margin-top: 12px; }
-.ver-old-del { color: var(--text-muted); }
-.ver-old-del:hover { color: var(--danger); }
 
 /* Carte active dépliée : accent à droite qui « relie » visuellement aux anciens noms. */
 .category-card.old-open { box-shadow: inset -4px 0 0 var(--cat-dot, var(--primary)), 0 8px 30px rgba(15,14,23,.08); }

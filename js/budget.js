@@ -434,7 +434,7 @@ const Budget = {
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="Budget.deleteTheme('${theme.id}')">🗑 Supprimer</button>
+        <button type="button" class="btn-danger-soft" onclick="Budget.deleteTheme('${theme.id}')">${Utils.ICON_TRASH} Supprimer</button>
         <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button type="submit" class="btn-primary">Enregistrer</button>
       </div></form>`;

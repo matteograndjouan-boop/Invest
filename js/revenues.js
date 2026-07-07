@@ -57,7 +57,7 @@ const Revenues = {
       <td><strong class="positive">${Utils.formatCurrency(rev.amount)}</strong></td>
       <td class="actions-cell">
         <button class="btn-icon" onclick="Revenues.edit('${rev.id}')" title="Modifier">✏️</button>
-        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')" title="Supprimer">🗑️</button>
+        <button class="btn-icon btn-danger" onclick="Revenues.delete('${rev.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>
     </tr>`).join('');
   },

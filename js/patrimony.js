@@ -49,7 +49,7 @@ const Patrimony = {
         <div class="pat-item-actions">
           <span class="pat-item-value ${isLiability ? 'negative' : ''}">${Utils.formatCurrency(item.value)}</span>
           <button class="btn-icon" onclick="Patrimony.edit('${item.id}')" title="Modifier">✏️</button>
-          <button class="btn-icon btn-danger" onclick="Patrimony.delete('${item.id}')" title="Supprimer">🗑️</button>
+          <button class="btn-icon btn-danger" onclick="Patrimony.delete('${item.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
         </div>
       </div>`).join('');
 
