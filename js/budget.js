@@ -81,22 +81,21 @@ const Budget = {
     return this._plannedForRange(theme.monthlyAmount || 0, start, end, theme.startDate);
   },
 
-  _prevPeriod() {
-    const s = PeriodFilter.get();
-    if (s.type !== 'month') return null;
-    const [y, m] = s.month.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return { start: `${pm}-01`, end: `${pm}-${String(last).padStart(2, '0')}` };
+  // Éclaircit une couleur hex vers le blanc (facteur 0..1) — dérive le 2e stop du dégradé du
+  // ruban (--cat-bar) à partir de l'unique couleur du budget (theme.color).
+  _lighten(hex, pct) {
+    const c = parseInt(hex.slice(1), 16);
+    const mix = (shift) => { const v = (c >> shift) & 255; return Math.round(v + (255 - v) * pct); };
+    return '#' + [mix(16), mix(8), mix(0)].map(v => v.toString(16).padStart(2, '0')).join('');
   },
 
-  _prevMonthLabel() {
-    const s = PeriodFilter.get();
-    if (s.type !== 'month') return 'péri. préc.';
-    const [y, m] = s.month.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    return ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][d.getMonth()];
+  // Dépassé / Proche limite / Dans le budget — même statut pour le texte et la barre de
+  // progression de la carte (couleur, libellé), selon % consommé de la période active.
+  _status(planned, pct) {
+    if (planned <= 0) return { label: 'Aucun prévu', cls: 'bstatus-none', color: 'var(--text-muted)' };
+    if (pct >= 100) return { label: 'Dépassé', cls: 'bstatus-over', color: '#ef4444' };
+    if (pct >= 80) return { label: 'Proche limite', cls: 'bstatus-warn', color: '#f59e0b' };
+    return { label: 'Dans le budget', cls: 'bstatus-ok', color: '#10b981' };
   },
 
   _ring(pct, color, size = 64) {
@@ -126,9 +125,6 @@ const Budget = {
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
     const expenses   = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
-    const prev       = this._prevPeriod();
-    const prevExp    = prev ? allExpenses.filter(e => Utils.getExpenseDate(e) >= prev.start && Utils.getExpenseDate(e) <= prev.end) : [];
-    const prevLabel  = this._prevMonthLabel();
 
     const overviewBar = document.getElementById('budget-overview-bar');
     const cardsGrid   = document.getElementById('budget-cards-grid');
@@ -152,96 +148,61 @@ const Budget = {
       return pl > 0 && sp > pl;
     }).length;
     const globalPct = totalPlanned > 0 ? Math.min(100, totalSpent / totalPlanned * 100) : 0;
-    const globalColor = globalPct >= 100 ? '#ef4444' : globalPct >= 80 ? '#f59e0b' : '#10b981';
 
+    // KPI overview — 4 cartes façon Flux (bande dégradée en haut, pas d'icône).
     if (overviewBar) {
       overviewBar.innerHTML = `
-        <div class="bov-items">
-          <div class="bov-item">
-            <div class="bov-val">${Utils.formatCurrency(totalPlanned)}</div>
-            <div class="bov-label">Budget total</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val" style="color:#ef4444">${Utils.formatCurrency(totalSpent)}</div>
-            <div class="bov-label">Dépensé</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val ${totalRemain >= 0 ? 'positive' : 'negative'}">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
-            <div class="bov-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val ${overCount > 0 ? 'negative' : 'positive'}">${overCount}</div>
-            <div class="bov-label">Dépassement${overCount !== 1 ? 's' : ''}</div>
-          </div>
+        <div class="kpi-card budget-kpi-card bkpi-total">
+          <div class="kpi-label">Budget total</div>
+          <div class="kpi-value">${Utils.formatCurrency(totalPlanned)}</div>
+          <div class="kpi-sub">Prévu · ${PeriodFilter.getLabel()}</div>
         </div>
-        <div class="bov-progress-track">
-          <div class="bov-progress-fill" style="width:${globalPct.toFixed(1)}%;background:${globalColor}"></div>
-          <span class="bov-progress-label">${globalPct.toFixed(0)}% du budget global utilisé</span>
+        <div class="kpi-card budget-kpi-card bkpi-spent">
+          <div class="kpi-label">Dépensé</div>
+          <div class="kpi-value">${Utils.formatCurrency(totalSpent)}</div>
+          <div class="kpi-sub">${globalPct.toFixed(0)}% du budget</div>
+        </div>
+        <div class="kpi-card budget-kpi-card bkpi-remain">
+          <div class="kpi-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
+          <div class="kpi-value">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
+          <div class="kpi-sub">${totalRemain >= 0 ? 'Encore disponible' : 'Au-dessus du prévu'}</div>
+        </div>
+        <div class="kpi-card budget-kpi-card bkpi-over">
+          <div class="kpi-label">Dépassements</div>
+          <div class="kpi-value">${overCount}</div>
+          <div class="kpi-sub">Catégorie${overCount !== 1 ? 's' : ''} au-dessus</div>
         </div>`;
     }
 
-    // Cards
+    // Cards — même carcasse visuelle que les cartes de Catégories (ruban --cat-bar dérivé de
+    // la couleur du budget, icône de la catégorie, coins arrondis) ; statut/barre en couleur
+    // rouge/orange/vert selon % consommé.
     if (cardsGrid) {
       cardsGrid.innerHTML = themes.map(theme => {
         const spent   = this._computeSpent(theme, expenses);
         const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
         const color   = theme.color || '#6366f1';
-        const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
-        const remaining   = planned - spent;
-        const overBudget  = planned > 0 && spent > planned;
+        const icon    = Categories._meta(theme.name).icon;
+        const status  = this._status(planned, pct);
+        const vars    = `--cat-bar:linear-gradient(90deg,${color},${this._lighten(color, 0.35)})`;
 
-        let trendHtml = '';
-        if (prev) {
-          const prevSpent = this._computeSpent(theme, prevExp);
-          if (prevSpent > 0) {
-            const dp = Math.round((spent - prevSpent) / prevSpent * 100);
-            trendHtml = dp > 0
-              ? `<span class="bcard-trend negative">↑ +${dp}% vs ${prevLabel}</span>`
-              : dp < 0
-              ? `<span class="bcard-trend positive">↓ ${dp}% vs ${prevLabel}</span>`
-              : `<span class="bcard-trend">= vs ${prevLabel}</span>`;
-          }
-        }
-
-        const remainText = overBudget
-          ? `<span class="bcard-over">⚠ +${Utils.formatCurrency(spent - planned)}</span>`
-          : planned > 0
-          ? `<span class="bcard-remain ${remaining < planned * 0.2 ? 'bcard-remain-low' : ''}">${Utils.formatCurrency(remaining)} restants</span>`
-          : `<span style="color:var(--text-muted);font-size:11px">Aucun montant prévu</span>`;
-
-        return `<div class="bcard${overBudget ? ' bcard-over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
-          <div class="bcard-top">
-            ${this._ring(pct, color)}
-            <div class="bcard-meta">
-              <div class="bcard-name">${theme.name}</div>
-              <div class="bcard-period">${PeriodFilter.getLabel()}</div>
-            </div>
-            <div class="bcard-actions">
-              <button class="bcard-btn" onclick="event.stopPropagation();Budget.openEditForm('${theme.id}')" title="Modifier">✏️</button>
-              <button class="bcard-btn bcard-btn-del" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
+        return `<div class="category-card bcard" style="${vars}" onclick="Budget.showDetail('${theme.id}')">
+          <div class="bcard-head">
+            <div class="cat-left"><div class="cat-icon">${icon}</div><span class="cat-name">${theme.name}</span></div>
+            <div class="cat-top-right">
+              <span class="bstatus ${status.cls}">${status.label}</span>
+              <button class="cat-edit-btn" onclick="event.stopPropagation();Budget.openEditForm('${theme.id}')" title="Modifier">✏️</button>
             </div>
           </div>
+          <div class="bcard-bar-track"><div class="bcard-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${status.color}"></div></div>
           <div class="bcard-amounts">
-            <span class="bcard-spent" style="color:${overBudget ? '#ef4444' : color}">${Utils.formatCurrency(spent)}</span>
-            <span class="bcard-planned-text">/ ${Utils.formatCurrency(planned)}</span>
-          </div>
-          <div class="bcard-bar-track">
-            <div class="bcard-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${statusColor}"></div>
-          </div>
-          <div class="bcard-footer">
-            ${remainText}
-            ${trendHtml}
+            <span class="bcard-spent" style="color:${status.color}">${Utils.formatCurrency(spent)}</span>
+            <span class="bcard-planned-text">sur ${Utils.formatCurrency(planned)} · ${Math.round(pct)}%</span>
           </div>
         </div>`;
       }).join('') + `
-        <div class="bcard-ghost" onclick="Budget.openAddForm()">
-          <div class="bcard-ghost-icon">+</div>
-          <div class="bcard-ghost-label">Nouveau budget</div>
-        </div>`;
+        <div class="category-card card-new" onclick="Budget.openAddForm()"><div class="new-plus">＋</div><span class="new-label">Nouveau budget</span></div>`;
     }
   },
 
@@ -483,6 +444,7 @@ const Budget = {
           <div class="color-picker-row">${this._colorPicker(theme.color || this._THEME_COLORS[0])}</div></div>
       </div>
       <div class="form-actions">
+        <button type="button" class="btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="Budget.deleteTheme('${theme.id}')">🗑 Supprimer</button>
         <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button type="submit" class="btn-primary">Enregistrer</button>
       </div></form>`;
@@ -536,6 +498,7 @@ const Budget = {
     if (!confirm('Supprimer ce budget ?')) return;
     Storage.saveBudgetThemes(Storage.getBudgetThemes().filter(t => t.id !== id));
     this._currentThemeId = null;
+    Modal.close();
     this.showList();
   },
 

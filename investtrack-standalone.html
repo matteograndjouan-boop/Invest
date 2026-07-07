@@ -1414,35 +1414,43 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    BUDGET — redesign
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* Overview bar */
-.budget-overview-bar {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-  padding: 16px 20px; margin-bottom: 1.25rem; box-shadow: var(--shadow);
+/* KPI overview : conteneur = .kpi-grid-4 (comme Flux/Dashboard). Même carcasse que .kpi-card
+   (bande dégradée en haut, pas d'icône) mais fond légèrement différent (--bg au lieu de
+   --surface) pour bien les distinguer des cartes budget en dessous. */
+.budget-kpi-card { background: var(--bg); border-left-color: transparent !important; }
+.budget-kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
 }
-.bov-items { display: flex; align-items: center; gap: 0; margin-bottom: 14px; }
-.bov-item { flex: 1; text-align: center; }
-.bov-val { font-size: 20px; font-weight: 800; line-height: 1.1; }
-.bov-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 2px; }
-.bov-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
-.bov-progress-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; position: relative; }
-.bov-progress-fill { height: 10px; border-radius: 5px; transition: width 0.4s; }
-.bov-progress-label { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: right; }
+.bkpi-total::before  { background: linear-gradient(90deg, #6c63ff, #a09bff); }
+.bkpi-spent::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.bkpi-remain::before { background: linear-gradient(90deg, #00b37e, #4ade80); }
+.bkpi-over::before   { background: linear-gradient(90deg, #e53e3e, #fc8181); }
 
-/* Cards grid */
-.budget-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 1rem; }
+/* Cards grid — grille fixe à 4 colonnes, comme l'onglet Catégories. */
+.budget-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .budget-cards-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .budget-cards-grid { grid-template-columns: 1fr; } }
 
-/* Budget card */
-.bcard {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-  padding: 16px; cursor: pointer; position: relative;
-  transition: box-shadow 0.18s;
-  display: flex; flex-direction: column; gap: 10px;
-  border-top: 4px solid var(--border);
-}
-.bcard:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-.bcard-over-budget { border-top-color: #ef4444 !important; }
+/* Budget card — même carcasse visuelle que .category-card (ruban --cat-bar, coins arrondis,
+   fond) : la carte porte les deux classes, .cat-icon/.cat-left/.cat-name/.cat-edit-btn/
+   .cat-top-right sont réutilisées telles quelles depuis Catégories. */
+.bcard { cursor: pointer; }
+.bcard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
 
-/* Ring */
+.bstatus { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.bstatus-over  { color: #ef4444; }
+.bstatus-warn  { color: #f59e0b; }
+.bstatus-ok    { color: #10b981; }
+.bstatus-none  { color: var(--text-muted); font-weight: 600; }
+
+.bcard-bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.bcard-bar-fill { height: 8px; border-radius: 4px; transition: width 0.4s; }
+
+.bcard-amounts { display: flex; align-items: baseline; gap: 6px; }
+.bcard-spent { font-size: 26px; font-weight: 900; line-height: 1; }
+.bcard-planned-text { font-size: 12px; color: var(--text-muted); }
+
+/* Ring — utilisé par la vue détail (Budget._ring), pas par les cartes de la liste. */
 .bcard-ring {
   border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -1450,47 +1458,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   border-radius: 50%; background: var(--surface);
   display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text);
 }
-
-.bcard-top { display: flex; align-items: center; gap: 12px; }
-.bcard-meta { flex: 1; min-width: 0; }
-.bcard-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bcard-period { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-.bcard-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
-.bcard:hover .bcard-actions { opacity: 1; }
-.bcard-btn {
-  width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border);
-  background: var(--surface); cursor: pointer; font-size: 13px;
-  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
-}
-.bcard-btn:hover { background: var(--surface-alt); }
-.bcard-btn-del { color: #ef4444; font-size: 16px; font-weight: 700; }
-.bcard-btn-del:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
-
-.bcard-amounts { display: flex; align-items: baseline; gap: 6px; }
-.bcard-spent { font-size: 26px; font-weight: 900; line-height: 1; }
-.bcard-planned-text { font-size: 13px; color: var(--text-muted); }
-
-.bcard-bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.bcard-bar-fill { height: 8px; border-radius: 4px; transition: width 0.4s; }
-
-.bcard-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
-.bcard-remain { font-size: 12px; font-weight: 600; color: #10b981; }
-.bcard-remain-low { color: #f59e0b; }
-.bcard-over { font-size: 12px; font-weight: 700; color: #ef4444; }
-.bcard-trend { font-size: 11px; font-weight: 600; }
-.bcard-trend.positive { color: #10b981; }
-.bcard-trend.negative { color: #ef4444; }
-
-/* Ghost add card */
-.bcard-ghost {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  border: 2px dashed var(--border); border-radius: 14px;
-  min-height: 150px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-  color: var(--text-muted);
-}
-.bcard-ghost:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
-.bcard-ghost-icon { font-size: 28px; line-height: 1; }
-.bcard-ghost-label { font-size: 13px; font-weight: 600; }
 
 /* ─── Detail hero ─── */
 .budget-detail-hero {
@@ -2592,7 +2559,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 
         <!-- List view -->
         <div id="budget-list-view">
-          <div id="budget-overview-bar" class="budget-overview-bar"></div>
+          <div id="budget-overview-bar" class="kpi-grid-4"></div>
           <div id="budget-cards-grid" class="budget-cards-grid"></div>
           <div id="budget-empty" class="empty-state hidden">
             <p>Aucun budget. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
@@ -6127,22 +6094,21 @@ const Budget = {
     return this._plannedForRange(theme.monthlyAmount || 0, start, end, theme.startDate);
   },
 
-  _prevPeriod() {
-    const s = PeriodFilter.get();
-    if (s.type !== 'month') return null;
-    const [y, m] = s.month.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    const pm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return { start: `${pm}-01`, end: `${pm}-${String(last).padStart(2, '0')}` };
+  // Éclaircit une couleur hex vers le blanc (facteur 0..1) — dérive le 2e stop du dégradé du
+  // ruban (--cat-bar) à partir de l'unique couleur du budget (theme.color).
+  _lighten(hex, pct) {
+    const c = parseInt(hex.slice(1), 16);
+    const mix = (shift) => { const v = (c >> shift) & 255; return Math.round(v + (255 - v) * pct); };
+    return '#' + [mix(16), mix(8), mix(0)].map(v => v.toString(16).padStart(2, '0')).join('');
   },
 
-  _prevMonthLabel() {
-    const s = PeriodFilter.get();
-    if (s.type !== 'month') return 'péri. préc.';
-    const [y, m] = s.month.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    return ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][d.getMonth()];
+  // Dépassé / Proche limite / Dans le budget — même statut pour le texte et la barre de
+  // progression de la carte (couleur, libellé), selon % consommé de la période active.
+  _status(planned, pct) {
+    if (planned <= 0) return { label: 'Aucun prévu', cls: 'bstatus-none', color: 'var(--text-muted)' };
+    if (pct >= 100) return { label: 'Dépassé', cls: 'bstatus-over', color: '#ef4444' };
+    if (pct >= 80) return { label: 'Proche limite', cls: 'bstatus-warn', color: '#f59e0b' };
+    return { label: 'Dans le budget', cls: 'bstatus-ok', color: '#10b981' };
   },
 
   _ring(pct, color, size = 64) {
@@ -6172,9 +6138,6 @@ const Budget = {
     const { start, end } = PeriodFilter.getDateRange();
     const allExpenses = Storage.getExpenses();
     const expenses   = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
-    const prev       = this._prevPeriod();
-    const prevExp    = prev ? allExpenses.filter(e => Utils.getExpenseDate(e) >= prev.start && Utils.getExpenseDate(e) <= prev.end) : [];
-    const prevLabel  = this._prevMonthLabel();
 
     const overviewBar = document.getElementById('budget-overview-bar');
     const cardsGrid   = document.getElementById('budget-cards-grid');
@@ -6198,96 +6161,61 @@ const Budget = {
       return pl > 0 && sp > pl;
     }).length;
     const globalPct = totalPlanned > 0 ? Math.min(100, totalSpent / totalPlanned * 100) : 0;
-    const globalColor = globalPct >= 100 ? '#ef4444' : globalPct >= 80 ? '#f59e0b' : '#10b981';
 
+    // KPI overview — 4 cartes façon Flux (bande dégradée en haut, pas d'icône).
     if (overviewBar) {
       overviewBar.innerHTML = `
-        <div class="bov-items">
-          <div class="bov-item">
-            <div class="bov-val">${Utils.formatCurrency(totalPlanned)}</div>
-            <div class="bov-label">Budget total</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val" style="color:#ef4444">${Utils.formatCurrency(totalSpent)}</div>
-            <div class="bov-label">Dépensé</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val ${totalRemain >= 0 ? 'positive' : 'negative'}">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
-            <div class="bov-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
-          </div>
-          <div class="bov-divider"></div>
-          <div class="bov-item">
-            <div class="bov-val ${overCount > 0 ? 'negative' : 'positive'}">${overCount}</div>
-            <div class="bov-label">Dépassement${overCount !== 1 ? 's' : ''}</div>
-          </div>
+        <div class="kpi-card budget-kpi-card bkpi-total">
+          <div class="kpi-label">Budget total</div>
+          <div class="kpi-value">${Utils.formatCurrency(totalPlanned)}</div>
+          <div class="kpi-sub">Prévu · ${PeriodFilter.getLabel()}</div>
         </div>
-        <div class="bov-progress-track">
-          <div class="bov-progress-fill" style="width:${globalPct.toFixed(1)}%;background:${globalColor}"></div>
-          <span class="bov-progress-label">${globalPct.toFixed(0)}% du budget global utilisé</span>
+        <div class="kpi-card budget-kpi-card bkpi-spent">
+          <div class="kpi-label">Dépensé</div>
+          <div class="kpi-value">${Utils.formatCurrency(totalSpent)}</div>
+          <div class="kpi-sub">${globalPct.toFixed(0)}% du budget</div>
+        </div>
+        <div class="kpi-card budget-kpi-card bkpi-remain">
+          <div class="kpi-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
+          <div class="kpi-value">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
+          <div class="kpi-sub">${totalRemain >= 0 ? 'Encore disponible' : 'Au-dessus du prévu'}</div>
+        </div>
+        <div class="kpi-card budget-kpi-card bkpi-over">
+          <div class="kpi-label">Dépassements</div>
+          <div class="kpi-value">${overCount}</div>
+          <div class="kpi-sub">Catégorie${overCount !== 1 ? 's' : ''} au-dessus</div>
         </div>`;
     }
 
-    // Cards
+    // Cards — même carcasse visuelle que les cartes de Catégories (ruban --cat-bar dérivé de
+    // la couleur du budget, icône de la catégorie, coins arrondis) ; statut/barre en couleur
+    // rouge/orange/vert selon % consommé.
     if (cardsGrid) {
       cardsGrid.innerHTML = themes.map(theme => {
         const spent   = this._computeSpent(theme, expenses);
         const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
         const color   = theme.color || '#6366f1';
-        const statusColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#10b981';
-        const remaining   = planned - spent;
-        const overBudget  = planned > 0 && spent > planned;
+        const icon    = Categories._meta(theme.name).icon;
+        const status  = this._status(planned, pct);
+        const vars    = `--cat-bar:linear-gradient(90deg,${color},${this._lighten(color, 0.35)})`;
 
-        let trendHtml = '';
-        if (prev) {
-          const prevSpent = this._computeSpent(theme, prevExp);
-          if (prevSpent > 0) {
-            const dp = Math.round((spent - prevSpent) / prevSpent * 100);
-            trendHtml = dp > 0
-              ? `<span class="bcard-trend negative">↑ +${dp}% vs ${prevLabel}</span>`
-              : dp < 0
-              ? `<span class="bcard-trend positive">↓ ${dp}% vs ${prevLabel}</span>`
-              : `<span class="bcard-trend">= vs ${prevLabel}</span>`;
-          }
-        }
-
-        const remainText = overBudget
-          ? `<span class="bcard-over">⚠ +${Utils.formatCurrency(spent - planned)}</span>`
-          : planned > 0
-          ? `<span class="bcard-remain ${remaining < planned * 0.2 ? 'bcard-remain-low' : ''}">${Utils.formatCurrency(remaining)} restants</span>`
-          : `<span style="color:var(--text-muted);font-size:11px">Aucun montant prévu</span>`;
-
-        return `<div class="bcard${overBudget ? ' bcard-over-budget' : ''}" onclick="Budget.showDetail('${theme.id}')">
-          <div class="bcard-top">
-            ${this._ring(pct, color)}
-            <div class="bcard-meta">
-              <div class="bcard-name">${theme.name}</div>
-              <div class="bcard-period">${PeriodFilter.getLabel()}</div>
-            </div>
-            <div class="bcard-actions">
-              <button class="bcard-btn" onclick="event.stopPropagation();Budget.openEditForm('${theme.id}')" title="Modifier">✏️</button>
-              <button class="bcard-btn bcard-btn-del" onclick="event.stopPropagation();Budget.deleteTheme('${theme.id}')" title="Supprimer">×</button>
+        return `<div class="category-card bcard" style="${vars}" onclick="Budget.showDetail('${theme.id}')">
+          <div class="bcard-head">
+            <div class="cat-left"><div class="cat-icon">${icon}</div><span class="cat-name">${theme.name}</span></div>
+            <div class="cat-top-right">
+              <span class="bstatus ${status.cls}">${status.label}</span>
+              <button class="cat-edit-btn" onclick="event.stopPropagation();Budget.openEditForm('${theme.id}')" title="Modifier">✏️</button>
             </div>
           </div>
+          <div class="bcard-bar-track"><div class="bcard-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${status.color}"></div></div>
           <div class="bcard-amounts">
-            <span class="bcard-spent" style="color:${overBudget ? '#ef4444' : color}">${Utils.formatCurrency(spent)}</span>
-            <span class="bcard-planned-text">/ ${Utils.formatCurrency(planned)}</span>
-          </div>
-          <div class="bcard-bar-track">
-            <div class="bcard-bar-fill" style="width:${Math.min(100, pct).toFixed(1)}%;background:${statusColor}"></div>
-          </div>
-          <div class="bcard-footer">
-            ${remainText}
-            ${trendHtml}
+            <span class="bcard-spent" style="color:${status.color}">${Utils.formatCurrency(spent)}</span>
+            <span class="bcard-planned-text">sur ${Utils.formatCurrency(planned)} · ${Math.round(pct)}%</span>
           </div>
         </div>`;
       }).join('') + `
-        <div class="bcard-ghost" onclick="Budget.openAddForm()">
-          <div class="bcard-ghost-icon">+</div>
-          <div class="bcard-ghost-label">Nouveau budget</div>
-        </div>`;
+        <div class="category-card card-new" onclick="Budget.openAddForm()"><div class="new-plus">＋</div><span class="new-label">Nouveau budget</span></div>`;
     }
   },
 
@@ -6529,6 +6457,7 @@ const Budget = {
           <div class="color-picker-row">${this._colorPicker(theme.color || this._THEME_COLORS[0])}</div></div>
       </div>
       <div class="form-actions">
+        <button type="button" class="btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="Budget.deleteTheme('${theme.id}')">🗑 Supprimer</button>
         <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button type="submit" class="btn-primary">Enregistrer</button>
       </div></form>`;
@@ -6582,6 +6511,7 @@ const Budget = {
     if (!confirm('Supprimer ce budget ?')) return;
     Storage.saveBudgetThemes(Storage.getBudgetThemes().filter(t => t.id !== id));
     this._currentThemeId = null;
+    Modal.close();
     this.showList();
   },
 
