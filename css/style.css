@@ -76,7 +76,9 @@ input:focus:not(:focus-visible) { outline: none; }
 }
 
 .mode-btn {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   padding: 9px 13px;
   margin-bottom: 3px;
@@ -87,14 +89,18 @@ input:focus:not(:focus-visible) { outline: none; }
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background .15s, color .15s, box-shadow .15s;
   text-align: left;
   white-space: nowrap;
   box-sizing: border-box;
 }
 .mode-btn:last-child { margin-bottom: 0; }
 .mode-btn:hover { background: var(--sidebar-hover); color: var(--text); }
-.mode-btn.active { background: var(--sidebar-active); color: #fff; }
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(108,99,255,0.4);
+}
 
 /* ---- Sidebar section divider ---- */
 .nav-divider {
@@ -111,7 +117,20 @@ input:focus:not(:focus-visible) { outline: none; }
   padding: 6px 12px 4px;
 }
 
-.logo-icon { font-size: 22px; }
+.logo-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgba(108,99,255,0.4);
+  flex-shrink: 0;
+}
 
 .sidebar-nav { flex: 1; padding: 14px 10px; }
 
@@ -129,8 +148,21 @@ input:focus:not(:focus-visible) { outline: none; }
   margin-bottom: 3px;
 }
 .nav-item:hover { background: var(--sidebar-hover); color: var(--text); }
-.nav-item.active { background: var(--sidebar-active); color: #fff; font-weight: 600; }
-.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item.active {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(108,99,255,0.4);
+}
+.mode-icon, .nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.mode-icon svg, .nav-icon svg { width: 100%; height: 100%; }
 
 .sidebar-footer {
   padding: 12px 10px;
