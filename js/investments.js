@@ -1,128 +1,259 @@
 const Investments = {
-  _currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
+  _currentAccount: null, // compte actif de l'onglet compte courant, ex: 'pea'
+  _evoWindow: 12,         // fenêtre (en mois) de la courbe d'évolution ; 0 = tout l'historique
+
+  // ---------- Vue globale ----------
 
   renderPortfolio() {
     const investments = Storage.getInvestments();
-    this._renderPortfolioKpis(investments);
-    Charts.portfolioAllocation(investments);
-    Charts.investmentsByAccount(investments);
-    this._renderTopPositions(investments);
-    this._renderPerformers(investments);
+    this._recordSnapshot(investments);
+    this._renderGlobalKpis(investments);
+    this._renderAllocation(investments);
+    this._renderEvolution();
   },
 
-  _renderPortfolioKpis(investments) {
+  // Un point par jour (écrasé si on revisite le même jour) : construit progressivement
+  // l'historique de valeur du portefeuille au fil des visites, sans jamais inventer de données
+  // passées qu'on n'a pas.
+  _recordSnapshot(investments) {
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const history = Storage.getPortfolioHistory();
+    const idx = history.findIndex(h => h.date === dateStr);
+    if (idx >= 0) history[idx].value = totalValue;
+    else history.push({ date: dateStr, value: totalValue });
+    history.sort((a, b) => a.date.localeCompare(b.date));
+    Storage.savePortfolioHistory(history);
+  },
+
+  _renderGlobalKpis(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     const totalCost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
     const gain = totalValue - totalCost;
     const gainPct = totalCost > 0 ? (gain / totalCost * 100) : 0;
-    const count = investments.length;
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('port-total-value', Utils.formatCurrency(totalValue));
-    set('port-total-cost',  Utils.formatCurrency(totalCost));
-    set('port-count',       count + ' position' + (count !== 1 ? 's' : ''));
-    const gainEl = document.getElementById('port-total-gain');
-    if (gainEl) {
-      gainEl.textContent = (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain);
-      gainEl.className   = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
+    set('inv-kpi-value', Utils.formatCurrency(totalValue));
+    set('inv-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
+    set('inv-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+
+    const annualReturn = this._annualizedReturn(investments);
+    set('inv-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
+
+    const avgMonthly = this._avgMonthlyContribution(investments);
+    set('inv-kpi-avg', avgMonthly === null ? '—' : Utils.formatCurrency(avgMonthly));
+
+    const series = this._evolutionSeries(this._evoWindow);
+    const trendEl = document.getElementById('inv-kpi-value-trend');
+    if (trendEl) {
+      if (series.length >= 2 && series[0].value > 0) {
+        const pct = (series[series.length - 1].value - series[0].value) / series[0].value * 100;
+        trendEl.textContent = `${Utils.formatPercent(pct)} sur ${this._windowLabel()}`;
+        trendEl.className = 'kpi-sub ' + (pct >= 0 ? 'positive' : 'negative');
+      } else {
+        trendEl.textContent = '';
+        trendEl.className = 'kpi-sub';
+      }
     }
-    const gainPctEl = document.getElementById('port-total-gain-pct');
-    if (gainPctEl) gainPctEl.textContent = Utils.formatPercent(gainPct);
-    const gainCard = document.getElementById('port-gain-card');
-    if (gainCard) gainCard.className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
   },
 
-  _renderTopPositions(investments) {
-    const container = document.getElementById('port-top-positions');
-    if (!container) return;
-    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
+  _renderAllocation(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
-    if (!sorted.length) { container.innerHTML = '<p class="text-muted">Aucune position</p>'; return; }
-    container.innerHTML = sorted.map(inv => {
-      const value = inv.quantity * inv.currentPrice;
-      const pct   = totalValue > 0 ? (value / totalValue * 100) : 0;
-      const gain  = value - inv.quantity * inv.buyPrice;
-      const gainCls = gain >= 0 ? 'positive' : 'negative';
-      const acColor = Utils.ACCOUNT_COLORS[inv.account] || '#6b7280';
-      return `<div class="port-position-row">
-        <div class="port-pos-dot" style="background:${acColor}"></div>
-        <div class="port-pos-info">
-          <strong>${inv.name}</strong>${inv.ticker ? ` <small class="text-muted">${inv.ticker}</small>` : ''}
-          <div class="port-pos-bar-wrap"><div class="port-pos-bar" style="width:${Math.min(pct,100)}%"></div></div>
-        </div>
-        <div class="port-pos-right">
-          <div>${Utils.formatCurrency(value)}</div>
-          <div class="${gainCls}" style="font-size:12px">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</div>
-        </div>
-        <div class="port-pos-actions">
-          <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
-          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
-        </div>
+    const byAccount = {};
+    investments.forEach(inv => {
+      const acc = inv.account || 'autre';
+      byAccount[acc] = (byAccount[acc] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const entries = Object.entries(byAccount).map(([acc, value]) => ({
+      label: Utils.INVESTMENT_ACCOUNTS[acc] || acc,
+      value,
+      color: Utils.ACCOUNT_COLORS[acc] || '#6b7280',
+    }));
+    Charts.investmentsByAccount(investments, () => [
+      { text: 'Total', font: '600 11px -apple-system, sans-serif', color: '#9497b8' },
+      { text: Utils.formatCurrency(totalValue), font: '800 14px -apple-system, sans-serif', color: '#ffffff' },
+    ]);
+    this._renderLegend('port-alloc-legend', entries);
+  },
+
+  // entries: [{label, value, color}] — légende verticale pastille/nom/montant/%, partagée par
+  // la Vue globale (répartition par compte) et les onglets compte (répartition par position).
+  _renderLegend(containerId, entries) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!entries.length) { container.innerHTML = '<p class="text-muted">Aucune donnée</p>'; return; }
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    container.innerHTML = entries.map(e => {
+      const pct = total > 0 ? (e.value / total * 100) : 0;
+      return `<div class="port-legend-item">
+        <span class="pl-dot" style="background:${e.color}"></span>
+        <span class="pl-name">${e.label}</span>
+        <span class="pl-amount">${Utils.formatCurrency(e.value)}</span>
+        <span class="pl-pct">${pct.toFixed(0)}%</span>
       </div>`;
     }).join('');
   },
 
-  _renderPerformers(investments) {
-    const withPerf = investments.map(inv => ({
-      ...inv,
-      perf: inv.buyPrice > 0 ? (inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100 : 0,
-    })).sort((a, b) => b.perf - a.perf);
-
-    const best  = withPerf.slice(0, 3);
-    const worst = withPerf.slice(-3).reverse();
-
-    const render = (list, containerId, colorFn) => {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      if (!list.length) { el.innerHTML = '<p class="text-muted" style="padding:8px 0">-</p>'; return; }
-      el.innerHTML = list.map(inv => `
-        <div class="performer-row">
-          <div class="performer-name">${inv.ticker || inv.name}</div>
-          <div class="performer-perf ${colorFn(inv.perf)}">${inv.perf >= 0 ? '+' : ''}${Utils.formatPercent(inv.perf)}</div>
-        </div>`).join('');
-    };
-    render(best,  'port-best',  p => p >= 0 ? 'positive' : 'negative');
-    render(worst, 'port-worst', p => p >= 0 ? 'positive' : 'negative');
+  setEvoWindow(months) {
+    this._evoWindow = parseInt(months, 10) || 0;
+    this._renderGlobalKpis(Storage.getInvestments());
+    this._renderEvolution();
   },
 
-  renderPositions() {
-    const investments = Storage.getInvestments();
-    this._renderAccountPills(investments);
-    this._renderPositionsTable(investments);
+  _windowLabel() {
+    return this._evoWindow === 0 ? 'tout' : `${this._evoWindow} mois`;
   },
 
-  _renderAccountPills(investments) {
-    const container = document.getElementById('positions-account-pills');
-    if (!container) return;
-    const accounts = [...new Set(investments.map(i => i.account || 'autre'))];
-    const allBtn = `<button class="account-pill ${!this._currentAccount ? 'active' : ''}" onclick="Investments.setAccount(null)">Tous</button>`;
-    const pills  = accounts.map(acc => {
-      const label = Utils.INVESTMENT_ACCOUNTS[acc] || acc;
-      const color = Utils.ACCOUNT_COLORS[acc] || '#6b7280';
-      const active = this._currentAccount === acc ? 'active' : '';
-      return `<button class="account-pill ${active}" style="${active ? `background:${color};border-color:${color}` : `border-color:${color};color:${color}`}" onclick="Investments.setAccount('${acc}')">${label}</button>`;
+  _lastNMonths(n) {
+    const months = [];
+    const now = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return months;
+  },
+
+  _monthRange(fromMonth, toMonth) {
+    const months = [];
+    let [y, m] = fromMonth.split('-').map(Number);
+    const [ty, tm] = toMonth.split('-').map(Number);
+    while (y < ty || (y === ty && m <= tm)) {
+      months.push(`${y}-${String(m).padStart(2, '0')}`);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return months;
+  },
+
+  // Une valeur par mois (dernier point connu au plus tard à la fin de ce mois) : jamais de mois
+  // "vide" à 0 avant le tout premier point réellement enregistré.
+  _evolutionSeries(windowMonths) {
+    const history = Storage.getPortfolioHistory();
+    if (!history.length) return [];
+    const firstMonth = history[0].date.slice(0, 7);
+    const currentMonth = Utils.getCurrentMonth();
+    let months = windowMonths > 0 ? this._lastNMonths(windowMonths) : this._monthRange(firstMonth, currentMonth);
+    months = months.filter(m => m >= firstMonth);
+    return months.map(m => {
+      const upTo = history.filter(h => h.date.slice(0, 7) <= m);
+      if (!upTo.length) return null;
+      return { month: m, label: Utils.getMonthLabel(m), value: upTo[upTo.length - 1].value };
+    }).filter(Boolean);
+  },
+
+  _renderEvolution() {
+    const series = this._evolutionSeries(this._evoWindow);
+    Charts.portfolioEvolution(series);
+    const trendEl = document.getElementById('inv-evo-trend');
+    if (!trendEl) return;
+    if (series.length < 2) { trendEl.textContent = ''; trendEl.className = 'inv-evo-trend'; return; }
+    const delta = series[series.length - 1].value - series[0].value;
+    const arrow = delta >= 0 ? '↑' : '↓';
+    trendEl.textContent = `${arrow} ${delta >= 0 ? '+' : '-'}${Utils.formatCurrency(Math.abs(delta))} sur ${this._windowLabel()}`;
+    trendEl.className = 'inv-evo-trend ' + (delta >= 0 ? 'positive' : 'negative');
+  },
+
+  // ---------- Rendement / versements (dérivés des positions, pas de l'historique) ----------
+
+  // Rendement annualisé pondéré — estimation simple (PAS un XIRR), affichée en "estimé" dans
+  // l'UI. Ignore les positions sans date d'achat (durée de détention inconnue) ; plancher de
+  // 30 jours pour éviter qu'un achat très récent explose le résultat une fois annualisé.
+  _annualizedReturn(investments) {
+    const now = new Date();
+    let costSum = 0, weightedSum = 0;
+    investments.forEach(inv => {
+      if (!inv.buyDate || !inv.buyPrice) return;
+      const cost = inv.quantity * inv.buyPrice;
+      if (cost <= 0) return;
+      const days = Math.max((now - new Date(inv.buyDate + 'T00:00:00')) / 86400000, 30);
+      const gainPct = (inv.currentPrice - inv.buyPrice) / inv.buyPrice;
+      costSum += cost;
+      weightedSum += cost * gainPct * (365 / days);
     });
-    container.innerHTML = allBtn + pills.join('');
+    return costSum > 0 ? (weightedSum / costSum * 100) : null;
   },
 
-  _renderPositionsTable(investments) {
-    const filtered = this._currentAccount
-      ? investments.filter(i => (i.account || 'autre') === this._currentAccount)
-      : investments;
+  // Total investi / mois écoulés depuis le plus ancien achat daté — proxy simple, pas un calcul
+  // de flux de versements récurrents.
+  _avgMonthlyContribution(investments) {
+    const withDate = investments.filter(i => i.buyDate);
+    if (!withDate.length) return null;
+    const totalCost = withDate.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const earliest = withDate.reduce((min, i) => (i.buyDate < min ? i.buyDate : min), withDate[0].buyDate);
+    const months = Math.max((new Date() - new Date(earliest + 'T00:00:00')) / (86400000 * 30.44), 1);
+    return totalCost / months;
+  },
 
+  // ---------- Onglet par compte ----------
+
+  renderAccountTab(account) {
+    if (account) this._currentAccount = account;
+    const acc = this._currentAccount;
+    if (!acc) return;
+    const all = Storage.getInvestments();
+    const accInvestments = all.filter(i => (i.account || 'autre') === acc);
+    const totalValue = all.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+
+    this._renderAccountHeader(acc);
+    this._renderAccountKpis(accInvestments, totalValue);
+    this._renderAccountAllocation(accInvestments);
+    this._renderAccountTable(accInvestments);
+  },
+
+  _isAssuranceVie(acc) { return acc === 'assurance_vie'; },
+
+  _renderAccountHeader(acc) {
+    const label = Utils.INVESTMENT_ACCOUNTS[acc] || acc;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('inv-acc-title', label);
+    set('inv-acc-kpi-value-label', this._isAssuranceVie(acc) ? 'Valeur du contrat' : 'Valeur du compte');
+    set('inv-acc-alloc-title', this._isAssuranceVie(acc) ? 'Répartition du contrat' : 'Répartition');
+    set('inv-acc-pos-title', this._isAssuranceVie(acc) ? 'Supports détenus' : 'Positions détenues');
+    set('inv-acc-th-asset', this._isAssuranceVie(acc) ? 'Support' : 'Actif');
+  },
+
+  _renderAccountKpis(investments, totalPortfolioValue) {
+    const value = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const cost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const gain  = value - cost;
+    const gainPct = cost > 0 ? (gain / cost * 100) : 0;
+    const pctOfPortfolio = totalPortfolioValue > 0 ? (value / totalPortfolioValue * 100) : 0;
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('inv-acc-kpi-value', Utils.formatCurrency(value));
+    set('inv-acc-kpi-value-sub', investments.length ? `${pctOfPortfolio.toFixed(0)}% du portefeuille` : '');
+    set('inv-acc-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
+    set('inv-acc-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+    const annualReturn = this._annualizedReturn(investments);
+    set('inv-acc-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
+    set('inv-acc-kpi-cost', Utils.formatCurrency(cost));
+  },
+
+  _renderAccountAllocation(investments) {
+    Charts.accountAllocation(investments);
+    const entries = investments.map((inv, i) => ({
+      label: inv.name,
+      value: inv.quantity * inv.currentPrice,
+      color: Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length],
+    }));
+    this._renderLegend('port-acc-alloc-legend', entries);
+  },
+
+  _renderAccountTable(investments) {
     const tbody  = document.getElementById('positions-tbody');
     const empty  = document.getElementById('positions-empty');
     const search = (document.getElementById('pos-search')?.value || '').toLowerCase();
     const typeFilter = document.getElementById('pos-filter-type')?.value || '';
 
-    let list = filtered;
+    let list = investments;
     if (search)     list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
     if (typeFilter) list = list.filter(i => i.type === typeFilter);
 
     if (!list.length) { if (tbody) tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
     if (empty) empty.classList.add('hidden');
 
-    const totalValue = filtered.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
 
     tbody.innerHTML = list.map(inv => {
       const value   = inv.quantity * inv.currentPrice;
@@ -131,14 +262,11 @@ const Investments = {
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
       const pct     = totalValue > 0 ? (value / totalValue * 100) : 0;
       const cls     = gain >= 0 ? 'positive' : 'negative';
-      const acColor = Utils.ACCOUNT_COLORS[inv.account || 'autre'] || '#6b7280';
       const barW    = Math.min(Math.abs(gainPct) / 30 * 100, 100);
       const barCol  = gain >= 0 ? '#10b981' : '#ef4444';
-      const accLabel = Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account || 'Autre';
       return `<tr>
         <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
-        <td><span class="account-dot" style="background:${acColor}"></span>${accLabel}</td>
         <td>${inv.quantity}</td>
         <td>${Utils.formatCurrency(inv.buyPrice)}</td>
         <td>${Utils.formatCurrency(inv.currentPrice)}</td>
@@ -158,10 +286,7 @@ const Investments = {
     }).join('');
   },
 
-  setAccount(account) {
-    this._currentAccount = account;
-    this.renderPositions();
-  },
+  // ---------- CRUD ----------
 
   openAddForm() { Modal.open('Ajouter un investissement', this._form(null)); },
 
@@ -216,16 +341,23 @@ const Investments = {
     else list.push(data);
     Storage.saveInvestments(list);
     Modal.close();
-    this.renderPortfolio();
-    this.renderPositions();
-    Dashboard.render();
+    this._refreshCurrentView();
   },
 
   delete(id) {
     if (!confirm('Supprimer cet investissement ?')) return;
     Storage.saveInvestments(Storage.getInvestments().filter(i => i.id !== id));
-    this.renderPortfolio();
-    this.renderPositions();
+    this._refreshCurrentView();
+  },
+
+  // Reflète l'ajout/modification/suppression sur la vue actuellement affichée (Vue globale ou
+  // un onglet compte), et rafraîchit les onglets du haut (un compte peut apparaître/disparaître
+  // selon qu'il a encore des positions) + le Dashboard (valorisation du portefeuille).
+  _refreshCurrentView() {
+    const portfolioVisible = !document.getElementById('section-portfolio')?.classList.contains('hidden');
+    if (portfolioVisible) this.renderPortfolio();
+    else if (this._currentAccount) this.renderAccountTab();
+    renderModeTabs(currentMode, portfolioVisible ? 'portfolio' : `account-${this._currentAccount}`);
     Dashboard.render();
   },
 };

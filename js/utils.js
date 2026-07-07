@@ -124,15 +124,6 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
-  TYPE_COLORS: {
-    action: '#6366f1',
-    etf: '#8b5cf6',
-    crypto: '#ec4899',
-    immobilier: '#f59e0b',
-    obligations: '#10b981',
-    autre: '#6b7280',
-  },
-
   CATEGORY_COLORS: [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
     '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',

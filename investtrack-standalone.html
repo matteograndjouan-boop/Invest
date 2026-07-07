@@ -418,6 +418,11 @@ input:focus:not(:focus-visible) { outline: none; }
 /* ---- Charts ---- */
 .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 .charts-grid-single { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+/* Onglets compte Investissements : répartition (donut étroit) / positions détenues (table
+   large) — ratio fixe plutôt que 1fr 1fr, sinon le tableau pousse la colonne bien au-delà de
+   50% selon le nombre de positions. */
+.charts-grid-inv-acc { grid-template-columns: minmax(280px, 38%) 1fr; }
+@media (max-width: 1100px) { .charts-grid-inv-acc { grid-template-columns: 1fr; } }
 
 .chart-card {
   background: var(--surface);
@@ -1453,6 +1458,16 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .bkpi-remain::before { background: linear-gradient(90deg, #00b37e, #4ade80); }
 .bkpi-over::before   { background: linear-gradient(90deg, #e53e3e, #fc8181); }
 
+/* KPI Investissements (Vue globale + onglets compte) : même carcasse que .budget-kpi-card. */
+.inv-kpi-card { background: var(--bg); border-left-color: transparent !important; }
+.inv-kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.ikpi-value::before  { background: linear-gradient(90deg, #6c63ff, #a09bff); }
+.ikpi-gain::before   { background: linear-gradient(90deg, #00b37e, #4ade80); }
+.ikpi-return::before { background: linear-gradient(90deg, #06b6d4, #67e8f9); }
+.ikpi-avg::before    { background: linear-gradient(90deg, #d97706, #fbbf24); }
+
 /* Cards grid — grille fixe à 4 colonnes, comme l'onglet Catégories. */
 .budget-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }
 @media (max-width: 1100px) { .budget-cards-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -1534,64 +1549,40 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 
 /* ---- Investment Portfolio ---- */
-.port-bottom-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-.port-position-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-.port-position-row:last-child { border-bottom: none; }
-.port-position-rank {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-.port-position-info { flex: 1; min-width: 0; }
-.port-position-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.port-position-meta { margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap; }
-.port-position-right { text-align: right; flex-shrink: 0; }
-.port-position-value { font-weight: 700; font-size: 13px; }
-.port-position-gain { font-size: 11px; }
 
-.port-performer-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
+/* Anneau donut + légende verticale (pastille/nom/montant/%), empilés — Vue globale (par
+   compte) et onglets compte (par position), voir Investments._renderLegend. */
+.port-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.port-donut-wrap .chart-container { width: 100%; max-width: 220px; }
+.port-legend { width: 100%; display: flex; flex-direction: column; gap: 2px; }
+.port-legend-item { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.port-legend-item:last-child { border-bottom: none; }
+.pl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pl-name { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-amount { font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.pl-pct { font-size: 11px; font-weight: 600; color: var(--text-muted); width: 34px; text-align: right; flex-shrink: 0; }
+
+/* Tendance affichée à droite du titre "Évolution du patrimoine" (card-header-row). */
+.inv-evo-trend { font-size: 12px; font-weight: 700; }
+.inv-evo-trend.positive { color: var(--success); }
+.inv-evo-trend.negative { color: var(--danger); }
+
+/* Pilule de sélection de fenêtre (Vue globale, "12 derniers mois ▾"). */
+.inv-period-select { border-radius: 999px; padding: 7px 14px; font-weight: 600; }
+
+/* Bouton d'ajout circulaire (+), header des pages Investissements. */
+.fab-add {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border: none; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: #fff; font-size: 20px; line-height: 1; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 4px 14px rgba(108,99,255,0.4);
+  transition: transform .15s, box-shadow .15s;
 }
-.port-performer-row:last-child { border-bottom: none; }
-.port-performer-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-.port-performer-right { text-align: right; flex-shrink: 0; }
-.port-performer-pct { font-size: 14px; font-weight: 700; }
-.port-performer-val { font-size: 11px; color: var(--text-muted); }
+.fab-add:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(108,99,255,0.5); }
 
 /* ---- Positions table ---- */
-.account-pills { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-.account-pill {
-  padding: 5px 16px;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
-}
-.account-pill:hover { border-color: var(--primary); color: var(--primary); }
-.account-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .pos-perf-cell { display: flex; align-items: center; gap: 7px; }
 .pos-perf-bar-wrap {
   width: 52px; height: 5px;
@@ -1636,16 +1627,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 .budget-theme-card:hover .budget-card-delete { opacity: 1; }
 .budget-card-delete:hover { background: var(--danger); color: #fff; }
-
-/* ---- Portfolio position rows (new design) ---- */
-.port-pos-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.port-pos-info { flex: 1; min-width: 0; }
-.port-pos-info strong { font-size: 14px; }
-.port-pos-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
-.port-pos-bar { height: 4px; background: var(--primary); border-radius: 2px; transition: width 0.3s; }
-.port-pos-right { text-align: right; font-size: 13px; font-weight: 600; }
-.port-pos-actions { display: flex; gap: 2px; margin-left: 8px; opacity: 0; transition: opacity .15s; }
-.port-position-row:hover .port-pos-actions { opacity: 1; }
 
 /* ---- Mapping Wizard ---- */
 .mapping-wizard { display: flex; flex-direction: column; gap: 16px; }
@@ -1713,15 +1694,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .pdfz-handle-l { left: -6px; }
 .pdfz-handle-r { right: -6px; }
 
-/* ---- Performer rows (new design) ---- */
-.performer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
-.performer-row:last-child { border-bottom: none; }
-.performer-name { font-size: 13px; font-weight: 600; }
-.performer-perf { font-size: 13px; font-weight: 700; }
-
-/* ---- Account dot inline indicator ---- */
-.account-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
@@ -1730,7 +1702,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
   .dashboard-bottom-grid { grid-template-columns: 1fr; }
-  .port-bottom-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 860px) {
   .flux-donut-wrap { flex-direction: column; align-items: flex-start; }
@@ -2212,104 +2183,134 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
         </div>
       </section>
 
-      <!-- PORTFOLIO — Overview -->
+      <!-- PORTFOLIO — Vue globale -->
       <section class="section hidden" id="section-portfolio">
         <div class="section-header">
-          <h1>Portefeuille</h1>
-          <div style="display:flex;gap:0.5rem">
+          <h1>Vue globale</h1>
+          <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
-            <button class="btn-primary" onclick="Investments.openAddForm()">+ Ajouter</button>
+            <select id="inv-evo-window" class="select-input inv-period-select" onchange="Investments.setEvoWindow(this.value)">
+              <option value="3">3 derniers mois</option>
+              <option value="6">6 derniers mois</option>
+              <option value="12" selected>12 derniers mois</option>
+              <option value="24">24 derniers mois</option>
+              <option value="0">Tout</option>
+            </select>
+            <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card primary">
-            <div class="kpi-badge">◈</div>
-            <div class="kpi-label">Valeur totale</div>
-            <div class="kpi-value" id="port-total-value">0 €</div>
+          <div class="kpi-card inv-kpi-card ikpi-value">
+            <div class="kpi-label">Valeur du portefeuille</div>
+            <div class="kpi-value" id="inv-kpi-value">0 €</div>
+            <div class="kpi-sub" id="inv-kpi-value-trend"></div>
           </div>
-          <div class="kpi-card" id="port-gain-card">
-            <div class="kpi-badge">±</div>
-            <div class="kpi-label">Plus/Moins-value</div>
-            <div class="kpi-value" id="port-total-gain">+0 €</div>
-            <div class="kpi-sub" id="port-total-gain-pct">+0,00%</div>
+          <div class="kpi-card inv-kpi-card ikpi-gain">
+            <div class="kpi-label">Plus-value latente</div>
+            <div class="kpi-value" id="inv-kpi-gain">+0 €</div>
+            <div class="kpi-sub" id="inv-kpi-gain-pct"></div>
           </div>
-          <div class="kpi-card info">
-            <div class="kpi-badge">◎</div>
-            <div class="kpi-label">Investi</div>
-            <div class="kpi-value" id="port-total-cost">0 €</div>
+          <div class="kpi-card inv-kpi-card ikpi-return">
+            <div class="kpi-label">Rendement annuel</div>
+            <div class="kpi-value" id="inv-kpi-return">— %</div>
+            <div class="kpi-sub">Estimé net</div>
           </div>
-          <div class="kpi-card warning">
-            <div class="kpi-badge">≡</div>
-            <div class="kpi-label">Positions</div>
-            <div class="kpi-value" id="port-count">0</div>
+          <div class="kpi-card inv-kpi-card ikpi-avg">
+            <div class="kpi-label">Versement moyen</div>
+            <div class="kpi-value" id="inv-kpi-avg">0 €</div>
+            <div class="kpi-sub">Par mois</div>
           </div>
         </div>
         <div class="charts-grid">
           <div class="chart-card">
-            <h3>Répartition par type</h3>
-            <div class="chart-container"><canvas id="chart-portfolio-allocation"></canvas></div>
+            <h3>Allocation du patrimoine</h3>
+            <div class="port-donut-wrap">
+              <div class="chart-container" style="height:180px"><canvas id="chart-port-account"></canvas></div>
+              <div id="port-alloc-legend" class="port-legend"></div>
+            </div>
           </div>
           <div class="chart-card">
-            <h3>Répartition par compte</h3>
-            <div class="chart-container"><canvas id="chart-port-account"></canvas></div>
-          </div>
-        </div>
-        <div class="port-bottom-grid">
-          <div class="chart-card">
-            <h3>Positions</h3>
-            <div id="port-top-positions"></div>
-          </div>
-          <div class="chart-card">
-            <h3>Meilleures performances</h3>
-            <div id="port-best"></div>
-          </div>
-          <div class="chart-card">
-            <h3>Moins bonnes performances</h3>
-            <div id="port-worst"></div>
+            <div class="card-header-row">
+              <h3>Évolution du patrimoine</h3>
+              <span id="inv-evo-trend" class="inv-evo-trend"></span>
+            </div>
+            <div class="chart-container"><canvas id="chart-port-evolution"></canvas></div>
           </div>
         </div>
       </section>
 
-      <!-- POSITIONS — List -->
-      <section class="section hidden" id="section-positions">
+      <!-- PORTFOLIO — Onglet par compte (gabarit partagé, voir Investments.renderAccountTab) -->
+      <section class="section hidden" id="section-portfolio-account">
         <div class="section-header">
-          <h1>Positions</h1>
-          <button class="btn-primary" onclick="Investments.openAddForm()">+ Ajouter</button>
+          <h1 id="inv-acc-title">Compte</h1>
+          <div class="header-actions">
+            <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
+          </div>
         </div>
-        <div id="positions-account-pills" class="account-pills"></div>
-        <div class="card">
-          <div class="table-toolbar">
-            <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input" oninput="Investments.renderPositions()">
-            <select id="pos-filter-type" class="select-input" onchange="Investments.renderPositions()">
-              <option value="">Tous les types</option>
-              <option value="action">Actions</option>
-              <option value="etf">ETF</option>
-              <option value="crypto">Crypto</option>
-              <option value="immobilier">Immobilier</option>
-              <option value="obligations">Obligations</option>
-              <option value="autre">Autre</option>
-            </select>
+        <div class="kpi-grid-4">
+          <div class="kpi-card inv-kpi-card ikpi-value">
+            <div class="kpi-label" id="inv-acc-kpi-value-label">Valeur du compte</div>
+            <div class="kpi-value" id="inv-acc-kpi-value">0 €</div>
+            <div class="kpi-sub" id="inv-acc-kpi-value-sub"></div>
           </div>
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Nom / Ticker</th>
-                  <th>Type</th>
-                  <th>Compte</th>
-                  <th>Quantité</th>
-                  <th>Prix achat</th>
-                  <th>Prix actuel</th>
-                  <th>Valeur / %port.</th>
-                  <th>Perf. / +/-val.</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="positions-tbody"></tbody>
-            </table>
+          <div class="kpi-card inv-kpi-card ikpi-gain">
+            <div class="kpi-label">Plus-value</div>
+            <div class="kpi-value" id="inv-acc-kpi-gain">+0 €</div>
+            <div class="kpi-sub" id="inv-acc-kpi-gain-pct"></div>
           </div>
-          <div id="positions-empty" class="empty-state hidden">
-            <p>Aucune position. Cliquez sur <strong>+ Ajouter</strong> pour commencer.</p>
+          <div class="kpi-card inv-kpi-card ikpi-return">
+            <div class="kpi-label">Performance</div>
+            <div class="kpi-value" id="inv-acc-kpi-return">— %</div>
+            <div class="kpi-sub">Annualisée</div>
+          </div>
+          <div class="kpi-card inv-kpi-card ikpi-avg">
+            <div class="kpi-label">Total investi</div>
+            <div class="kpi-value" id="inv-acc-kpi-cost">0 €</div>
+            <div class="kpi-sub">Versements cumulés</div>
+          </div>
+        </div>
+        <div class="charts-grid charts-grid-inv-acc">
+          <div class="chart-card">
+            <h3 id="inv-acc-alloc-title">Répartition</h3>
+            <div class="port-donut-wrap">
+              <div class="chart-container" style="height:180px"><canvas id="chart-port-acc-alloc"></canvas></div>
+              <div id="port-acc-alloc-legend" class="port-legend"></div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3 id="inv-acc-pos-title">Positions détenues</h3>
+            <div class="table-toolbar">
+              <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input">
+              <select id="pos-filter-type" class="select-input">
+                <option value="">Tous les types</option>
+                <option value="action">Actions</option>
+                <option value="etf">ETF</option>
+                <option value="crypto">Crypto</option>
+                <option value="immobilier">Immobilier</option>
+                <option value="obligations">Obligations</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th id="inv-acc-th-asset">Actif</th>
+                    <th>Type</th>
+                    <th>Quantité</th>
+                    <th>Prix achat</th>
+                    <th>Prix actuel</th>
+                    <th>Valeur / %compte</th>
+                    <th>Perf. / +/-val.</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="positions-tbody"></tbody>
+              </table>
+            </div>
+            <div id="positions-empty" class="empty-state hidden">
+              <p>Aucune position dans ce compte. Cliquez sur <strong>+</strong> pour en ajouter une.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -2757,6 +2758,7 @@ const Storage = {
     CATEGORIES: 'invest_categories_v2',
     BUDGET_THEMES: 'invest_budgets_v2',
     DATE_MODE: 'invest_date_mode',
+    PORTFOLIO_HISTORY: 'invest_portfolio_history',
   },
 
   get(key) {
@@ -2778,6 +2780,12 @@ const Storage = {
 
   getInvestments() { return this.get(this.KEYS.INVESTMENTS) || []; },
   saveInvestments(data) { this.set(this.KEYS.INVESTMENTS, data); },
+
+  // Historique de la valeur totale du portefeuille : [{date:'YYYY-MM-DD', value}], un point par
+  // jour (écrasé si on revisite le même jour) — alimenté par Investments._recordSnapshot à chaque
+  // visite de la Vue globale, pour construire progressivement la courbe d'évolution.
+  getPortfolioHistory() { return this.get(this.KEYS.PORTFOLIO_HISTORY) || []; },
+  savePortfolioHistory(data) { this.set(this.KEYS.PORTFOLIO_HISTORY, data); },
 
   getExpenses() { return this.get(this.KEYS.EXPENSES) || []; },
   saveExpenses(data) { this.set(this.KEYS.EXPENSES, data); },
@@ -2836,6 +2844,7 @@ const Storage = {
       patrimony: this.getPatrimony(),
       revenues: this.getRevenues(),
       categories: this.getCategories(),
+      portfolioHistory: this.getPortfolioHistory(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -2848,6 +2857,7 @@ const Storage = {
     if (data.patrimony) this.savePatrimony(data.patrimony);
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);
+    if (data.portfolioHistory) this.savePortfolioHistory(data.portfolioHistory);
   },
 };
 
@@ -2979,15 +2989,6 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
-  TYPE_COLORS: {
-    action: '#6366f1',
-    etf: '#8b5cf6',
-    crypto: '#ec4899',
-    immobilier: '#f59e0b',
-    obligations: '#10b981',
-    autre: '#6b7280',
-  },
-
   CATEGORY_COLORS: [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
     '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
@@ -3115,24 +3116,6 @@ const Charts = {
     };
   },
 
-  portfolioAllocation(investments) {
-    const byType = {};
-    investments.forEach(inv => {
-      const type = inv.type || 'autre';
-      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
-    });
-    const keys = Object.keys(byType);
-    const labels = keys.length ? keys.map(t => Utils.INVESTMENT_TYPES[t] || t) : ['Aucun investissement'];
-    const data = keys.length ? Object.values(byType) : [1];
-    const colors = keys.length ? keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280') : ['#e5e7eb'];
-
-    this.create('chart-portfolio-allocation', {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
-    });
-  },
-
   expensesBudget(expenses, budgets) {
     const month = Utils.getCurrentMonth();
     const monthExpenses = expenses.filter(e => Utils.getExpenseMonth(e) === month);
@@ -3156,23 +3139,36 @@ const Charts = {
     });
   },
 
-  investmentsByType(investments, canvasId) {
-    const byType = {};
-    investments.forEach(inv => {
-      const type = inv.type || 'autre';
-      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
-    });
-    const keys = Object.keys(byType);
-    if (!keys.length) { this.destroy(canvasId || 'chart-inv-type'); return; }
-
-    this.create(canvasId || 'chart-inv-type', {
-      type: 'doughnut',
-      data: { labels: keys.map(t => Utils.INVESTMENT_TYPES[t] || t), datasets: [{ data: Object.values(byType), backgroundColor: keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
-    });
+  // Anneau centré (petit texte à 2 lignes, ex. "Total" / "187 450 €") : plugin Chart.js par
+  // graphique (pas global), `lines` = [{text, font, color}] empilées et centrées verticalement.
+  _centerTextPlugin(lines) {
+    return {
+      id: 'centerText',
+      afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        const items = typeof lines === 'function' ? lines() : lines;
+        if (!items || !items.length) return;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const lineHeight = 20;
+        const startY = cy - ((items.length - 1) * lineHeight) / 2;
+        items.forEach((it, i) => {
+          ctx.font = it.font || '600 13px -apple-system, sans-serif';
+          ctx.fillStyle = it.color || '#9497b8';
+          ctx.fillText(it.text, cx, startY + i * lineHeight);
+        });
+        ctx.restore();
+      },
+    };
   },
 
-  investmentsByAccount(investments) {
+  // Légende Chart.js native désactivée : consommée séparément par Investments._renderLegend
+  // (liste verticale pastille/nom/montant/%, avec le texte centré du total dans l'anneau).
+  investmentsByAccount(investments, centerLines) {
     const byAccount = {};
     investments.forEach(inv => {
       const acc = inv.account || 'autre';
@@ -3182,32 +3178,64 @@ const Charts = {
     if (!keys.length) { this.destroy('chart-port-account'); return; }
     const labels = keys.map(a => Utils.INVESTMENT_ACCOUNTS[a] || a);
     const colors = keys.map(a => Utils.ACCOUNT_COLORS[a] || '#6b7280');
+    const opts = this._doughnutOptions(Utils.formatCurrency);
+    opts.cutout = '68%';
+    opts.plugins.legend = { display: false };
     this.create('chart-port-account', {
       type: 'doughnut',
-      data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
+      data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
+      options: opts,
+      plugins: centerLines ? [this._centerTextPlugin(centerLines)] : [],
     });
   },
 
-  investmentsPerformance(investments) {
-    if (!investments.length) { this.destroy('chart-inv-performance'); return; }
-    const sorted = [...investments].sort((a, b) => {
-      const pa = (a.currentPrice - a.buyPrice) / a.buyPrice * 100;
-      const pb = (b.currentPrice - b.buyPrice) / b.buyPrice * 100;
-      return pb - pa;
-    }).slice(0, 10);
+  // Répartition par POSITION à l'intérieur d'un seul compte (pas par type) : chaque position
+  // garde une couleur stable par son rang dans la liste filtrée (palette catégorielle générique).
+  accountAllocation(investments) {
+    if (!investments.length) { this.destroy('chart-port-acc-alloc'); return; }
+    const labels = investments.map(inv => inv.name);
+    const data = investments.map(inv => inv.quantity * inv.currentPrice);
+    const colors = investments.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]);
+    const opts = this._doughnutOptions(Utils.formatCurrency);
+    opts.cutout = '68%';
+    opts.plugins.legend = { display: false };
+    this.create('chart-port-acc-alloc', {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
+      options: opts,
+    });
+  },
 
-    const data = sorted.map(inv => ((inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100));
-    this.create('chart-inv-performance', {
-      type: 'bar',
+  // Courbe d'évolution de la valeur totale du portefeuille : `points` = [{label, value}], déjà
+  // agrégés/fenêtrés par l'appelant (Investments._evolutionSeries). Aire dégradée violette,
+  // cohérente avec le Solde net du Dashboard/Flux.
+  portfolioEvolution(points) {
+    if (!points.length) { this.destroy('chart-port-evolution'); return; }
+    this.create('chart-port-evolution', {
+      type: 'line',
       data: {
-        labels: sorted.map(inv => inv.ticker || inv.name),
-        datasets: [{ label: 'Performance (%)', data, backgroundColor: data.map(v => v >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }],
+        labels: points.map(p => p.label),
+        datasets: [{
+          label: 'Valeur',
+          data: points.map(p => p.value),
+          borderColor: '#8b5cf6',
+          backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
+          borderWidth: 2.5,
+          pointRadius: points.length > 1 ? 3 : 4,
+          pointBackgroundColor: '#8b5cf6',
+          pointBorderColor: '#131525',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.35,
+        }],
       },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatPercent(ctx.raw)}` } } },
-        scales: { x: { ticks: { callback: (v) => `${v}%` } } },
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
       },
     });
   },
@@ -3826,130 +3854,261 @@ const PeriodFilter = {
 </script>
 <script>
 const Investments = {
-  _currentAccount: null, // null = all, 'pea', 'assurance_vie', 'autre'
+  _currentAccount: null, // compte actif de l'onglet compte courant, ex: 'pea'
+  _evoWindow: 12,         // fenêtre (en mois) de la courbe d'évolution ; 0 = tout l'historique
+
+  // ---------- Vue globale ----------
 
   renderPortfolio() {
     const investments = Storage.getInvestments();
-    this._renderPortfolioKpis(investments);
-    Charts.portfolioAllocation(investments);
-    Charts.investmentsByAccount(investments);
-    this._renderTopPositions(investments);
-    this._renderPerformers(investments);
+    this._recordSnapshot(investments);
+    this._renderGlobalKpis(investments);
+    this._renderAllocation(investments);
+    this._renderEvolution();
   },
 
-  _renderPortfolioKpis(investments) {
+  // Un point par jour (écrasé si on revisite le même jour) : construit progressivement
+  // l'historique de valeur du portefeuille au fil des visites, sans jamais inventer de données
+  // passées qu'on n'a pas.
+  _recordSnapshot(investments) {
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const history = Storage.getPortfolioHistory();
+    const idx = history.findIndex(h => h.date === dateStr);
+    if (idx >= 0) history[idx].value = totalValue;
+    else history.push({ date: dateStr, value: totalValue });
+    history.sort((a, b) => a.date.localeCompare(b.date));
+    Storage.savePortfolioHistory(history);
+  },
+
+  _renderGlobalKpis(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     const totalCost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
     const gain = totalValue - totalCost;
     const gainPct = totalCost > 0 ? (gain / totalCost * 100) : 0;
-    const count = investments.length;
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('port-total-value', Utils.formatCurrency(totalValue));
-    set('port-total-cost',  Utils.formatCurrency(totalCost));
-    set('port-count',       count + ' position' + (count !== 1 ? 's' : ''));
-    const gainEl = document.getElementById('port-total-gain');
-    if (gainEl) {
-      gainEl.textContent = (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain);
-      gainEl.className   = 'kpi-value ' + (gain >= 0 ? 'positive' : 'negative');
+    set('inv-kpi-value', Utils.formatCurrency(totalValue));
+    set('inv-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
+    set('inv-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+
+    const annualReturn = this._annualizedReturn(investments);
+    set('inv-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
+
+    const avgMonthly = this._avgMonthlyContribution(investments);
+    set('inv-kpi-avg', avgMonthly === null ? '—' : Utils.formatCurrency(avgMonthly));
+
+    const series = this._evolutionSeries(this._evoWindow);
+    const trendEl = document.getElementById('inv-kpi-value-trend');
+    if (trendEl) {
+      if (series.length >= 2 && series[0].value > 0) {
+        const pct = (series[series.length - 1].value - series[0].value) / series[0].value * 100;
+        trendEl.textContent = `${Utils.formatPercent(pct)} sur ${this._windowLabel()}`;
+        trendEl.className = 'kpi-sub ' + (pct >= 0 ? 'positive' : 'negative');
+      } else {
+        trendEl.textContent = '';
+        trendEl.className = 'kpi-sub';
+      }
     }
-    const gainPctEl = document.getElementById('port-total-gain-pct');
-    if (gainPctEl) gainPctEl.textContent = Utils.formatPercent(gainPct);
-    const gainCard = document.getElementById('port-gain-card');
-    if (gainCard) gainCard.className = 'kpi-card ' + (gain >= 0 ? 'success' : 'danger');
   },
 
-  _renderTopPositions(investments) {
-    const container = document.getElementById('port-top-positions');
-    if (!container) return;
-    const sorted = [...investments].sort((a, b) => (b.quantity * b.currentPrice) - (a.quantity * a.currentPrice));
+  _renderAllocation(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
-    if (!sorted.length) { container.innerHTML = '<p class="text-muted">Aucune position</p>'; return; }
-    container.innerHTML = sorted.map(inv => {
-      const value = inv.quantity * inv.currentPrice;
-      const pct   = totalValue > 0 ? (value / totalValue * 100) : 0;
-      const gain  = value - inv.quantity * inv.buyPrice;
-      const gainCls = gain >= 0 ? 'positive' : 'negative';
-      const acColor = Utils.ACCOUNT_COLORS[inv.account] || '#6b7280';
-      return `<div class="port-position-row">
-        <div class="port-pos-dot" style="background:${acColor}"></div>
-        <div class="port-pos-info">
-          <strong>${inv.name}</strong>${inv.ticker ? ` <small class="text-muted">${inv.ticker}</small>` : ''}
-          <div class="port-pos-bar-wrap"><div class="port-pos-bar" style="width:${Math.min(pct,100)}%"></div></div>
-        </div>
-        <div class="port-pos-right">
-          <div>${Utils.formatCurrency(value)}</div>
-          <div class="${gainCls}" style="font-size:12px">${gain >= 0 ? '+' : ''}${Utils.formatCurrency(gain)}</div>
-        </div>
-        <div class="port-pos-actions">
-          <button class="btn-icon" onclick="Investments.edit('${inv.id}')" title="Modifier">✏️</button>
-          <button class="btn-icon btn-danger" onclick="Investments.delete('${inv.id}')" title="Supprimer">🗑️</button>
-        </div>
+    const byAccount = {};
+    investments.forEach(inv => {
+      const acc = inv.account || 'autre';
+      byAccount[acc] = (byAccount[acc] || 0) + inv.quantity * inv.currentPrice;
+    });
+    const entries = Object.entries(byAccount).map(([acc, value]) => ({
+      label: Utils.INVESTMENT_ACCOUNTS[acc] || acc,
+      value,
+      color: Utils.ACCOUNT_COLORS[acc] || '#6b7280',
+    }));
+    Charts.investmentsByAccount(investments, () => [
+      { text: 'Total', font: '600 11px -apple-system, sans-serif', color: '#9497b8' },
+      { text: Utils.formatCurrency(totalValue), font: '800 14px -apple-system, sans-serif', color: '#ffffff' },
+    ]);
+    this._renderLegend('port-alloc-legend', entries);
+  },
+
+  // entries: [{label, value, color}] — légende verticale pastille/nom/montant/%, partagée par
+  // la Vue globale (répartition par compte) et les onglets compte (répartition par position).
+  _renderLegend(containerId, entries) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!entries.length) { container.innerHTML = '<p class="text-muted">Aucune donnée</p>'; return; }
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    container.innerHTML = entries.map(e => {
+      const pct = total > 0 ? (e.value / total * 100) : 0;
+      return `<div class="port-legend-item">
+        <span class="pl-dot" style="background:${e.color}"></span>
+        <span class="pl-name">${e.label}</span>
+        <span class="pl-amount">${Utils.formatCurrency(e.value)}</span>
+        <span class="pl-pct">${pct.toFixed(0)}%</span>
       </div>`;
     }).join('');
   },
 
-  _renderPerformers(investments) {
-    const withPerf = investments.map(inv => ({
-      ...inv,
-      perf: inv.buyPrice > 0 ? (inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100 : 0,
-    })).sort((a, b) => b.perf - a.perf);
-
-    const best  = withPerf.slice(0, 3);
-    const worst = withPerf.slice(-3).reverse();
-
-    const render = (list, containerId, colorFn) => {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      if (!list.length) { el.innerHTML = '<p class="text-muted" style="padding:8px 0">-</p>'; return; }
-      el.innerHTML = list.map(inv => `
-        <div class="performer-row">
-          <div class="performer-name">${inv.ticker || inv.name}</div>
-          <div class="performer-perf ${colorFn(inv.perf)}">${inv.perf >= 0 ? '+' : ''}${Utils.formatPercent(inv.perf)}</div>
-        </div>`).join('');
-    };
-    render(best,  'port-best',  p => p >= 0 ? 'positive' : 'negative');
-    render(worst, 'port-worst', p => p >= 0 ? 'positive' : 'negative');
+  setEvoWindow(months) {
+    this._evoWindow = parseInt(months, 10) || 0;
+    this._renderGlobalKpis(Storage.getInvestments());
+    this._renderEvolution();
   },
 
-  renderPositions() {
-    const investments = Storage.getInvestments();
-    this._renderAccountPills(investments);
-    this._renderPositionsTable(investments);
+  _windowLabel() {
+    return this._evoWindow === 0 ? 'tout' : `${this._evoWindow} mois`;
   },
 
-  _renderAccountPills(investments) {
-    const container = document.getElementById('positions-account-pills');
-    if (!container) return;
-    const accounts = [...new Set(investments.map(i => i.account || 'autre'))];
-    const allBtn = `<button class="account-pill ${!this._currentAccount ? 'active' : ''}" onclick="Investments.setAccount(null)">Tous</button>`;
-    const pills  = accounts.map(acc => {
-      const label = Utils.INVESTMENT_ACCOUNTS[acc] || acc;
-      const color = Utils.ACCOUNT_COLORS[acc] || '#6b7280';
-      const active = this._currentAccount === acc ? 'active' : '';
-      return `<button class="account-pill ${active}" style="${active ? `background:${color};border-color:${color}` : `border-color:${color};color:${color}`}" onclick="Investments.setAccount('${acc}')">${label}</button>`;
+  _lastNMonths(n) {
+    const months = [];
+    const now = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return months;
+  },
+
+  _monthRange(fromMonth, toMonth) {
+    const months = [];
+    let [y, m] = fromMonth.split('-').map(Number);
+    const [ty, tm] = toMonth.split('-').map(Number);
+    while (y < ty || (y === ty && m <= tm)) {
+      months.push(`${y}-${String(m).padStart(2, '0')}`);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return months;
+  },
+
+  // Une valeur par mois (dernier point connu au plus tard à la fin de ce mois) : jamais de mois
+  // "vide" à 0 avant le tout premier point réellement enregistré.
+  _evolutionSeries(windowMonths) {
+    const history = Storage.getPortfolioHistory();
+    if (!history.length) return [];
+    const firstMonth = history[0].date.slice(0, 7);
+    const currentMonth = Utils.getCurrentMonth();
+    let months = windowMonths > 0 ? this._lastNMonths(windowMonths) : this._monthRange(firstMonth, currentMonth);
+    months = months.filter(m => m >= firstMonth);
+    return months.map(m => {
+      const upTo = history.filter(h => h.date.slice(0, 7) <= m);
+      if (!upTo.length) return null;
+      return { month: m, label: Utils.getMonthLabel(m), value: upTo[upTo.length - 1].value };
+    }).filter(Boolean);
+  },
+
+  _renderEvolution() {
+    const series = this._evolutionSeries(this._evoWindow);
+    Charts.portfolioEvolution(series);
+    const trendEl = document.getElementById('inv-evo-trend');
+    if (!trendEl) return;
+    if (series.length < 2) { trendEl.textContent = ''; trendEl.className = 'inv-evo-trend'; return; }
+    const delta = series[series.length - 1].value - series[0].value;
+    const arrow = delta >= 0 ? '↑' : '↓';
+    trendEl.textContent = `${arrow} ${delta >= 0 ? '+' : '-'}${Utils.formatCurrency(Math.abs(delta))} sur ${this._windowLabel()}`;
+    trendEl.className = 'inv-evo-trend ' + (delta >= 0 ? 'positive' : 'negative');
+  },
+
+  // ---------- Rendement / versements (dérivés des positions, pas de l'historique) ----------
+
+  // Rendement annualisé pondéré — estimation simple (PAS un XIRR), affichée en "estimé" dans
+  // l'UI. Ignore les positions sans date d'achat (durée de détention inconnue) ; plancher de
+  // 30 jours pour éviter qu'un achat très récent explose le résultat une fois annualisé.
+  _annualizedReturn(investments) {
+    const now = new Date();
+    let costSum = 0, weightedSum = 0;
+    investments.forEach(inv => {
+      if (!inv.buyDate || !inv.buyPrice) return;
+      const cost = inv.quantity * inv.buyPrice;
+      if (cost <= 0) return;
+      const days = Math.max((now - new Date(inv.buyDate + 'T00:00:00')) / 86400000, 30);
+      const gainPct = (inv.currentPrice - inv.buyPrice) / inv.buyPrice;
+      costSum += cost;
+      weightedSum += cost * gainPct * (365 / days);
     });
-    container.innerHTML = allBtn + pills.join('');
+    return costSum > 0 ? (weightedSum / costSum * 100) : null;
   },
 
-  _renderPositionsTable(investments) {
-    const filtered = this._currentAccount
-      ? investments.filter(i => (i.account || 'autre') === this._currentAccount)
-      : investments;
+  // Total investi / mois écoulés depuis le plus ancien achat daté — proxy simple, pas un calcul
+  // de flux de versements récurrents.
+  _avgMonthlyContribution(investments) {
+    const withDate = investments.filter(i => i.buyDate);
+    if (!withDate.length) return null;
+    const totalCost = withDate.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const earliest = withDate.reduce((min, i) => (i.buyDate < min ? i.buyDate : min), withDate[0].buyDate);
+    const months = Math.max((new Date() - new Date(earliest + 'T00:00:00')) / (86400000 * 30.44), 1);
+    return totalCost / months;
+  },
 
+  // ---------- Onglet par compte ----------
+
+  renderAccountTab(account) {
+    if (account) this._currentAccount = account;
+    const acc = this._currentAccount;
+    if (!acc) return;
+    const all = Storage.getInvestments();
+    const accInvestments = all.filter(i => (i.account || 'autre') === acc);
+    const totalValue = all.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+
+    this._renderAccountHeader(acc);
+    this._renderAccountKpis(accInvestments, totalValue);
+    this._renderAccountAllocation(accInvestments);
+    this._renderAccountTable(accInvestments);
+  },
+
+  _isAssuranceVie(acc) { return acc === 'assurance_vie'; },
+
+  _renderAccountHeader(acc) {
+    const label = Utils.INVESTMENT_ACCOUNTS[acc] || acc;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('inv-acc-title', label);
+    set('inv-acc-kpi-value-label', this._isAssuranceVie(acc) ? 'Valeur du contrat' : 'Valeur du compte');
+    set('inv-acc-alloc-title', this._isAssuranceVie(acc) ? 'Répartition du contrat' : 'Répartition');
+    set('inv-acc-pos-title', this._isAssuranceVie(acc) ? 'Supports détenus' : 'Positions détenues');
+    set('inv-acc-th-asset', this._isAssuranceVie(acc) ? 'Support' : 'Actif');
+  },
+
+  _renderAccountKpis(investments, totalPortfolioValue) {
+    const value = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const cost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
+    const gain  = value - cost;
+    const gainPct = cost > 0 ? (gain / cost * 100) : 0;
+    const pctOfPortfolio = totalPortfolioValue > 0 ? (value / totalPortfolioValue * 100) : 0;
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('inv-acc-kpi-value', Utils.formatCurrency(value));
+    set('inv-acc-kpi-value-sub', investments.length ? `${pctOfPortfolio.toFixed(0)}% du portefeuille` : '');
+    set('inv-acc-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
+    set('inv-acc-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+    const annualReturn = this._annualizedReturn(investments);
+    set('inv-acc-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
+    set('inv-acc-kpi-cost', Utils.formatCurrency(cost));
+  },
+
+  _renderAccountAllocation(investments) {
+    Charts.accountAllocation(investments);
+    const entries = investments.map((inv, i) => ({
+      label: inv.name,
+      value: inv.quantity * inv.currentPrice,
+      color: Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length],
+    }));
+    this._renderLegend('port-acc-alloc-legend', entries);
+  },
+
+  _renderAccountTable(investments) {
     const tbody  = document.getElementById('positions-tbody');
     const empty  = document.getElementById('positions-empty');
     const search = (document.getElementById('pos-search')?.value || '').toLowerCase();
     const typeFilter = document.getElementById('pos-filter-type')?.value || '';
 
-    let list = filtered;
+    let list = investments;
     if (search)     list = list.filter(i => i.name.toLowerCase().includes(search) || (i.ticker || '').toLowerCase().includes(search));
     if (typeFilter) list = list.filter(i => i.type === typeFilter);
 
     if (!list.length) { if (tbody) tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
     if (empty) empty.classList.add('hidden');
 
-    const totalValue = filtered.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
+    const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
 
     tbody.innerHTML = list.map(inv => {
       const value   = inv.quantity * inv.currentPrice;
@@ -3958,14 +4117,11 @@ const Investments = {
       const gainPct = cost > 0 ? (gain / cost * 100) : 0;
       const pct     = totalValue > 0 ? (value / totalValue * 100) : 0;
       const cls     = gain >= 0 ? 'positive' : 'negative';
-      const acColor = Utils.ACCOUNT_COLORS[inv.account || 'autre'] || '#6b7280';
       const barW    = Math.min(Math.abs(gainPct) / 30 * 100, 100);
       const barCol  = gain >= 0 ? '#10b981' : '#ef4444';
-      const accLabel = Utils.INVESTMENT_ACCOUNTS[inv.account] || inv.account || 'Autre';
       return `<tr>
         <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
-        <td><span class="account-dot" style="background:${acColor}"></span>${accLabel}</td>
         <td>${inv.quantity}</td>
         <td>${Utils.formatCurrency(inv.buyPrice)}</td>
         <td>${Utils.formatCurrency(inv.currentPrice)}</td>
@@ -3985,10 +4141,7 @@ const Investments = {
     }).join('');
   },
 
-  setAccount(account) {
-    this._currentAccount = account;
-    this.renderPositions();
-  },
+  // ---------- CRUD ----------
 
   openAddForm() { Modal.open('Ajouter un investissement', this._form(null)); },
 
@@ -4043,16 +4196,23 @@ const Investments = {
     else list.push(data);
     Storage.saveInvestments(list);
     Modal.close();
-    this.renderPortfolio();
-    this.renderPositions();
-    Dashboard.render();
+    this._refreshCurrentView();
   },
 
   delete(id) {
     if (!confirm('Supprimer cet investissement ?')) return;
     Storage.saveInvestments(Storage.getInvestments().filter(i => i.id !== id));
-    this.renderPortfolio();
-    this.renderPositions();
+    this._refreshCurrentView();
+  },
+
+  // Reflète l'ajout/modification/suppression sur la vue actuellement affichée (Vue globale ou
+  // un onglet compte), et rafraîchit les onglets du haut (un compte peut apparaître/disparaître
+  // selon qu'il a encore des positions) + le Dashboard (valorisation du portefeuille).
+  _refreshCurrentView() {
+    const portfolioVisible = !document.getElementById('section-portfolio')?.classList.contains('hidden');
+    if (portfolioVisible) this.renderPortfolio();
+    else if (this._currentAccount) this.renderAccountTab();
+    renderModeTabs(currentMode, portfolioVisible ? 'portfolio' : `account-${this._currentAccount}`);
     Dashboard.render();
   },
 };
@@ -10491,9 +10651,14 @@ const APP_MODES = {
   investments: {
     label: 'Investissements',
     sections: [
-      { id: 'portfolio', label: 'Portefeuille' },
-      { id: 'positions', label: 'Positions' },
+      { id: 'portfolio', label: 'Vue globale' },
     ],
+    // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
+    // affichage des onglets, pas figé comme les autres modes.
+    dynamicSections: () => {
+      const accounts = [...new Set(Storage.getInvestments().map(i => i.account || 'autre'))];
+      return accounts.map(acc => ({ id: `account-${acc}`, label: Utils.INVESTMENT_ACCOUNTS[acc] || acc }));
+    },
     default: 'portfolio',
   },
   expenses: {
@@ -10521,7 +10686,10 @@ let currentMode = 'expenses';
 // par le sélecteur de mode) ; null pour les sections "Général" (dashboard, patrimony), qui
 // n'appartiennent à aucun mode et n'ont donc pas d'onglets.
 function modeForSection(sectionId) {
-  return Object.keys(APP_MODES).find(m => APP_MODES[m].sections.some(s => s.id === sectionId)) || null;
+  return Object.keys(APP_MODES).find(m => {
+    const cfg = APP_MODES[m];
+    return cfg.sections.some(s => s.id === sectionId) || (cfg.dynamicSections && cfg.dynamicSections().some(s => s.id === sectionId));
+  }) || null;
 }
 
 // Onglets du mode en haut du contenu (remplacent l'ancienne liste de nav-item par mode dans la
@@ -10533,7 +10701,8 @@ function renderModeTabs(mode, activeSectionId) {
   if (!cfg) { container.innerHTML = ''; container.style.display = 'none'; return; }
 
   container.style.display = '';
-  const tabs = cfg.sections.map(s => `
+  const sections = cfg.dynamicSections ? [...cfg.sections, ...cfg.dynamicSections()] : cfg.sections;
+  const tabs = sections.map(s => `
     <button class="mode-tab${s.id === activeSectionId ? ' active' : ''}" data-section="${s.id}">
       ${s.label}
     </button>`).join('');
@@ -10550,10 +10719,10 @@ function switchMode(mode) {
 }
 
 function navigateTo(sectionId) {
-  // Map section identifiers to actual HTML section IDs
+  // Map section identifiers to actual HTML section IDs — les onglets de compte dynamiques
+  // (account-pea, account-assurance_vie...) partagent tous le même gabarit HTML.
   const sectionMap = {
     portfolio: 'portfolio',
-    positions: 'positions',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -10565,7 +10734,7 @@ function navigateTo(sectionId) {
     patrimony: 'patrimony',
   };
 
-  const htmlSectionId = sectionMap[sectionId] || sectionId;
+  const htmlSectionId = sectionId.startsWith('account-') ? 'portfolio-account' : (sectionMap[sectionId] || sectionId);
 
   // Détermine le mode propriétaire de cette section (null = page "Général", hors mode) et
   // synchronise le sélecteur de mode + les onglets du haut en conséquence, même si on arrive
@@ -10599,15 +10768,16 @@ function navigateTo(sectionId) {
   PeriodFilter._refreshTrigger();
 
   // Render the appropriate section
+  if (sectionId.startsWith('account-')) {
+    Investments.renderAccountTab(sectionId.slice('account-'.length));
+    return;
+  }
   switch (sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
     case 'portfolio':
       Investments.renderPortfolio();
-      break;
-    case 'positions':
-      Investments.renderPositions();
       break;
     case 'flux':
       Flux.render();
@@ -10693,8 +10863,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
-  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderPositions());
-  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderPositions());
+  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderAccountTab());
+  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderAccountTab());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
   document.getElementById('rev-search').addEventListener('input', () => Revenues.render());

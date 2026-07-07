@@ -8,6 +8,7 @@ const Storage = {
     CATEGORIES: 'invest_categories_v2',
     BUDGET_THEMES: 'invest_budgets_v2',
     DATE_MODE: 'invest_date_mode',
+    PORTFOLIO_HISTORY: 'invest_portfolio_history',
   },
 
   get(key) {
@@ -29,6 +30,12 @@ const Storage = {
 
   getInvestments() { return this.get(this.KEYS.INVESTMENTS) || []; },
   saveInvestments(data) { this.set(this.KEYS.INVESTMENTS, data); },
+
+  // Historique de la valeur totale du portefeuille : [{date:'YYYY-MM-DD', value}], un point par
+  // jour (écrasé si on revisite le même jour) — alimenté par Investments._recordSnapshot à chaque
+  // visite de la Vue globale, pour construire progressivement la courbe d'évolution.
+  getPortfolioHistory() { return this.get(this.KEYS.PORTFOLIO_HISTORY) || []; },
+  savePortfolioHistory(data) { this.set(this.KEYS.PORTFOLIO_HISTORY, data); },
 
   getExpenses() { return this.get(this.KEYS.EXPENSES) || []; },
   saveExpenses(data) { this.set(this.KEYS.EXPENSES, data); },
@@ -87,6 +94,7 @@ const Storage = {
       patrimony: this.getPatrimony(),
       revenues: this.getRevenues(),
       categories: this.getCategories(),
+      portfolioHistory: this.getPortfolioHistory(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -99,5 +107,6 @@ const Storage = {
     if (data.patrimony) this.savePatrimony(data.patrimony);
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);
+    if (data.portfolioHistory) this.savePortfolioHistory(data.portfolioHistory);
   },
 };

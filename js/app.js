@@ -277,9 +277,14 @@ const APP_MODES = {
   investments: {
     label: 'Investissements',
     sections: [
-      { id: 'portfolio', label: 'Portefeuille' },
-      { id: 'positions', label: 'Positions' },
+      { id: 'portfolio', label: 'Vue globale' },
     ],
+    // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
+    // affichage des onglets, pas figé comme les autres modes.
+    dynamicSections: () => {
+      const accounts = [...new Set(Storage.getInvestments().map(i => i.account || 'autre'))];
+      return accounts.map(acc => ({ id: `account-${acc}`, label: Utils.INVESTMENT_ACCOUNTS[acc] || acc }));
+    },
     default: 'portfolio',
   },
   expenses: {
@@ -307,7 +312,10 @@ let currentMode = 'expenses';
 // par le sélecteur de mode) ; null pour les sections "Général" (dashboard, patrimony), qui
 // n'appartiennent à aucun mode et n'ont donc pas d'onglets.
 function modeForSection(sectionId) {
-  return Object.keys(APP_MODES).find(m => APP_MODES[m].sections.some(s => s.id === sectionId)) || null;
+  return Object.keys(APP_MODES).find(m => {
+    const cfg = APP_MODES[m];
+    return cfg.sections.some(s => s.id === sectionId) || (cfg.dynamicSections && cfg.dynamicSections().some(s => s.id === sectionId));
+  }) || null;
 }
 
 // Onglets du mode en haut du contenu (remplacent l'ancienne liste de nav-item par mode dans la
@@ -319,7 +327,8 @@ function renderModeTabs(mode, activeSectionId) {
   if (!cfg) { container.innerHTML = ''; container.style.display = 'none'; return; }
 
   container.style.display = '';
-  const tabs = cfg.sections.map(s => `
+  const sections = cfg.dynamicSections ? [...cfg.sections, ...cfg.dynamicSections()] : cfg.sections;
+  const tabs = sections.map(s => `
     <button class="mode-tab${s.id === activeSectionId ? ' active' : ''}" data-section="${s.id}">
       ${s.label}
     </button>`).join('');
@@ -336,10 +345,10 @@ function switchMode(mode) {
 }
 
 function navigateTo(sectionId) {
-  // Map section identifiers to actual HTML section IDs
+  // Map section identifiers to actual HTML section IDs — les onglets de compte dynamiques
+  // (account-pea, account-assurance_vie...) partagent tous le même gabarit HTML.
   const sectionMap = {
     portfolio: 'portfolio',
-    positions: 'positions',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -351,7 +360,7 @@ function navigateTo(sectionId) {
     patrimony: 'patrimony',
   };
 
-  const htmlSectionId = sectionMap[sectionId] || sectionId;
+  const htmlSectionId = sectionId.startsWith('account-') ? 'portfolio-account' : (sectionMap[sectionId] || sectionId);
 
   // Détermine le mode propriétaire de cette section (null = page "Général", hors mode) et
   // synchronise le sélecteur de mode + les onglets du haut en conséquence, même si on arrive
@@ -385,15 +394,16 @@ function navigateTo(sectionId) {
   PeriodFilter._refreshTrigger();
 
   // Render the appropriate section
+  if (sectionId.startsWith('account-')) {
+    Investments.renderAccountTab(sectionId.slice('account-'.length));
+    return;
+  }
   switch (sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
     case 'portfolio':
       Investments.renderPortfolio();
-      break;
-    case 'positions':
-      Investments.renderPositions();
       break;
     case 'flux':
       Flux.render();
@@ -479,8 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
 
   // Filters
-  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderPositions());
-  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderPositions());
+  document.getElementById('pos-search')?.addEventListener('input', () => Investments.renderAccountTab());
+  document.getElementById('pos-filter-type')?.addEventListener('change', () => Investments.renderAccountTab());
   document.getElementById('exp-search').addEventListener('input', () => Expenses.render());
   document.getElementById('exp-filter-cat').addEventListener('change', () => Expenses.render());
   document.getElementById('rev-search').addEventListener('input', () => Revenues.render());

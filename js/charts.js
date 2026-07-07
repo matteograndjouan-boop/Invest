@@ -102,24 +102,6 @@ const Charts = {
     };
   },
 
-  portfolioAllocation(investments) {
-    const byType = {};
-    investments.forEach(inv => {
-      const type = inv.type || 'autre';
-      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
-    });
-    const keys = Object.keys(byType);
-    const labels = keys.length ? keys.map(t => Utils.INVESTMENT_TYPES[t] || t) : ['Aucun investissement'];
-    const data = keys.length ? Object.values(byType) : [1];
-    const colors = keys.length ? keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280') : ['#e5e7eb'];
-
-    this.create('chart-portfolio-allocation', {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
-    });
-  },
-
   expensesBudget(expenses, budgets) {
     const month = Utils.getCurrentMonth();
     const monthExpenses = expenses.filter(e => Utils.getExpenseMonth(e) === month);
@@ -143,23 +125,36 @@ const Charts = {
     });
   },
 
-  investmentsByType(investments, canvasId) {
-    const byType = {};
-    investments.forEach(inv => {
-      const type = inv.type || 'autre';
-      byType[type] = (byType[type] || 0) + inv.quantity * inv.currentPrice;
-    });
-    const keys = Object.keys(byType);
-    if (!keys.length) { this.destroy(canvasId || 'chart-inv-type'); return; }
-
-    this.create(canvasId || 'chart-inv-type', {
-      type: 'doughnut',
-      data: { labels: keys.map(t => Utils.INVESTMENT_TYPES[t] || t), datasets: [{ data: Object.values(byType), backgroundColor: keys.map(t => Utils.TYPE_COLORS[t] || '#6b7280'), borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
-    });
+  // Anneau centré (petit texte à 2 lignes, ex. "Total" / "187 450 €") : plugin Chart.js par
+  // graphique (pas global), `lines` = [{text, font, color}] empilées et centrées verticalement.
+  _centerTextPlugin(lines) {
+    return {
+      id: 'centerText',
+      afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        const items = typeof lines === 'function' ? lines() : lines;
+        if (!items || !items.length) return;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const lineHeight = 20;
+        const startY = cy - ((items.length - 1) * lineHeight) / 2;
+        items.forEach((it, i) => {
+          ctx.font = it.font || '600 13px -apple-system, sans-serif';
+          ctx.fillStyle = it.color || '#9497b8';
+          ctx.fillText(it.text, cx, startY + i * lineHeight);
+        });
+        ctx.restore();
+      },
+    };
   },
 
-  investmentsByAccount(investments) {
+  // Légende Chart.js native désactivée : consommée séparément par Investments._renderLegend
+  // (liste verticale pastille/nom/montant/%, avec le texte centré du total dans l'anneau).
+  investmentsByAccount(investments, centerLines) {
     const byAccount = {};
     investments.forEach(inv => {
       const acc = inv.account || 'autre';
@@ -169,32 +164,64 @@ const Charts = {
     if (!keys.length) { this.destroy('chart-port-account'); return; }
     const labels = keys.map(a => Utils.INVESTMENT_ACCOUNTS[a] || a);
     const colors = keys.map(a => Utils.ACCOUNT_COLORS[a] || '#6b7280');
+    const opts = this._doughnutOptions(Utils.formatCurrency);
+    opts.cutout = '68%';
+    opts.plugins.legend = { display: false };
     this.create('chart-port-account', {
       type: 'doughnut',
-      data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
-      options: this._doughnutOptions(Utils.formatCurrency),
+      data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
+      options: opts,
+      plugins: centerLines ? [this._centerTextPlugin(centerLines)] : [],
     });
   },
 
-  investmentsPerformance(investments) {
-    if (!investments.length) { this.destroy('chart-inv-performance'); return; }
-    const sorted = [...investments].sort((a, b) => {
-      const pa = (a.currentPrice - a.buyPrice) / a.buyPrice * 100;
-      const pb = (b.currentPrice - b.buyPrice) / b.buyPrice * 100;
-      return pb - pa;
-    }).slice(0, 10);
+  // Répartition par POSITION à l'intérieur d'un seul compte (pas par type) : chaque position
+  // garde une couleur stable par son rang dans la liste filtrée (palette catégorielle générique).
+  accountAllocation(investments) {
+    if (!investments.length) { this.destroy('chart-port-acc-alloc'); return; }
+    const labels = investments.map(inv => inv.name);
+    const data = investments.map(inv => inv.quantity * inv.currentPrice);
+    const colors = investments.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]);
+    const opts = this._doughnutOptions(Utils.formatCurrency);
+    opts.cutout = '68%';
+    opts.plugins.legend = { display: false };
+    this.create('chart-port-acc-alloc', {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
+      options: opts,
+    });
+  },
 
-    const data = sorted.map(inv => ((inv.currentPrice - inv.buyPrice) / inv.buyPrice * 100));
-    this.create('chart-inv-performance', {
-      type: 'bar',
+  // Courbe d'évolution de la valeur totale du portefeuille : `points` = [{label, value}], déjà
+  // agrégés/fenêtrés par l'appelant (Investments._evolutionSeries). Aire dégradée violette,
+  // cohérente avec le Solde net du Dashboard/Flux.
+  portfolioEvolution(points) {
+    if (!points.length) { this.destroy('chart-port-evolution'); return; }
+    this.create('chart-port-evolution', {
+      type: 'line',
       data: {
-        labels: sorted.map(inv => inv.ticker || inv.name),
-        datasets: [{ label: 'Performance (%)', data, backgroundColor: data.map(v => v >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }],
+        labels: points.map(p => p.label),
+        datasets: [{
+          label: 'Valeur',
+          data: points.map(p => p.value),
+          borderColor: '#8b5cf6',
+          backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
+          borderWidth: 2.5,
+          pointRadius: points.length > 1 ? 3 : 4,
+          pointBackgroundColor: '#8b5cf6',
+          pointBorderColor: '#131525',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.35,
+        }],
       },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${Utils.formatPercent(ctx.raw)}` } } },
-        scales: { x: { ticks: { callback: (v) => `${v}%` } } },
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
       },
     });
   },
