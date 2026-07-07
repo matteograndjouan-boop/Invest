@@ -460,7 +460,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Modal
   document.getElementById('modal-close').addEventListener('click', Modal.close);
-  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  // mousedown (pas click/mouseup) : sinon un clic commencé dans la modale qui glisse
+  // jusqu'à l'overlay avant relâchement la ferme par erreur.
+  document.getElementById('modal-overlay').addEventListener('mousedown', (e) => {
     if (e.target.id === 'modal-overlay') Modal.close();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Modal.close(); });
