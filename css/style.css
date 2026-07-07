@@ -1,4 +1,8 @@
 :root {
+  /* App 100% sombre (pas de bascule thème clair) : indique au navigateur de rendre les
+     contrôles natifs (icône calendrier des <input type="date">, etc.) en clair sur fond
+     sombre, sinon ils restent en foncé-sur-foncé et deviennent quasi invisibles. */
+  color-scheme: dark;
   /* Thème sombre — palette imposée (fond/sidebar/cards/texte/bordure/accent) */
   --primary: #6c63ff;
   --primary-dark: #8b83ff;
