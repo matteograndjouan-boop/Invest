@@ -275,27 +275,27 @@ const Dashboard = {
 
 const APP_MODES = {
   investments: {
-    label: 'Investissements', icon: '📈',
+    label: 'Investissements',
     sections: [
-      { id: 'portfolio', label: 'Portefeuille', icon: '◈' },
-      { id: 'positions', label: 'Positions', icon: '≡' },
+      { id: 'portfolio', label: 'Portefeuille' },
+      { id: 'positions', label: 'Positions' },
     ],
     default: 'portfolio',
   },
   expenses: {
-    label: 'Dépenses', icon: '💳',
+    label: 'Dépenses',
     sections: [
-      { id: 'flux', label: 'Flux', icon: '💸' },
-      { id: 'comparisons', label: 'Comparaisons', icon: '⚖️' },
-      { id: 'budget', label: 'Budget', icon: '🎯' },
+      { id: 'flux', label: 'Flux' },
+      { id: 'comparisons', label: 'Comparaisons' },
+      { id: 'budget', label: 'Budget' },
     ],
     default: 'flux',
   },
   donnees: {
-    label: 'Données', icon: '🗃️',
+    label: 'Données',
     sections: [
-      { id: 'donnees', label: 'Toutes les données', icon: '📋' },
-      { id: 'categories', label: 'Catégories', icon: '🏷️' },
+      { id: 'donnees', label: 'Toutes les données' },
+      { id: 'categories', label: 'Catégories' },
     ],
     default: 'donnees',
   },
@@ -321,10 +321,10 @@ function renderModeTabs(mode, activeSectionId) {
   container.style.display = '';
   const tabs = cfg.sections.map(s => `
     <button class="mode-tab${s.id === activeSectionId ? ' active' : ''}" data-section="${s.id}">
-      <span class="mode-tab-ico">${s.icon}</span>${s.label}
+      ${s.label}
     </button>`).join('');
   container.innerHTML = `
-    <div class="mode-tabs-crumb">${cfg.icon} ${cfg.label}</div>
+    <div class="mode-tabs-crumb">${cfg.label}</div>
     <div class="mode-tabs-row">${tabs}</div>`;
   container.querySelectorAll('.mode-tab').forEach(btn => {
     btn.addEventListener('click', () => navigateTo(btn.dataset.section));
