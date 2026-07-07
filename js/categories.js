@@ -166,12 +166,65 @@ const Categories = {
   _delVersion(lin, id) {
     const cats = Storage.getCategories();
     const cat = cats.find(c => c.id === id);
-    if (!cat || !confirm(`Supprimer la version « ${cat.name} » ?`)) return;
-    const rest = cats.filter(c => c.id !== id);
-    Storage.saveCategories(rest);
-    const remain = rest.filter(c => c.lineage === lin);
+    if (!cat) return;
+    if (!this._deleteWithReassign(cat, cats)) return;
+    const remain = Storage.getCategories().filter(c => c.lineage === lin);
     if (remain.length < 2 && remain[0]) this._openOld.delete(remain[0].id);
     this.render();
+  },
+
+  // Suppression d'une catégorie : ne laisse JAMAIS une transaction pointer vers un nom qui
+  // n'existe plus (sinon elle reste affichée telle quelle dans "Toutes les données", orpheline,
+  // et l'édition retombe silencieusement sur la 1re catégorie de la liste — cf. piège connu).
+  //  • Si la catégorie a un nom précédent (renommage, cat.aliases) : les transactions y
+  //    reviennent. Si ce nom précédent existe encore comme catégorie (renommage à portée
+  //    datée), on y fusionne les sous-catégories et on supprime la version courante ; sinon
+  //    (renommage simple) on annule juste le renommage sur le même objet.
+  //  • Sinon (jamais renommée) : suppression bloquée tant qu'il reste des transactions
+  //    rattachées — pas de « Divers » implicite qui masquerait la perte de catégorisation.
+  // Renvoie true si la suppression (ou le retour en arrière) a eu lieu, false si annulée/bloquée.
+  _deleteWithReassign(cat, cats) {
+    const expenses = Storage.getExpenses();
+    const revenues = Storage.getRevenues();
+    const affected = expenses.filter(e => e.category === cat.name).length
+                    + revenues.filter(r => r.category === cat.name).length;
+    const previousName = (cat.aliases && cat.aliases.length) ? cat.aliases[cat.aliases.length - 1] : null;
+
+    if (!previousName && affected > 0) {
+      alert(`Impossible de supprimer « ${cat.name} » : ${affected} transaction${affected > 1 ? 's' : ''} utilise${affected > 1 ? 'nt' : ''} encore cette catégorie.\nRéaffectez-les depuis "Toutes les données" avant de supprimer.`);
+      return false;
+    }
+
+    const msg = previousName
+      ? (affected > 0
+          ? `Supprimer « ${cat.name} » ? ${affected} transaction${affected > 1 ? 's' : ''} ${affected > 1 ? 'seront réaffectées' : 'sera réaffectée'} à « ${previousName} ».`
+          : `Supprimer « ${cat.name} » ? Elle reviendra au nom « ${previousName} ».`)
+      : `Supprimer la catégorie "${cat.name}" et toutes ses sous-catégories ?`;
+    if (!confirm(msg)) return false;
+
+    let remaining = cats;
+    if (previousName) {
+      [expenses, revenues].forEach(arr => arr.forEach(t => { if (t.category === cat.name) t.category = previousName; }));
+      Storage.saveExpenses(expenses);
+      Storage.saveRevenues(revenues);
+
+      const sibling = cats.find(c => c.id !== cat.id && c.name === previousName);
+      if (sibling) {
+        cat.subcategories.forEach(s => { if (!sibling.subcategories.includes(s)) sibling.subcategories.push(s); });
+        delete sibling.obsolete; delete sibling.versionNote; delete sibling.validFrom; delete sibling.validTo; delete sibling.lineage;
+        remaining = cats.filter(c => c.id !== cat.id);
+      } else {
+        cat.name = previousName;
+        cat.aliases = cat.aliases.slice(0, -1);
+        if (!cat.aliases.length) delete cat.aliases;
+        delete cat.obsolete; delete cat.versionNote; delete cat.lineage; delete cat.validFrom; delete cat.validTo;
+      }
+    } else {
+      remaining = cats.filter(c => c.id !== cat.id);
+    }
+
+    Storage.saveCategories(remaining);
+    return true;
   },
 
   // Type d'une catégorie : explicite (cat.type) sinon déduit du nom.
@@ -402,6 +455,7 @@ const Categories = {
     Modal.close();
     this.render();
     if (typeof Expenses !== 'undefined' && Expenses._populateCatFilter) Expenses._populateCatFilter();
+    if (typeof DataEntry !== 'undefined' && DataEntry._populateCatFilter) DataEntry._populateCatFilter();
   },
 
   // ---- Historique / anciens noms (alias) d'une catégorie ----
@@ -670,17 +724,18 @@ const Categories = {
     Modal.close();
     this.render();
     Expenses._populateCatFilter();
+    if (typeof DataEntry !== 'undefined' && DataEntry._populateCatFilter) DataEntry._populateCatFilter();
   },
 
   deleteCategory(id) {
     const cats = Storage.getCategories();
     const cat = cats.find(c => c.id === id);
     if (!cat) return;
-    if (!confirm(`Supprimer la catégorie "${cat.name}" et toutes ses sous-catégories ?`)) return;
-    Storage.saveCategories(cats.filter(c => c.id !== id));
+    if (!this._deleteWithReassign(cat, cats)) return;
     this._editingCatId = null;
     this.render();
     Expenses._populateCatFilter();
+    if (typeof DataEntry !== 'undefined' && DataEntry._populateCatFilter) DataEntry._populateCatFilter();
   },
 
   addSubcat(catId) { this._openAddSubcatModal(catId); },
