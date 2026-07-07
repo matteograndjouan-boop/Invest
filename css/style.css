@@ -899,10 +899,6 @@ input:focus:not(:focus-visible) { outline: none; }
 .budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .card-header-row h3 { margin: 0; }
-.color-picker-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-.color-opt input[type=radio] { display: none; }
-.color-swatch { display: block; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s; }
-.color-opt input[type=radio]:checked + .color-swatch { border-color: var(--text); }
 
 /* ---- Flux cross-filter badge ---- */
 .flux-active-filter-badge {

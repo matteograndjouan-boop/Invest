@@ -1,6 +1,5 @@
 const Budget = {
   _currentThemeId: null,
-  _THEME_COLORS: ['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#ef4444','#14b8a6'],
 
   init() {
     PeriodFilter.onChange(() => {
@@ -82,7 +81,8 @@ const Budget = {
   },
 
   // Éclaircit une couleur hex vers le blanc (facteur 0..1) — dérive le 2e stop du dégradé du
-  // ruban (--cat-bar) à partir de l'unique couleur du budget (theme.color).
+  // ruban (--cat-bar) à partir de la couleur canonique de la catégorie (Utils.getCategoryColor),
+  // pour que le budget ait toujours la même couleur que sa catégorie ailleurs dans l'app.
   _lighten(hex, pct) {
     const c = parseInt(hex.slice(1), 16);
     const mix = (shift) => { const v = (c >> shift) & 255; return Math.round(v + (255 - v) * pct); };
@@ -182,7 +182,7 @@ const Budget = {
         const spent   = this._computeSpent(theme, expenses);
         const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
-        const color   = theme.color || '#6366f1';
+        const color   = Utils.getCategoryColor(theme.name);
         const icon    = Categories._meta(theme.name).icon;
         const status  = this._status(planned, pct);
         const vars    = `--cat-bar:linear-gradient(90deg,${color},${this._lighten(color, 0.35)})`;
@@ -222,7 +222,7 @@ const Budget = {
     const raw = Storage.getBudgetThemes().find(t => t.id === id);
     if (!raw) { this.showList(); return; }
     const theme = this._migrate({ ...raw });
-    const color = theme.color || '#6366f1';
+    const color = Utils.getCategoryColor(theme.name);
 
     document.getElementById('budget-list-view').classList.add('hidden');
     document.getElementById('budget-detail-view').classList.remove('hidden');
@@ -338,7 +338,7 @@ const Budget = {
     if (!wrap) return;
     const cats       = theme.categories || [];
     const catExpenses = periodExpenses.filter(e => cats.includes(e.category));
-    const color      = theme.color || '#6366f1';
+    const color      = Utils.getCategoryColor(theme.name);
 
     const groups = {};
     catExpenses.forEach(e => {
@@ -392,12 +392,6 @@ const Budget = {
     if (raw) Modal.open('Modifier le budget', this._editThemeForm(this._migrate({ ...raw })));
   },
 
-  _colorPicker(selected) {
-    return this._THEME_COLORS.map(c =>
-      `<label class="color-opt"><input type="radio" name="color" value="${c}" ${selected === c ? 'checked' : ''}><span style="background:${c}" class="color-swatch"></span></label>`
-    ).join('');
-  },
-
   _createForm() {
     const existing = new Set(Storage.getBudgetThemes().map(t => {
       const m = this._migrate({ ...t });
@@ -419,8 +413,6 @@ const Budget = {
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${today}">
           <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant (ramené au mois), à partir de cette date.</p></div>
-        <div class="form-group form-full"><label>Couleur</label>
-          <div class="color-picker-row">${this._colorPicker(this._THEME_COLORS[0])}</div></div>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
@@ -440,8 +432,6 @@ const Budget = {
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${theme.startDate || ''}">
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
-        <div class="form-group form-full"><label>Couleur</label>
-          <div class="color-picker-row">${this._colorPicker(theme.color || this._THEME_COLORS[0])}</div></div>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="Budget.deleteTheme('${theme.id}')">🗑 Supprimer</button>
@@ -460,7 +450,6 @@ const Budget = {
     themes.push({
       id: 'theme_' + Date.now(),
       name: category,
-      color: fd.get('color'),
       monthlyAmount: amount / periodMonths,
       inputAmount: amount,
       inputPeriodMonths: periodMonths,
@@ -484,7 +473,6 @@ const Budget = {
     theme.inputAmount       = amount;
     theme.inputPeriodMonths = periodMonths;
     theme.startDate         = fd.get('startDate') || null;
-    theme.color             = fd.get('color') || theme.color;
     Storage.saveBudgetThemes(themes);
     Modal.close();
     if (this._currentThemeId === id) this._renderDetail(id);
