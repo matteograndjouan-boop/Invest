@@ -1320,22 +1320,70 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .kpi-trend .trend-bad  { color: var(--danger);  font-weight: 500; }
 .kpi-trend .trend-neutral { color: var(--text-muted); }
 
-/* flux-kpi-card kept for backward compat — styles are now global on .kpi-card */
-.flux-kpi-card { }
-
-/* ---- Flux : bande dégradée en haut des 4 cartes KPI (remplace le liseré gauche) ---- */
-/* Spécificité .kpi-card.flux-kpi-card (2 classes) : au moins égale à .kpi-card.primary/
-   .success/.danger (2 classes aussi) pour être sûr de l'emporter sur le liseré gauche
-   d'origine. #flux-kpi-solde-card ciblée par id EN PLUS : sa classe "flux-kpi-card" est
-   perdue quand Flux.js réassigne son className (succès/danger selon le signe du solde). */
-.kpi-card.flux-kpi-card, #flux-kpi-solde-card { border-left-color: transparent !important; }
-.flux-kpi-card::before, #flux-kpi-solde-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+/* ---- Flux : cartes KPI "fumée colorée" ----
+   Fond organique par calques de radial-gradient superposés (pas un aplat/linear-gradient) :
+   plusieurs taches de couleur à des positions/tailles différentes pour un rendu irrégulier,
+   assombries vers le bas par un dernier calque linéaire pour que le texte reste lisible. */
+.flux-kpi-card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 26px;
+  background: #0d0f1f;
+  box-shadow: 0 10px 28px rgba(0,0,0,.3);
+  padding: 22px 24px 20px;
 }
-.kpi-card.flux-kpi-card.success::before  { background: linear-gradient(90deg, #00b37e, #4ade80); }  /* Revenus */
-.kpi-card.flux-kpi-card.danger::before   { background: linear-gradient(90deg, #e53e3e, #fc8181); }  /* Dépenses */
-#flux-kpi-solde-card::before              { background: linear-gradient(90deg, #6c63ff, #a09bff); }  /* Solde net (pas de classe stable : succès/danger togglés en JS) */
-.kpi-card.flux-kpi-card.primary::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }  /* Taux d'épargne */
+.fk-smoke { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.flux-kpi-card > :not(.fk-smoke) { position: relative; z-index: 1; }
+
+.fk-icon { display: block; width: 22px; height: 22px; margin-bottom: 30px; }
+.fk-icon svg { width: 100%; height: 100%; }
+
+.flux-kpi-card .kpi-label { color: rgba(255,255,255,.62); }
+.flux-kpi-card .kpi-value { font-size: 30px; font-weight: 800; letter-spacing: -.5px; color: #fff; margin-top: 2px; }
+.flux-kpi-card .kpi-trend { margin-top: 10px; font-size: 13px; font-weight: 600; }
+
+.fk-revenue .fk-icon { color: #00b37e; }
+.fk-expense .fk-icon { color: #e53e3e; }
+.fk-balance .fk-icon { color: #3b82f6; }
+.fk-savings .fk-icon { color: #d97706; }
+
+.fk-revenue .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 18% 10%, rgba(0,179,126,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 58% 0%,  rgba(0,179,126,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 92% 30%, rgba(0,179,126,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 42% 48%, rgba(0,179,126,.32) 0%, transparent 100%);
+}
+.fk-expense .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 82% 8%,  rgba(229,62,62,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 40% 0%,  rgba(229,62,62,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 8% 32%,  rgba(229,62,62,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 55% 48%, rgba(229,62,62,.32) 0%, transparent 100%);
+}
+.fk-balance .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 25% 8%,  rgba(59,130,246,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 65% 14%, rgba(59,130,246,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 90% 40%, rgba(59,130,246,.48) 0%, transparent 100%),
+    radial-gradient(70% 65% at 38% 50%, rgba(59,130,246,.30) 0%, transparent 100%);
+}
+.fk-savings .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 80% 10%, rgba(217,119,6,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 35% 0%,  rgba(217,119,6,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 8% 34%,  rgba(217,119,6,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 55% 48%, rgba(217,119,6,.32) 0%, transparent 100%);
+}
 
 /* ---- Flux Category Pills ---- */
 .flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; align-items: center; }
@@ -2337,26 +2385,30 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card success flux-kpi-card">
-            <div class="kpi-badge">↗</div>
+          <div class="flux-kpi-card fk-revenue">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
             <div class="kpi-label">Revenus</div>
-            <div class="kpi-value positive" id="flux-kpi-revenus">0 €</div>
+            <div class="kpi-value" id="flux-kpi-revenus">0 €</div>
             <div class="kpi-trend" id="flux-trend-revenus"></div>
           </div>
-          <div class="kpi-card danger flux-kpi-card">
-            <div class="kpi-badge">↙</div>
+          <div class="flux-kpi-card fk-expense">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 19"/><polyline points="15 19 21 19 21 13"/></svg></span>
             <div class="kpi-label">Dépenses</div>
             <div class="kpi-value" id="flux-kpi-depenses">0 €</div>
             <div class="kpi-trend" id="flux-trend-depenses"></div>
           </div>
-          <div class="kpi-card flux-kpi-card" id="flux-kpi-solde-card">
-            <div class="kpi-badge">⊜</div>
+          <div class="flux-kpi-card fk-balance" id="flux-kpi-solde-card">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><path d="M5 7h14"/><path d="M5 7l-3 7a4 4 0 0 0 8 0z"/><path d="M19 7l-3 7a4 4 0 0 0 8 0z"/></svg></span>
             <div class="kpi-label">Solde net</div>
             <div class="kpi-value" id="flux-kpi-solde">0 €</div>
             <div class="kpi-trend" id="flux-trend-solde"></div>
           </div>
-          <div class="kpi-card primary flux-kpi-card">
-            <div class="kpi-badge">%</div>
+          <div class="flux-kpi-card fk-savings">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
             <div class="kpi-label">Taux d'épargne</div>
             <div class="kpi-value" id="flux-kpi-epargne">— %</div>
             <div class="kpi-trend" id="flux-trend-epargne"></div>
@@ -4632,17 +4684,21 @@ const Flux = {
     };
   },
 
-  _renderKpiTrend(id, current, prev, lowerIsBetter) {
+  // Couleur/flèche suivent le signe brut de la variation (vert = positif, rouge = négatif),
+  // pas une notion de "bon/mauvais" par métrique — une baisse de dépenses s'affiche donc en
+  // rouge comme n'importe quelle autre variation négative.
+  _renderKpiTrend(id, current, prev) {
     const el = document.getElementById(id);
     if (!el) return;
     if (prev == null || prev === 0) { el.innerHTML = ''; return; }
     const diff = current - prev;
-    const pct = Math.abs((diff / prev) * 100).toFixed(1);
+    if (diff === 0) { el.innerHTML = `<span class="trend-neutral">→ 0 % vs période préc.</span>`; return; }
+    const pct = Math.abs((diff / prev) * 100).toFixed(1).replace('.', ',');
     const isUp = diff > 0;
-    const isGood = lowerIsBetter ? !isUp : isUp;
     const arrow = isUp ? '↑' : '↓';
-    const cls = isGood ? 'trend-good' : 'trend-bad';
-    el.innerHTML = `<span class="${cls}">${arrow} ${pct}% vs mois préc.</span>`;
+    const sign = isUp ? '+' : '-';
+    const cls = isUp ? 'trend-good' : 'trend-bad';
+    el.innerHTML = `<span class="${cls}">${arrow} ${sign}${pct} % vs période préc.</span>`;
   },
 
   render() {
@@ -4664,13 +4720,8 @@ const Flux = {
 
     document.getElementById('flux-kpi-revenus').textContent = Utils.formatCurrency(totalRev);
     document.getElementById('flux-kpi-depenses').textContent = Utils.formatCurrency(totalDep);
-    const soldeEl = document.getElementById('flux-kpi-solde');
-    soldeEl.textContent = Utils.formatCurrency(solde);
-    soldeEl.className = 'kpi-value ' + (solde >= 0 ? 'positive' : 'negative');
-    document.getElementById('flux-kpi-solde-card').className = 'kpi-card ' + (solde >= 0 ? 'success' : 'danger');
-    const epEl = document.getElementById('flux-kpi-epargne');
-    epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
-    epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
+    document.getElementById('flux-kpi-solde').textContent = Utils.formatCurrency(solde);
+    document.getElementById('flux-kpi-epargne').textContent = tauxEpargne !== '—' ? tauxEpargne.replace('.', ',') + ' %' : '—';
 
     const prev = this._getPrevPeriodData();
     if (prev) {
@@ -4679,11 +4730,11 @@ const Flux = {
       if (catFilters.size) prevExp = prevExp.filter(e => catFilters.has(e.category));
       const prevDep = prevExp.reduce((s, e) => s + e.amount, 0);
       const prevSolde = prevRev - prevDep;
-      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev, false);
-      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep, true);
-      this._renderKpiTrend('flux-trend-solde', solde, prevSolde, false);
+      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev);
+      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep);
+      this._renderKpiTrend('flux-trend-solde', solde, prevSolde);
       const prevEp = prevRev > 0 ? prevSolde / prevRev * 100 : null;
-      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp, false);
+      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp);
     } else {
       ['flux-trend-revenus','flux-trend-depenses','flux-trend-solde','flux-trend-epargne']
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });

@@ -89,17 +89,21 @@ const Flux = {
     };
   },
 
-  _renderKpiTrend(id, current, prev, lowerIsBetter) {
+  // Couleur/flèche suivent le signe brut de la variation (vert = positif, rouge = négatif),
+  // pas une notion de "bon/mauvais" par métrique — une baisse de dépenses s'affiche donc en
+  // rouge comme n'importe quelle autre variation négative.
+  _renderKpiTrend(id, current, prev) {
     const el = document.getElementById(id);
     if (!el) return;
     if (prev == null || prev === 0) { el.innerHTML = ''; return; }
     const diff = current - prev;
-    const pct = Math.abs((diff / prev) * 100).toFixed(1);
+    if (diff === 0) { el.innerHTML = `<span class="trend-neutral">→ 0 % vs période préc.</span>`; return; }
+    const pct = Math.abs((diff / prev) * 100).toFixed(1).replace('.', ',');
     const isUp = diff > 0;
-    const isGood = lowerIsBetter ? !isUp : isUp;
     const arrow = isUp ? '↑' : '↓';
-    const cls = isGood ? 'trend-good' : 'trend-bad';
-    el.innerHTML = `<span class="${cls}">${arrow} ${pct}% vs mois préc.</span>`;
+    const sign = isUp ? '+' : '-';
+    const cls = isUp ? 'trend-good' : 'trend-bad';
+    el.innerHTML = `<span class="${cls}">${arrow} ${sign}${pct} % vs période préc.</span>`;
   },
 
   render() {
@@ -121,13 +125,8 @@ const Flux = {
 
     document.getElementById('flux-kpi-revenus').textContent = Utils.formatCurrency(totalRev);
     document.getElementById('flux-kpi-depenses').textContent = Utils.formatCurrency(totalDep);
-    const soldeEl = document.getElementById('flux-kpi-solde');
-    soldeEl.textContent = Utils.formatCurrency(solde);
-    soldeEl.className = 'kpi-value ' + (solde >= 0 ? 'positive' : 'negative');
-    document.getElementById('flux-kpi-solde-card').className = 'kpi-card ' + (solde >= 0 ? 'success' : 'danger');
-    const epEl = document.getElementById('flux-kpi-epargne');
-    epEl.textContent = tauxEpargne !== '—' ? tauxEpargne + ' %' : '—';
-    epEl.className = 'kpi-value ' + (parseFloat(tauxEpargne) >= 0 ? 'positive' : 'negative');
+    document.getElementById('flux-kpi-solde').textContent = Utils.formatCurrency(solde);
+    document.getElementById('flux-kpi-epargne').textContent = tauxEpargne !== '—' ? tauxEpargne.replace('.', ',') + ' %' : '—';
 
     const prev = this._getPrevPeriodData();
     if (prev) {
@@ -136,11 +135,11 @@ const Flux = {
       if (catFilters.size) prevExp = prevExp.filter(e => catFilters.has(e.category));
       const prevDep = prevExp.reduce((s, e) => s + e.amount, 0);
       const prevSolde = prevRev - prevDep;
-      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev, false);
-      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep, true);
-      this._renderKpiTrend('flux-trend-solde', solde, prevSolde, false);
+      this._renderKpiTrend('flux-trend-revenus', totalRev, prevRev);
+      this._renderKpiTrend('flux-trend-depenses', totalDep, prevDep);
+      this._renderKpiTrend('flux-trend-solde', solde, prevSolde);
       const prevEp = prevRev > 0 ? prevSolde / prevRev * 100 : null;
-      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp, false);
+      this._renderKpiTrend('flux-trend-epargne', parseFloat(tauxEpargne) || 0, prevEp);
     } else {
       ['flux-trend-revenus','flux-trend-depenses','flux-trend-solde','flux-trend-epargne']
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
