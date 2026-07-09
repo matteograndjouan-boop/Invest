@@ -3424,10 +3424,32 @@ const Charts = {
     });
   },
 
+  // Ombre portée sous chaque barre : ctx.shadow* n'existe pas comme option de dataset Chart.js,
+  // on l'applique donc en scriptant le contexte canvas juste avant/après le passage de dessin
+  // du dataset visé (args.meta.type filtre : seulement les barres, jamais la ligne Solde net
+  // qui partage le même chart).
+  _barShadowPlugin(color = 'rgba(0,0,0,0.35)', blur = 7, offsetY = 4) {
+    return {
+      id: 'barShadow',
+      beforeDatasetDraw(chart, args) {
+        if (args.meta.type !== 'bar') return;
+        chart.ctx.save();
+        chart.ctx.shadowColor = color;
+        chart.ctx.shadowBlur = blur;
+        chart.ctx.shadowOffsetY = offsetY;
+      },
+      afterDatasetDraw(chart, args) {
+        if (args.meta.type !== 'bar') return;
+        chart.ctx.restore();
+      },
+    };
+  },
+
   // Toujours Revenus vs Dépenses (+ Solde net) : ne dépend QUE de la période, jamais du
   // filtre de catégorie (celui-ci ne pilote que le nouveau graphique par catégorie et le
   // donut/tableau). Barres en dégradé vertical (vif en haut, sombre en bas), coins arrondis
-  // côté haut uniquement (borderSkipped par défaut = base), sans bordure (pas de glow).
+  // côté haut uniquement (borderSkipped par défaut = base), légère ombre portée, sans bordure
+  // (pas de glow). Solde net : ligne épaisse + aire dégradée (couleur → transparent) vers zéro.
   fluxBar(labels, revData, depData, soldeData) {
     const barDatasets = [
       { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#00b37e', '#004d35'), borderWidth: 0, borderRadius: 6, type: 'bar' },
@@ -3439,12 +3461,12 @@ const Charts = {
       data: soldeData,
       type: 'line',
       borderColor: '#8b5cf6',
-      backgroundColor: 'rgba(139,92,246,0.07)',
-      borderWidth: 2,
+      backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
+      borderWidth: 3,
       pointRadius: 3,
       pointHoverRadius: 5,
       pointBackgroundColor: '#8b5cf6',
-      fill: false,
+      fill: 'origin',
       tension: 0.35,
       yAxisID: 'y',
     };
@@ -3460,7 +3482,44 @@ const Charts = {
         },
         scales: { y: this._yAxis(), x: this._xAxis() },
       },
+      plugins: [this._barShadowPlugin()],
     });
+  },
+
+  // Léger glacis lumineux sur le bord supérieur de l'anneau (effet de relief façon bouton
+  // brillant) : un dégradé blanc→transparent, plaqué sur TOUT l'anneau (pas segment par
+  // segment — plus simple, et le résultat perçu est le même : un reflet qui vient du haut)
+  // via un chemin en anneau (grand cercle moins petit cercle) servant de clip.
+  _donutGlossPlugin() {
+    return {
+      id: 'donutGloss',
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data || !meta.data.length) return;
+        // Rayon depuis un arc (inchangé par le décalage "actif"), mais centre depuis la zone
+        // du graphique plutôt que arc.x/y — ceux-ci se décalent avec l'offset du segment actif
+        // (mode filtre), ce qui désalignerait le glacis s'il était lu sur le 1er segment.
+        const { innerRadius, outerRadius } = meta.data[0].getProps(['innerRadius', 'outerRadius'], true);
+        if (!outerRadius) return;
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const x = (chartArea.left + chartArea.right) / 2;
+        const y = (chartArea.top + chartArea.bottom) / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, outerRadius, 0, Math.PI * 2);
+        ctx.arc(x, y, innerRadius, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.clip();
+        const grad = ctx.createLinearGradient(x, y - outerRadius, x, y + outerRadius * 0.15);
+        grad.addColorStop(0, 'rgba(255,255,255,0.28)');
+        grad.addColorStop(0.4, 'rgba(255,255,255,0.06)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - outerRadius, y - outerRadius, outerRadius * 2, outerRadius * 2);
+        ctx.restore();
+      },
+    };
   },
 
   // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
@@ -3489,7 +3548,7 @@ const Charts = {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        cutout: '42%',   // anneau plus épais qu'avant (défaut Chart.js non précisé ~50% : plus petit = plus épais)
+        cutout: '34%',   // anneau bien plus épais (42% avant) : plus petit = plus épais
         plugins: {
           legend: { display: false },
           tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
@@ -3504,6 +3563,7 @@ const Charts = {
           ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
           : undefined,
       },
+      plugins: [this._donutGlossPlugin()],
     });
   },
 
