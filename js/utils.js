@@ -140,12 +140,28 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
+  // Palette des catégories : uniquement 4 teintes (+ nuances), le vert et le rouge sont
+  // réservés aux revenus/dépenses/tendances (voir --success/--danger) et ne doivent jamais
+  // servir à distinguer des catégories. Entrelacée par teinte (bleu/orange/violet/cyan) plutôt
+  // que groupée par nuance, pour que deux catégories consécutives (positions voisines dans
+  // Storage.getCategories()) ne partagent quasiment jamais la même famille de couleur.
   CATEGORY_COLORS: [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
-    '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
+    '#3b82f6', '#d97706', '#8b5cf6', '#06b6d4', // bleu / orange / violet / cyan
+    '#60a5fa', '#f59e0b', '#a78bfa', '#22d3ee', // …clairs
+    '#2563eb', '#b45309', '#7c3aed', '#0891b2', // …foncés
+    '#1d4ed8', '#fbbf24', '#6d28d9', '#0e7490', // …extrêmes
   ],
 
   CATEGORY_COLOR_OTHER: '#6b7280',
+
+  // Palette générique par RANG (pas par identité de catégorie) réservée aux positions d'un
+  // portefeuille (Investments._renderAccountAllocation / Charts.accountAllocation) — distincte
+  // de CATEGORY_COLORS pour que la refonte des couleurs de catégories n'affecte pas l'onglet
+  // Investissements (ancienne palette conservée telle quelle).
+  POSITION_COLORS: [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+    '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
+  ],
 
   // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
   // jamais par rang/montant/ordre d'apparition — sinon une même catégorie changerait de couleur

@@ -176,12 +176,14 @@ const Charts = {
   },
 
   // Répartition par POSITION à l'intérieur d'un seul compte (pas par type) : chaque position
-  // garde une couleur stable par son rang dans la liste filtrée (palette catégorielle générique).
+  // garde une couleur stable par son rang dans la liste filtrée (Utils.POSITION_COLORS —
+  // palette dédiée, distincte de CATEGORY_COLORS, pour ne pas dépendre des couleurs de
+  // catégories de dépense/revenu).
   accountAllocation(investments) {
     if (!investments.length) { this.destroy('chart-port-acc-alloc'); return; }
     const labels = investments.map(inv => inv.name);
     const data = investments.map(inv => inv.quantity * inv.currentPrice);
-    const colors = investments.map((_, i) => Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length]);
+    const colors = investments.map((_, i) => Utils.POSITION_COLORS[i % Utils.POSITION_COLORS.length]);
     const opts = this._doughnutOptions(Utils.formatCurrency);
     opts.cutout = '68%';
     opts.plugins.legend = { display: false };

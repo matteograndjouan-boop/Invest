@@ -235,7 +235,7 @@ const Investments = {
     const entries = investments.map((inv, i) => ({
       label: inv.name,
       value: inv.quantity * inv.currentPrice,
-      color: Utils.CATEGORY_COLORS[i % Utils.CATEGORY_COLORS.length],
+      color: Utils.POSITION_COLORS[i % Utils.POSITION_COLORS.length],
     }));
     this._renderLegend('port-acc-alloc-legend', entries);
   },
