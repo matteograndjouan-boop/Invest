@@ -16,7 +16,7 @@ const Expenses = {
     if (!catFilter) return;
     const currentVal = catFilter.value;
     catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
+    Storage.getCategories().filter(c => Categories._catType(c) === 'expense').forEach(cat => {
       const opt = document.createElement('option');
       opt.value = cat.name;
       opt.textContent = cat.name;
@@ -28,7 +28,9 @@ const Expenses = {
   },
 
   render() {
-    const expenses = Storage.getExpenses();
+    // Épargne/Revenus ne comptent jamais comme des dépenses (Utils.isExpenseCategory), même
+    // si un enregistrement existe techniquement dans invest_expenses.
+    const expenses = Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
     this._populateCatFilter();
     this._renderSummary(expenses);
     this._renderTable(expenses);
@@ -92,7 +94,14 @@ const Expenses = {
   _form(exp) {
     const isEdit = !!exp;
     const today = new Date().toISOString().split('T')[0];
-    const cats = Storage.getCategories();
+    // Catégories de dépense uniquement (Épargne/Revenus exclues) ; on garde la catégorie
+    // actuelle si on édite une dépense existante qui en sortirait sinon silencieusement —
+    // piège connu du <select> sans option "selected".
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense');
+    if (exp?.category && !cats.some(c => c.name === exp.category)) {
+      const cur = Storage.getCategories().find(c => c.name === exp.category);
+      if (cur) cats.push(cur);
+    }
     const selectedCatName = exp?.category || (cats[0]?.name || '');
     const selectedCat = cats.find(c => c.name === selectedCatName) || cats[0];
 

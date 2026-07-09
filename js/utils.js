@@ -6,6 +6,15 @@ const Utils = {
   // énorme (fallback navigateur ~300×150) tant qu'aucune règle CSS locale ne le contraint.
   ICON_TRASH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
 
+  // Une transaction ne compte comme une vraie "dépense" que si sa catégorie est de type
+  // 'expense' (Categories._catType) — Revenus/Épargne (revenue/investment) n'en sont jamais,
+  // même si un enregistrement existe techniquement dans invest_expenses (import bancaire,
+  // saisie manuelle...). Catégorie introuvable (supprimée) -> true, comportement historique.
+  isExpenseCategory(name) {
+    const cat = Storage.getCategories().find(c => c.name === name);
+    return cat ? Categories._catType(cat) === 'expense' : true;
+  },
+
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   },

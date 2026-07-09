@@ -14,6 +14,10 @@ const Modal = {
 const Dashboard = {
   render() {
     const expenses  = Storage.getExpenses();
+    // Épargne/Revenus ne comptent jamais comme des dépenses (Utils.isExpenseCategory) — sert
+    // à tous les totaux/calculs ci-dessous. "expenses" (brut) reste utilisé uniquement pour
+    // le flux d'activité récente (_renderRecentOps), qui montre tout sans distinction.
+    const realExpenses = expenses.filter(e => Utils.isExpenseCategory(e.category));
     const revenues  = Storage.getRevenues();
     const budgets   = Storage.getBudgets();
     const patrimony = Storage.getPatrimony();
@@ -30,7 +34,7 @@ const Dashboard = {
       MONTHS_FR[mm - 1] + ' ' + my;
 
     // --- Current month cash flow ---
-    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    const monthExp = realExpenses.filter(e => Utils.getExpenseMonth(e) === month);
     const monthRev = revenues.filter(r => r.date.substring(0, 7) === month);
     const totalDep = monthExp.reduce((s, e) => s + e.amount, 0);
     const totalRev = monthRev.reduce((s, r) => s + r.amount, 0);
@@ -40,7 +44,7 @@ const Dashboard = {
     // Previous month for trend
     const prevDate = new Date(my, mm - 2, 1);
     const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    const prevExp = expenses.filter(e => Utils.getExpenseMonth(e) === prevMonth).reduce((s, e) => s + e.amount, 0);
+    const prevExp = realExpenses.filter(e => Utils.getExpenseMonth(e) === prevMonth).reduce((s, e) => s + e.amount, 0);
     const prevRev = revenues.filter(r => r.date.substring(0, 7) === prevMonth).reduce((s, r) => s + r.amount, 0);
     const prevSolde = prevRev - prevExp;
 
@@ -96,8 +100,8 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
-    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevExp);
-    this._renderFluxChart(expenses, revenues);
+    this._renderInsights(realExpenses, revenues, monthExp, totalDep, totalRev, prevExp);
+    this._renderFluxChart(realExpenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
   },

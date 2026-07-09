@@ -1,6 +1,13 @@
 const Budget = {
   _currentThemeId: null,
 
+  // Mêmes dépenses "réelles" que Flux (Utils.isExpenseCategory) : Épargne/Revenus ne peuvent
+  // plus être suivies par un budget, comme elles ne peuvent plus être sélectionnées à la
+  // création (_createForm).
+  _realExpenses() {
+    return Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
+  },
+
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-budget').classList.contains('hidden')) this.render();
@@ -123,7 +130,7 @@ const Budget = {
     const rawThemes  = Storage.getBudgetThemes();
     const themes     = rawThemes.map(t => this._migrate({ ...t }));
     const { start, end } = PeriodFilter.getDateRange();
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const expenses   = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
 
     const overviewBar = document.getElementById('budget-overview-bar');
@@ -233,7 +240,7 @@ const Budget = {
     if (backBtn)   backBtn.classList.remove('hidden');
 
     const { start, end } = PeriodFilter.getDateRange();
-    const allExpenses    = Storage.getExpenses();
+    const allExpenses    = this._realExpenses();
     const periodExpenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     const spent   = this._computeSpent(theme, periodExpenses);
     const planned = this._plannedForPeriod(theme);
@@ -397,7 +404,7 @@ const Budget = {
       const m = this._migrate({ ...t });
       return (m.categories || [])[0];
     }).filter(Boolean));
-    const cats = Storage.getCategories().filter(c => !existing.has(c.name));
+    const cats = Storage.getCategories().filter(c => !existing.has(c.name) && Categories._catType(c) === 'expense');
     if (!cats.length) return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
       Toutes tes catégories ont déjà un budget.<br><small>Crée d'abord de nouvelles catégories dans Données › Catégories.</small>
       <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div></div>`;
@@ -496,7 +503,7 @@ const Budget = {
     const raw = Storage.getBudgetThemes().find(t => t.id === id);
     if (!raw) return;
     const theme = this._migrate({ ...raw });
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const now = new Date();
     let sum = 0;
     for (let i = 1; i <= 3; i++) {

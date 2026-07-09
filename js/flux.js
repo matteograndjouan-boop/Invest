@@ -10,10 +10,16 @@ const Flux = {
     this._renderCatPills();
   },
 
+  // Dépenses "réelles" au sens strict (catégorie de type 'expense') : Épargne/Revenus n'en
+  // font jamais partie, même si un enregistrement existe techniquement (import bancaire).
+  _realExpenses() {
+    return Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
+  },
+
   _renderCatPills() {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
-    const cats = Storage.getCategories().map(c => c.name);
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense').map(c => c.name);
     const active = this._activeFilters;
     const multi = this._multiMode;
 
@@ -84,7 +90,7 @@ const Flux = {
     const start = `${pm}-01`;
     const end = `${pm}-${String(last).padStart(2, '0')}`;
     return {
-      expenses: Storage.getExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
+      expenses: this._realExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
       revenues: Storage.getRevenues().filter(r => Utils.getExpenseDate(r) >= start && Utils.getExpenseDate(r) <= end),
     };
   },
@@ -110,7 +116,7 @@ const Flux = {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilters = this._activeFilters;
 
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const allRevenues = Storage.getRevenues();
 
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
@@ -204,7 +210,7 @@ const Flux = {
   _categoryTotals() {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
-    Storage.getExpenses()
+    this._realExpenses()
       .filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
     return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
@@ -285,7 +291,7 @@ const Flux = {
     if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
     else this._expandedCats.add(cat);
     const { start, end } = PeriodFilter.getDateRange();
-    this._renderSummaryTable(Storage.getExpenses(), start, end, this._activeFilters);
+    this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
   },
 
   _renderSummaryTable(allExpenses, start, end, catFilters) {

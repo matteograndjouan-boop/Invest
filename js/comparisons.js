@@ -30,7 +30,9 @@ const Comparisons = {
   },
 
   render() {
-    const expenses = Storage.getExpenses();
+    // Épargne/Revenus ne sont jamais des dépenses (Utils.isExpenseCategory), même si un
+    // enregistrement existe techniquement dans invest_expenses.
+    const expenses = Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
     // Respecte le mode date comptable/effective (getExpenseDate → mois filtrant).
     const expMonth = e => Utils.getExpenseDate(e).substring(0, 7);
     const expA = expenses.filter(e => expMonth(e) === this.periodA);

@@ -932,9 +932,8 @@ const BankImport = {
     if (/steam |playstation|xbox |nintendo|epic games|jeux?.video|gaming/.test(d))         return res('Loisir','Culture');
     if (/gym |fitness|basic fit|neoness|keep cool|salle de sport|musculation|piscine|tennis|badminton|squash|yoga|pilates|crossfit/.test(d)) return res('Loisir','Sport');
 
-    // Épargne
-    if (/boursorama|bourse direct|degiro|trade republic/.test(d))                          return res('Epargne','Bourso');
-    if (/livret|pel |plan epargne|assurance vie|per |placement/.test(d))                   return res('Epargne','');
+    // Épargne : plus de classement automatique ici — Épargne n'est plus une catégorie de
+    // dépense (comme Revenus), un virement vers l'épargne retombe sur Divers ci-dessous.
 
     // Divers
     if (/frais bancaire|cotisation carte|commission |agios|interet /.test(d))              return res('Divers','Frais bancaires');

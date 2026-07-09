@@ -2935,6 +2935,15 @@ const Utils = {
   // énorme (fallback navigateur ~300×150) tant qu'aucune règle CSS locale ne le contraint.
   ICON_TRASH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
 
+  // Une transaction ne compte comme une vraie "dépense" que si sa catégorie est de type
+  // 'expense' (Categories._catType) — Revenus/Épargne (revenue/investment) n'en sont jamais,
+  // même si un enregistrement existe techniquement dans invest_expenses (import bancaire,
+  // saisie manuelle...). Catégorie introuvable (supprimée) -> true, comportement historique.
+  isExpenseCategory(name) {
+    const cat = Storage.getCategories().find(c => c.name === name);
+    return cat ? Categories._catType(cat) === 'expense' : true;
+  },
+
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   },
@@ -4308,7 +4317,7 @@ const Expenses = {
     if (!catFilter) return;
     const currentVal = catFilter.value;
     catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
+    Storage.getCategories().filter(c => Categories._catType(c) === 'expense').forEach(cat => {
       const opt = document.createElement('option');
       opt.value = cat.name;
       opt.textContent = cat.name;
@@ -4320,7 +4329,9 @@ const Expenses = {
   },
 
   render() {
-    const expenses = Storage.getExpenses();
+    // Épargne/Revenus ne comptent jamais comme des dépenses (Utils.isExpenseCategory), même
+    // si un enregistrement existe techniquement dans invest_expenses.
+    const expenses = Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
     this._populateCatFilter();
     this._renderSummary(expenses);
     this._renderTable(expenses);
@@ -4384,7 +4395,14 @@ const Expenses = {
   _form(exp) {
     const isEdit = !!exp;
     const today = new Date().toISOString().split('T')[0];
-    const cats = Storage.getCategories();
+    // Catégories de dépense uniquement (Épargne/Revenus exclues) ; on garde la catégorie
+    // actuelle si on édite une dépense existante qui en sortirait sinon silencieusement —
+    // piège connu du <select> sans option "selected".
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense');
+    if (exp?.category && !cats.some(c => c.name === exp.category)) {
+      const cur = Storage.getCategories().find(c => c.name === exp.category);
+      if (cur) cats.push(cur);
+    }
     const selectedCatName = exp?.category || (cats[0]?.name || '');
     const selectedCat = cats.find(c => c.name === selectedCatName) || cats[0];
 
@@ -4605,10 +4623,16 @@ const Flux = {
     this._renderCatPills();
   },
 
+  // Dépenses "réelles" au sens strict (catégorie de type 'expense') : Épargne/Revenus n'en
+  // font jamais partie, même si un enregistrement existe techniquement (import bancaire).
+  _realExpenses() {
+    return Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
+  },
+
   _renderCatPills() {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
-    const cats = Storage.getCategories().map(c => c.name);
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense').map(c => c.name);
     const active = this._activeFilters;
     const multi = this._multiMode;
 
@@ -4679,7 +4703,7 @@ const Flux = {
     const start = `${pm}-01`;
     const end = `${pm}-${String(last).padStart(2, '0')}`;
     return {
-      expenses: Storage.getExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
+      expenses: this._realExpenses().filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end),
       revenues: Storage.getRevenues().filter(r => Utils.getExpenseDate(r) >= start && Utils.getExpenseDate(r) <= end),
     };
   },
@@ -4705,7 +4729,7 @@ const Flux = {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilters = this._activeFilters;
 
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const allRevenues = Storage.getRevenues();
 
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
@@ -4799,7 +4823,7 @@ const Flux = {
   _categoryTotals() {
     const byCategory = {};
     const { start, end } = PeriodFilter.getDateRange();
-    Storage.getExpenses()
+    this._realExpenses()
       .filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end)
       .forEach(e => { byCategory[e.category] = (byCategory[e.category] || 0) + e.amount; });
     return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
@@ -4880,7 +4904,7 @@ const Flux = {
     if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
     else this._expandedCats.add(cat);
     const { start, end } = PeriodFilter.getDateRange();
-    this._renderSummaryTable(Storage.getExpenses(), start, end, this._activeFilters);
+    this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
   },
 
   _renderSummaryTable(allExpenses, start, end, catFilters) {
@@ -5028,7 +5052,9 @@ const Comparisons = {
   },
 
   render() {
-    const expenses = Storage.getExpenses();
+    // Épargne/Revenus ne sont jamais des dépenses (Utils.isExpenseCategory), même si un
+    // enregistrement existe techniquement dans invest_expenses.
+    const expenses = Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
     // Respecte le mode date comptable/effective (getExpenseDate → mois filtrant).
     const expMonth = e => Utils.getExpenseDate(e).substring(0, 7);
     const expA = expenses.filter(e => expMonth(e) === this.periodA);
@@ -6199,9 +6225,11 @@ const DataEntry = {
     const type = item?._type || defaultType || 'expense';
     const today = new Date().toISOString().split('T')[0];
 
-    // Catégories actives pour la saisie ; on conserve la catégorie actuelle de la
-    // transaction éditée même si elle est devenue inactive (renommage à portée).
-    const cats = Storage.getActiveCategories();
+    // Catégories actives de type "dépense" pour la saisie (Épargne/Revenus exclues, comme
+    // dans Flux/Budget/Comparaisons) ; on conserve la catégorie actuelle de la transaction
+    // éditée même si elle est devenue inactive/exclue (renommage à portée, ancienne dépense
+    // Épargne importée avant ce changement...).
+    const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === 'expense');
     if (item?.category && !cats.some(c => c.name === item.category)) {
       const cur = Storage.getCategories().find(c => c.name === item.category);
       if (cur) cats.push(cur);
@@ -6341,6 +6369,13 @@ const DataEntry = {
 const Budget = {
   _currentThemeId: null,
 
+  // Mêmes dépenses "réelles" que Flux (Utils.isExpenseCategory) : Épargne/Revenus ne peuvent
+  // plus être suivies par un budget, comme elles ne peuvent plus être sélectionnées à la
+  // création (_createForm).
+  _realExpenses() {
+    return Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
+  },
+
   init() {
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-budget').classList.contains('hidden')) this.render();
@@ -6463,7 +6498,7 @@ const Budget = {
     const rawThemes  = Storage.getBudgetThemes();
     const themes     = rawThemes.map(t => this._migrate({ ...t }));
     const { start, end } = PeriodFilter.getDateRange();
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const expenses   = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
 
     const overviewBar = document.getElementById('budget-overview-bar');
@@ -6573,7 +6608,7 @@ const Budget = {
     if (backBtn)   backBtn.classList.remove('hidden');
 
     const { start, end } = PeriodFilter.getDateRange();
-    const allExpenses    = Storage.getExpenses();
+    const allExpenses    = this._realExpenses();
     const periodExpenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     const spent   = this._computeSpent(theme, periodExpenses);
     const planned = this._plannedForPeriod(theme);
@@ -6737,7 +6772,7 @@ const Budget = {
       const m = this._migrate({ ...t });
       return (m.categories || [])[0];
     }).filter(Boolean));
-    const cats = Storage.getCategories().filter(c => !existing.has(c.name));
+    const cats = Storage.getCategories().filter(c => !existing.has(c.name) && Categories._catType(c) === 'expense');
     if (!cats.length) return `<div style="text-align:center;padding:1rem;color:var(--text-muted)">
       Toutes tes catégories ont déjà un budget.<br><small>Crée d'abord de nouvelles catégories dans Données › Catégories.</small>
       <div class="form-actions"><button type="button" class="btn-secondary" onclick="Modal.close()">Fermer</button></div></div>`;
@@ -6836,7 +6871,7 @@ const Budget = {
     const raw = Storage.getBudgetThemes().find(t => t.id === id);
     if (!raw) return;
     const theme = this._migrate({ ...raw });
-    const allExpenses = Storage.getExpenses();
+    const allExpenses = this._realExpenses();
     const now = new Date();
     let sum = 0;
     for (let i = 1; i <= 3; i++) {
@@ -8865,9 +8900,8 @@ const BankImport = {
     if (/steam |playstation|xbox |nintendo|epic games|jeux?.video|gaming/.test(d))         return res('Loisir','Culture');
     if (/gym |fitness|basic fit|neoness|keep cool|salle de sport|musculation|piscine|tennis|badminton|squash|yoga|pilates|crossfit/.test(d)) return res('Loisir','Sport');
 
-    // Épargne
-    if (/boursorama|bourse direct|degiro|trade republic/.test(d))                          return res('Epargne','Bourso');
-    if (/livret|pel |plan epargne|assurance vie|per |placement/.test(d))                   return res('Epargne','');
+    // Épargne : plus de classement automatique ici — Épargne n'est plus une catégorie de
+    // dépense (comme Revenus), un virement vers l'épargne retombe sur Divers ci-dessous.
 
     // Divers
     if (/frais bancaire|cotisation carte|commission |agios|interet /.test(d))              return res('Divers','Frais bancaires');
@@ -10517,6 +10551,10 @@ const Modal = {
 const Dashboard = {
   render() {
     const expenses  = Storage.getExpenses();
+    // Épargne/Revenus ne comptent jamais comme des dépenses (Utils.isExpenseCategory) — sert
+    // à tous les totaux/calculs ci-dessous. "expenses" (brut) reste utilisé uniquement pour
+    // le flux d'activité récente (_renderRecentOps), qui montre tout sans distinction.
+    const realExpenses = expenses.filter(e => Utils.isExpenseCategory(e.category));
     const revenues  = Storage.getRevenues();
     const budgets   = Storage.getBudgets();
     const patrimony = Storage.getPatrimony();
@@ -10533,7 +10571,7 @@ const Dashboard = {
       MONTHS_FR[mm - 1] + ' ' + my;
 
     // --- Current month cash flow ---
-    const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
+    const monthExp = realExpenses.filter(e => Utils.getExpenseMonth(e) === month);
     const monthRev = revenues.filter(r => r.date.substring(0, 7) === month);
     const totalDep = monthExp.reduce((s, e) => s + e.amount, 0);
     const totalRev = monthRev.reduce((s, r) => s + r.amount, 0);
@@ -10543,7 +10581,7 @@ const Dashboard = {
     // Previous month for trend
     const prevDate = new Date(my, mm - 2, 1);
     const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    const prevExp = expenses.filter(e => Utils.getExpenseMonth(e) === prevMonth).reduce((s, e) => s + e.amount, 0);
+    const prevExp = realExpenses.filter(e => Utils.getExpenseMonth(e) === prevMonth).reduce((s, e) => s + e.amount, 0);
     const prevRev = revenues.filter(r => r.date.substring(0, 7) === prevMonth).reduce((s, r) => s + r.amount, 0);
     const prevSolde = prevRev - prevExp;
 
@@ -10599,8 +10637,8 @@ const Dashboard = {
     document.getElementById('kpi-net-worth-sub').textContent =
       `Actifs: ${Utils.formatCurrency(portfolioValue + manualAssets)} · Passifs: ${Utils.formatCurrency(liabilities)}`;
 
-    this._renderInsights(expenses, revenues, monthExp, totalDep, totalRev, prevExp);
-    this._renderFluxChart(expenses, revenues);
+    this._renderInsights(realExpenses, revenues, monthExp, totalDep, totalRev, prevExp);
+    this._renderFluxChart(realExpenses, revenues);
     this._renderTopCategories(monthExp, totalDep, budgets);
     this._renderRecentOps(expenses, revenues);
   },

@@ -278,9 +278,11 @@ const DataEntry = {
     const type = item?._type || defaultType || 'expense';
     const today = new Date().toISOString().split('T')[0];
 
-    // Catégories actives pour la saisie ; on conserve la catégorie actuelle de la
-    // transaction éditée même si elle est devenue inactive (renommage à portée).
-    const cats = Storage.getActiveCategories();
+    // Catégories actives de type "dépense" pour la saisie (Épargne/Revenus exclues, comme
+    // dans Flux/Budget/Comparaisons) ; on conserve la catégorie actuelle de la transaction
+    // éditée même si elle est devenue inactive/exclue (renommage à portée, ancienne dépense
+    // Épargne importée avant ce changement...).
+    const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === 'expense');
     if (item?.category && !cats.some(c => c.name === item.category)) {
       const cur = Storage.getCategories().find(c => c.name === item.category);
       if (cur) cats.push(cur);
