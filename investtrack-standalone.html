@@ -3445,11 +3445,95 @@ const Charts = {
     };
   },
 
+  // Effet "fumée colorée" identique à celui des cartes KPI Flux (.fk-smoke, css/style.css),
+  // porté en dessin canvas : un <canvas> ne peut pas empiler plusieurs background-image comme
+  // le CSS, donc chaque barre est clippée à sa propre forme (coins hauts arrondis compris) puis
+  // repeinte avec plusieurs radial-gradient de la même teinte à alpha variable, à des positions
+  // organiques — ça casse le dégradé vertical trop propre en zones plus lumineuses/plus sombres,
+  // comme de la lumière qui traverse de la fumée. Positions seedées par indice de barre :
+  // irrégulier visuellement mais stable d'un rendu à l'autre (pas de scintillement au survol/
+  // redraw/animation, contrairement à Math.random()).
+  _barSmokePlugin() {
+    const RECIPES = {
+      'Revenus':  { light: '0,179,126', dark: '0,77,53' },   // #00b37e / #004d35
+      'Dépenses': { light: '229,62,62', dark: '90,15,15' },  // #e53e3e / #5a0f0f
+    };
+    const rnd = (seed) => { const x = Math.sin(seed * 12.9898) * 43758.5453; return x - Math.floor(x); };
+
+    return {
+      id: 'barSmoke',
+      afterDatasetDraw(chart, args) {
+        if (args.meta.type !== 'bar') return;
+        const recipe = RECIPES[chart.data.datasets[args.index].label];
+        if (!recipe) return;
+        const { ctx } = chart;
+
+        args.meta.data.forEach((el, i) => {
+          const { x, y, base, width } = el.getProps(['x', 'y', 'base', 'width'], true);
+          const left = x - width / 2, top = Math.min(y, base), bottom = Math.max(y, base);
+          const h = bottom - top;
+          if (!isFinite(h) || !isFinite(width) || h < 2 || width < 2) return;
+
+          // Même rayon que celui réellement appliqué par Chart.js (coins hauts seulement,
+          // borderSkipped par défaut = base) pour que le clip épouse exactement la barre.
+          let r = el.options?.borderRadius;
+          if (r == null) r = 6;
+          if (typeof r === 'object') r = r.topLeft ?? 6;
+          r = Math.max(0, Math.min(r, width / 2, h));
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(left, bottom);
+          ctx.lineTo(left, top + r);
+          ctx.arcTo(left, top, left + r, top, r);
+          ctx.lineTo(left + width - r, top);
+          ctx.arcTo(left + width, top, left + width, top + r, r);
+          ctx.lineTo(left + width, bottom);
+          ctx.closePath();
+          ctx.clip();
+
+          // 4 taches organiques (2 claires "lumière", 2 sombres "fumée"). Contraste maximisé en
+          // biaisant chaque tache vers la zone du dégradé où elle tranche le plus : les claires
+          // (teinte vive) plutôt vers le bas déjà sombre, les sombres (quasi noir, comme une ombre
+          // portée sur la couleur) plutôt vers le haut déjà clair — ça casse le dégradé propre en
+          // reliefs irréguliers au lieu de se fondre dedans.
+          const seed = args.index * 97 + i * 13;
+          const blobs = [
+            { color: recipe.light, dx: 0.15 + rnd(seed + 1) * 0.40, dy: 0.55 + rnd(seed + 2) * 0.35, rad: 0.42 + rnd(seed + 3) * 0.22, a: 0.55 + rnd(seed + 4) * 0.22 },
+            { color: recipe.light, dx: 0.55 + rnd(seed + 5) * 0.35, dy: 0.40 + rnd(seed + 6) * 0.40, rad: 0.62 + rnd(seed + 7) * 0.28, a: 0.24 + rnd(seed + 8) * 0.16 },
+            { color: '0,0,0',      dx: 0.65 + rnd(seed + 9) * 0.30, dy: 0.08 + rnd(seed + 10) * 0.28, rad: 0.42 + rnd(seed + 11) * 0.24, a: 0.42 + rnd(seed + 12) * 0.20 },
+            { color: '0,0,0',      dx: 0.20 + rnd(seed + 13) * 0.30, dy: 0.12 + rnd(seed + 14) * 0.30, rad: 0.58 + rnd(seed + 15) * 0.26, a: 0.22 + rnd(seed + 16) * 0.15 },
+          ];
+          blobs.forEach(b => {
+            const cx = left + width * b.dx, cy = top + h * b.dy;
+            const radius = Math.max(width, h) * b.rad;
+            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            g.addColorStop(0, `rgba(${b.color},${b.a})`);
+            g.addColorStop(1, `rgba(${b.color},0)`);
+            ctx.fillStyle = g;
+            ctx.fillRect(left, top, width, h);
+          });
+
+          // Highlight blanc subtil sur le bord supérieur (bande courte, indépendante des taches).
+          const glowH = Math.min(h, 14);
+          const glow = ctx.createLinearGradient(0, top, 0, top + glowH);
+          glow.addColorStop(0, 'rgba(255,255,255,0.50)');
+          glow.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(left, top, width, glowH);
+
+          ctx.restore();
+        });
+      },
+    };
+  },
+
   // Toujours Revenus vs Dépenses (+ Solde net) : ne dépend QUE de la période, jamais du
   // filtre de catégorie (celui-ci ne pilote que le nouveau graphique par catégorie et le
-  // donut/tableau). Barres en dégradé vertical (vif en haut, sombre en bas), coins arrondis
-  // côté haut uniquement (borderSkipped par défaut = base), légère ombre portée, sans bordure
-  // (pas de glow). Solde net : ligne épaisse + aire dégradée (couleur → transparent) vers zéro.
+  // donut/tableau). Barres en dégradé vertical (vif en haut, sombre en bas) + texture "fumée"
+  // organique (_barSmokePlugin), coins arrondis côté haut uniquement (borderSkipped par défaut
+  // = base), légère ombre portée, sans bordure (pas de glow). Solde net : ligne épaisse + aire
+  // dégradée (couleur → transparent) vers zéro.
   fluxBar(labels, revData, depData, soldeData) {
     const barDatasets = [
       { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#00b37e', '#004d35'), borderWidth: 0, borderRadius: 6, type: 'bar' },
@@ -3482,7 +3566,7 @@ const Charts = {
         },
         scales: { y: this._yAxis(), x: this._xAxis() },
       },
-      plugins: [this._barShadowPlugin()],
+      plugins: [this._barShadowPlugin(), this._barSmokePlugin()],
     });
   },
 
