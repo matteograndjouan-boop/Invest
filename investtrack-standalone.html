@@ -3445,33 +3445,29 @@ const Charts = {
     };
   },
 
-  // Effet "fumée colorée" identique à celui des cartes KPI Flux (.fk-smoke, css/style.css),
-  // porté en dessin canvas : un <canvas> ne peut pas empiler plusieurs background-image comme
-  // le CSS, donc chaque barre est clippée à sa propre forme (coins hauts arrondis compris) puis
-  // repeinte avec plusieurs radial-gradient de la même teinte à alpha variable, à des positions
-  // organiques — ça casse le dégradé vertical trop propre en zones plus lumineuses/plus sombres,
-  // comme de la lumière qui traverse de la fumée. Positions seedées par indice de barre :
-  // irrégulier visuellement mais stable d'un rendu à l'autre (pas de scintillement au survol/
-  // redraw/animation, contrairement à Math.random()).
-  _barSmokePlugin() {
+  // Dégradé vertical propre et sobre PAR BARRE (vif en haut → ~40% plus sombre en bas) + fin
+  // highlight blanc sur le bord supérieur. Peint directement en canvas plutôt que via un
+  // `backgroundColor` scriptable (_vGrad) : celui-ci est relatif à TOUTE la zone du graphique,
+  // donc une petite barre assise en bas du graphique n'affiche presque que la couleur sombre —
+  // ici chaque barre montre sa propre transition claire→sombre quelle que soit sa hauteur.
+  _barGradientPlugin() {
     const RECIPES = {
-      'Revenus':  { light: '0,179,126', dark: '0,77,53' },   // #00b37e / #004d35
-      'Dépenses': { light: '229,62,62', dark: '90,15,15' },  // #e53e3e / #5a0f0f
+      'Revenus':  ['#00b37e', '#004d35'],
+      'Dépenses': ['#e53e3e', '#5a0f0f'],
     };
-    const rnd = (seed) => { const x = Math.sin(seed * 12.9898) * 43758.5453; return x - Math.floor(x); };
-
     return {
-      id: 'barSmoke',
+      id: 'barGradient',
       afterDatasetDraw(chart, args) {
         if (args.meta.type !== 'bar') return;
         const recipe = RECIPES[chart.data.datasets[args.index].label];
         if (!recipe) return;
         const { ctx } = chart;
+        const [top, bottom] = recipe;
 
-        args.meta.data.forEach((el, i) => {
+        args.meta.data.forEach((el) => {
           const { x, y, base, width } = el.getProps(['x', 'y', 'base', 'width'], true);
-          const left = x - width / 2, top = Math.min(y, base), bottom = Math.max(y, base);
-          const h = bottom - top;
+          const left = x - width / 2, barTop = Math.min(y, base), barBottom = Math.max(y, base);
+          const h = barBottom - barTop;
           if (!isFinite(h) || !isFinite(width) || h < 2 || width < 2) return;
 
           // Même rayon que celui réellement appliqué par Chart.js (coins hauts seulement,
@@ -3483,44 +3479,24 @@ const Charts = {
 
           ctx.save();
           ctx.beginPath();
-          ctx.moveTo(left, bottom);
-          ctx.lineTo(left, top + r);
-          ctx.arcTo(left, top, left + r, top, r);
-          ctx.lineTo(left + width - r, top);
-          ctx.arcTo(left + width, top, left + width, top + r, r);
-          ctx.lineTo(left + width, bottom);
+          ctx.moveTo(left, barBottom);
+          ctx.lineTo(left, barTop + r);
+          ctx.arcTo(left, barTop, left + r, barTop, r);
+          ctx.lineTo(left + width - r, barTop);
+          ctx.arcTo(left + width, barTop, left + width, barTop + r, r);
+          ctx.lineTo(left + width, barBottom);
           ctx.closePath();
           ctx.clip();
 
-          // 4 taches organiques (2 claires "lumière", 2 sombres "fumée"). Contraste maximisé en
-          // biaisant chaque tache vers la zone du dégradé où elle tranche le plus : les claires
-          // (teinte vive) plutôt vers le bas déjà sombre, les sombres (quasi noir, comme une ombre
-          // portée sur la couleur) plutôt vers le haut déjà clair — ça casse le dégradé propre en
-          // reliefs irréguliers au lieu de se fondre dedans.
-          const seed = args.index * 97 + i * 13;
-          const blobs = [
-            { color: recipe.light, dx: 0.15 + rnd(seed + 1) * 0.40, dy: 0.55 + rnd(seed + 2) * 0.35, rad: 0.42 + rnd(seed + 3) * 0.22, a: 0.55 + rnd(seed + 4) * 0.22 },
-            { color: recipe.light, dx: 0.55 + rnd(seed + 5) * 0.35, dy: 0.40 + rnd(seed + 6) * 0.40, rad: 0.62 + rnd(seed + 7) * 0.28, a: 0.24 + rnd(seed + 8) * 0.16 },
-            { color: '0,0,0',      dx: 0.65 + rnd(seed + 9) * 0.30, dy: 0.08 + rnd(seed + 10) * 0.28, rad: 0.42 + rnd(seed + 11) * 0.24, a: 0.42 + rnd(seed + 12) * 0.20 },
-            { color: '0,0,0',      dx: 0.20 + rnd(seed + 13) * 0.30, dy: 0.12 + rnd(seed + 14) * 0.30, rad: 0.58 + rnd(seed + 15) * 0.26, a: 0.22 + rnd(seed + 16) * 0.15 },
-          ];
-          blobs.forEach(b => {
-            const cx = left + width * b.dx, cy = top + h * b.dy;
-            const radius = Math.max(width, h) * b.rad;
-            const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-            g.addColorStop(0, `rgba(${b.color},${b.a})`);
-            g.addColorStop(1, `rgba(${b.color},0)`);
-            ctx.fillStyle = g;
-            ctx.fillRect(left, top, width, h);
-          });
+          const grad = ctx.createLinearGradient(0, barTop, 0, barBottom);
+          grad.addColorStop(0, top);
+          grad.addColorStop(1, bottom);
+          ctx.fillStyle = grad;
+          ctx.fillRect(left, barTop, width, h);
 
-          // Highlight blanc subtil sur le bord supérieur (bande courte, indépendante des taches).
-          const glowH = Math.min(h, 14);
-          const glow = ctx.createLinearGradient(0, top, 0, top + glowH);
-          glow.addColorStop(0, 'rgba(255,255,255,0.50)');
-          glow.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = glow;
-          ctx.fillRect(left, top, width, glowH);
+          // Highlight : fine ligne claire (pas une large lueur) sur le bord supérieur.
+          ctx.fillStyle = 'rgba(255,255,255,0.65)';
+          ctx.fillRect(left, barTop, width, Math.min(1.5, h));
 
           ctx.restore();
         });
@@ -3530,14 +3506,14 @@ const Charts = {
 
   // Toujours Revenus vs Dépenses (+ Solde net) : ne dépend QUE de la période, jamais du
   // filtre de catégorie (celui-ci ne pilote que le nouveau graphique par catégorie et le
-  // donut/tableau). Barres en dégradé vertical (vif en haut, sombre en bas) + texture "fumée"
-  // organique (_barSmokePlugin), coins arrondis côté haut uniquement (borderSkipped par défaut
-  // = base), légère ombre portée, sans bordure (pas de glow). Solde net : ligne épaisse + aire
-  // dégradée (couleur → transparent) vers zéro.
+  // donut/tableau). Barres en dégradé vertical propre par barre (_barGradientPlugin), coins
+  // arrondis côté haut uniquement (borderSkipped par défaut = base), légère ombre portée, sans
+  // bordure (pas de glow), gridlines horizontales pointillées très discrètes. Solde net : ligne
+  // épaisse + aire dégradée (couleur → transparent) vers zéro.
   fluxBar(labels, revData, depData, soldeData) {
     const barDatasets = [
-      { label: 'Revenus', data: revData, backgroundColor: this._vGrad('#00b37e', '#004d35'), borderWidth: 0, borderRadius: 6, type: 'bar' },
-      { label: 'Dépenses', data: depData, backgroundColor: this._vGrad('#e53e3e', '#5a0f0f'), borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar' },
+      { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar' },
     ];
 
     const soldeDataset = {
@@ -3564,9 +3540,14 @@ const Charts = {
           legend: this._leg('top'),
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: this._yAxis(), x: this._xAxis() },
+        // Gridlines pointillées très discrètes (propres à ce graphique, _yAxis() reste inchangé
+        // pour les autres graphiques qui le partagent).
+        scales: {
+          y: this._yAxis({ grid: { color: '#ffffff08' }, border: { display: false, dash: [3, 3] } }),
+          x: this._xAxis(),
+        },
       },
-      plugins: [this._barShadowPlugin(), this._barSmokePlugin()],
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin()],
     });
   },
 
