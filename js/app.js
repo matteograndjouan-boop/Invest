@@ -187,6 +187,8 @@ const Dashboard = {
     }</div>`;
   },
 
+  // Même rendu que le graphique "Revenus vs Dépenses" de l'onglet Flux (Charts.fluxBar) : pas
+  // de style dupliqué, juste un canvas cible différent.
   _renderFluxChart(expenses, revenues) {
     const months = Utils.getLast12Months().slice(-6);
     const labels  = months.map(m => {
@@ -194,35 +196,11 @@ const Dashboard = {
       const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
       return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
     });
-    const getLastDay = m => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
     const revData  = months.map(m => revenues.filter(r => r.date.substring(0,7) === m).reduce((s,r) => s + r.amount, 0));
     const depData  = months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s,e) => s + e.amount, 0));
     const soldeData = revData.map((r, i) => r - depData[i]);
 
-    Charts.destroy('chart-dashboard-flux');
-    const canvas = document.getElementById('chart-dashboard-flux');
-    if (!canvas) return;
-    const chart = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Revenus',   data: revData,   backgroundColor: 'rgba(16,185,129,0.75)',  borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Dépenses',  data: depData,   backgroundColor: 'rgba(239,68,68,0.75)',   borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Solde net', data: soldeData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)',
-            borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#8b5cf6', fill: false, tension: 0.3, type: 'line', yAxisID: 'y' },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: Charts._leg('top'),
-          tooltip: { ...Charts._tip(), mode: 'index', callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: Charts._yAxis({ beginAtZero: false }), x: Charts._xAxis() },
-      },
-    });
-    Charts._instances['chart-dashboard-flux'] = chart;
+    Charts.fluxBar(labels, revData, depData, soldeData, 'chart-dashboard-flux');
   },
 
   _renderTopCategories(monthExp, totalDep, budgets) {

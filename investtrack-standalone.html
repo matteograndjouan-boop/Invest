@@ -3163,6 +3163,14 @@ const Charts = {
     };
   },
 
+  // Gridlines horizontales pointillées très discrètes — variante d'axe Y utilisée par les
+  // graphiques "premium" (barres Revenus/Dépenses, Comparaisons, Patrimoine, courbes). Le dash
+  // se règle via `border.dash` (pas `grid.borderDash`) : c'est ce que Chart.js v4 lit réellement
+  // pour dessiner le trait de grille lui-même, cf. CartesianScale#_computeGridLineItems.
+  _dottedGrid(extra = {}) {
+    return { grid: { color: '#ffffff08' }, border: { display: false, dash: [3, 3] }, ...extra };
+  },
+
   _xAxis(extra = {}) {
     return {
       ticks: { color: '#9ca3af', font: { size: 11 } },
@@ -3281,7 +3289,7 @@ const Charts = {
       type: 'doughnut',
       data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
-      plugins: centerLines ? [this._centerTextPlugin(centerLines)] : [],
+      plugins: [this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
     });
   },
 
@@ -3301,6 +3309,7 @@ const Charts = {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
+      plugins: [this._donutGlossPlugin()],
     });
   },
 
@@ -3318,7 +3327,7 @@ const Charts = {
           data: points.map(p => p.value),
           borderColor: '#8b5cf6',
           backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
-          borderWidth: 2.5,
+          borderWidth: 3,
           pointRadius: points.length > 1 ? 3 : 4,
           pointBackgroundColor: '#8b5cf6',
           pointBorderColor: '#131525',
@@ -3333,7 +3342,7 @@ const Charts = {
           legend: { display: false },
           tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
+        scales: { y: this._yAxis(this._dottedGrid({ beginAtZero: false })), x: this._xAxis() },
       },
     });
   },
@@ -3399,7 +3408,8 @@ const Charts = {
   },
 
   // Barres groupées par catégorie (période A / période B), catégories en abscisse — mêmes
-  // couleurs que les panneaux de périodes au-dessus (indigo = A, ambre = B).
+  // couleurs que les panneaux de périodes au-dessus (indigo = A, ambre = B). Même style "premium"
+  // que fluxBar (dégradé par barre, ombre, highlight, gridlines pointillées) pour l'homogénéité.
   comparisonBarByCategory(labels, dataA, dataB, labelA, labelB) {
     if (!labels.length) { this.destroy('chart-comparison'); return; }
 
@@ -3408,8 +3418,8 @@ const Charts = {
       data: {
         labels,
         datasets: [
-          { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 },
-          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 4 },
+          { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 6 },
+          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 6 },
         ],
       },
       options: {
@@ -3419,8 +3429,9 @@ const Charts = {
           legend: this._leg('top'),
           tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: this._yAxis(), x: this._xAxis() },
+        scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#6366f1', '#312e81'], ['#f59e0b', '#78350f']])],
     });
   },
 
@@ -3445,46 +3456,62 @@ const Charts = {
     };
   },
 
-  // Dégradé vertical propre et sobre PAR BARRE (vif en haut → ~40% plus sombre en bas) + fin
-  // highlight blanc sur le bord supérieur. Peint directement en canvas plutôt que via un
-  // `backgroundColor` scriptable (_vGrad) : celui-ci est relatif à TOUTE la zone du graphique,
-  // donc une petite barre assise en bas du graphique n'affiche presque que la couleur sombre —
-  // ici chaque barre montre sa propre transition claire→sombre quelle que soit sa hauteur.
-  _barGradientPlugin() {
-    const RECIPES = {
-      'Revenus':  ['#00b37e', '#004d35'],
-      'Dépenses': ['#e53e3e', '#5a0f0f'],
-    };
+  // Dégradé vertical propre et sobre PAR BARRE (vif en haut → sombre en bas) + fin highlight
+  // blanc sur le bord supérieur. Peint directement en canvas plutôt que via un `backgroundColor`
+  // scriptable (_vGrad) : celui-ci est relatif à TOUTE la zone du graphique, donc une petite
+  // barre assise en bas du graphique n'affiche presque que la couleur sombre — ici chaque barre
+  // montre sa propre transition claire→sombre quelle que soit sa hauteur. Style commun à TOUS
+  // les graphiques en barres de l'app (homogénéité) : `recipes[datasetIndex]` est soit une paire
+  // [clair,sombre] unique pour tout le dataset (ex. Revenus/Dépenses, période A/B), soit un
+  // tableau de paires — une par barre — pour un dataset où chaque barre a sa propre couleur
+  // (ex. Patrimoine, une couleur par catégorie).
+  _barGradientPlugin(recipes) {
     return {
       id: 'barGradient',
       afterDatasetDraw(chart, args) {
         if (args.meta.type !== 'bar') return;
-        const recipe = RECIPES[chart.data.datasets[args.index].label];
+        const recipe = recipes[args.index];
         if (!recipe) return;
+        const perBar = Array.isArray(recipe[0]);
         const { ctx } = chart;
-        const [top, bottom] = recipe;
 
-        args.meta.data.forEach((el) => {
+        args.meta.data.forEach((el, i) => {
+          const pair = perBar ? recipe[i] : recipe;
+          if (!pair) return;
+          const [top, bottom] = pair;
           const { x, y, base, width } = el.getProps(['x', 'y', 'base', 'width'], true);
           const left = x - width / 2, barTop = Math.min(y, base), barBottom = Math.max(y, base);
           const h = barBottom - barTop;
           if (!isFinite(h) || !isFinite(width) || h < 2 || width < 2) return;
 
-          // Même rayon que celui réellement appliqué par Chart.js (coins hauts seulement,
-          // borderSkipped par défaut = base) pour que le clip épouse exactement la barre.
+          // Même rayon que celui réellement appliqué par Chart.js pour que le clip épouse
+          // exactement la barre. Chart.js arrondit le coin loin de la ligne de base (value=0) et
+          // garde celui à la base carré (borderSkipped par défaut) — pour une barre positive
+          // c'est le haut (cas standard), mais pour une valeur négative (ex. passifs en
+          // Patrimoine, la barre descend sous zéro) c'est le BAS qu'il faut arrondir.
           let r = el.options?.borderRadius;
           if (r == null) r = 6;
           if (typeof r === 'object') r = r.topLeft ?? 6;
           r = Math.max(0, Math.min(r, width / 2, h));
+          const roundTop = y <= base;
 
           ctx.save();
           ctx.beginPath();
-          ctx.moveTo(left, barBottom);
-          ctx.lineTo(left, barTop + r);
-          ctx.arcTo(left, barTop, left + r, barTop, r);
-          ctx.lineTo(left + width - r, barTop);
-          ctx.arcTo(left + width, barTop, left + width, barTop + r, r);
-          ctx.lineTo(left + width, barBottom);
+          if (roundTop) {
+            ctx.moveTo(left, barBottom);
+            ctx.lineTo(left, barTop + r);
+            ctx.arcTo(left, barTop, left + r, barTop, r);
+            ctx.lineTo(left + width - r, barTop);
+            ctx.arcTo(left + width, barTop, left + width, barTop + r, r);
+            ctx.lineTo(left + width, barBottom);
+          } else {
+            ctx.moveTo(left, barTop);
+            ctx.lineTo(left, barBottom - r);
+            ctx.arcTo(left, barBottom, left + r, barBottom, r);
+            ctx.lineTo(left + width - r, barBottom);
+            ctx.arcTo(left + width, barBottom, left + width, barBottom - r, r);
+            ctx.lineTo(left + width, barTop);
+          }
           ctx.closePath();
           ctx.clip();
 
@@ -3509,8 +3536,10 @@ const Charts = {
   // donut/tableau). Barres en dégradé vertical propre par barre (_barGradientPlugin), coins
   // arrondis côté haut uniquement (borderSkipped par défaut = base), légère ombre portée, sans
   // bordure (pas de glow), gridlines horizontales pointillées très discrètes. Solde net : ligne
-  // épaisse + aire dégradée (couleur → transparent) vers zéro.
-  fluxBar(labels, revData, depData, soldeData) {
+  // épaisse + aire dégradée (couleur → transparent) vers zéro. `canvasId` : ce même rendu sert
+  // aussi à la mini-carte Flux du Dashboard (Dashboard._renderFluxChart, app.js), pour un rendu
+  // strictement identique entre les deux — pas de duplication de code/style.
+  fluxBar(labels, revData, depData, soldeData, canvasId = 'chart-flux-bar') {
     const barDatasets = [
       { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar' },
       { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar' },
@@ -3531,7 +3560,7 @@ const Charts = {
       yAxisID: 'y',
     };
 
-    this.create('chart-flux-bar', {
+    this.create(canvasId, {
       type: 'bar',
       data: { labels, datasets: [...barDatasets, soldeDataset] },
       options: {
@@ -3540,14 +3569,9 @@ const Charts = {
           legend: this._leg('top'),
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        // Gridlines pointillées très discrètes (propres à ce graphique, _yAxis() reste inchangé
-        // pour les autres graphiques qui le partagent).
-        scales: {
-          y: this._yAxis({ grid: { color: '#ffffff08' }, border: { display: false, dash: [3, 3] } }),
-          x: this._xAxis(),
-        },
+        scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
-      plugins: [this._barShadowPlugin(), this._barGradientPlugin()],
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#00b37e', '#004d35'], ['#e53e3e', '#5a0f0f']])],
     });
   },
 
@@ -3640,7 +3664,7 @@ const Charts = {
       label: 'Dépenses réelles',
       data,
       borderColor: color || '#6366f1',
-      backgroundColor: (color || '#6366f1') + '22',
+      backgroundColor: this._vGrad((color || '#6366f1') + '55', (color || '#6366f1') + '00'),
       fill: true, tension: 0.4, pointRadius: 5,
       pointBackgroundColor: data.map((v, i) => (plannedArr[i] > 0 && v > plannedArr[i]) ? '#ef4444' : color || '#6366f1'),
     }];
@@ -3665,11 +3689,15 @@ const Charts = {
           legend: hasPlanned ? this._leg('top') : { display: false },
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
-        scales: { y: this._yAxis(), x: this._xAxis() },
+        scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
     });
   },
 
+  // Même style "premium" que fluxBar (dégradé par barre, ombre, highlight, gridlines
+  // pointillées) pour l'homogénéité — chaque barre garde sa propre teinte HSL (une par
+  // catégorie, comme avant), mais avec un second stop assombri (~42% de la luminosité
+  // d'origine, même teinte/saturation) pour le dégradé vertical.
   patrimony(assets, liabilities) {
     const assetsByCat = {}, liabByCat = {};
     assets.forEach(a => { assetsByCat[a.category] = (assetsByCat[a.category] || 0) + a.value; });
@@ -3677,20 +3705,28 @@ const Charts = {
 
     const labels = [...Object.keys(assetsByCat).map(k => `${k} (actif)`), ...Object.keys(liabByCat).map(k => `${k} (passif)`)];
     const data = [...Object.values(assetsByCat), ...Object.values(liabByCat).map(v => -v)];
-    const colors = [
-      ...Object.keys(assetsByCat).map((_, i) => `hsla(142, 60%, ${45 + i * 10}%, 0.8)`),
-      ...Object.keys(liabByCat).map((_, i) => `hsla(0, 80%, ${50 + i * 10}%, 0.8)`),
+    const pairs = [
+      ...Object.keys(assetsByCat).map((_, i) => {
+        const l = 45 + i * 10;
+        return [`hsla(142, 60%, ${l}%, 0.8)`, `hsla(142, 60%, ${Math.round(l * 0.42)}%, 0.8)`];
+      }),
+      ...Object.keys(liabByCat).map((_, i) => {
+        const l = 50 + i * 10;
+        return [`hsla(0, 80%, ${l}%, 0.8)`, `hsla(0, 80%, ${Math.round(l * 0.42)}%, 0.8)`];
+      }),
     ];
+    const colors = pairs.map(([light]) => light);
 
     if (!data.length) { this.destroy('chart-patrimony'); return; }
     this.create('chart-patrimony', {
       type: 'bar',
-      data: { labels, datasets: [{ label: 'Valeur', data, backgroundColor: colors, borderRadius: 4 }] },
+      data: { labels, datasets: [{ label: 'Valeur', data, backgroundColor: colors, borderRadius: 6 }] },
       options: {
         responsive: true, maintainAspectRatio: true,
         plugins: { legend: { display: false }, tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(Math.abs(ctx.raw))}` } } },
-        scales: { y: this._yAxis({ beginAtZero: false }), x: this._xAxis() },
+        scales: { y: this._yAxis(this._dottedGrid({ beginAtZero: false })), x: this._xAxis() },
       },
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([pairs])],
     });
   },
 };
@@ -10867,6 +10903,8 @@ const Dashboard = {
     }</div>`;
   },
 
+  // Même rendu que le graphique "Revenus vs Dépenses" de l'onglet Flux (Charts.fluxBar) : pas
+  // de style dupliqué, juste un canvas cible différent.
   _renderFluxChart(expenses, revenues) {
     const months = Utils.getLast12Months().slice(-6);
     const labels  = months.map(m => {
@@ -10874,35 +10912,11 @@ const Dashboard = {
       const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
       return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
     });
-    const getLastDay = m => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
     const revData  = months.map(m => revenues.filter(r => r.date.substring(0,7) === m).reduce((s,r) => s + r.amount, 0));
     const depData  = months.map(m => expenses.filter(e => Utils.getExpenseMonth(e) === m).reduce((s,e) => s + e.amount, 0));
     const soldeData = revData.map((r, i) => r - depData[i]);
 
-    Charts.destroy('chart-dashboard-flux');
-    const canvas = document.getElementById('chart-dashboard-flux');
-    if (!canvas) return;
-    const chart = new Chart(canvas, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Revenus',   data: revData,   backgroundColor: 'rgba(16,185,129,0.75)',  borderColor: '#10b981', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Dépenses',  data: depData,   backgroundColor: 'rgba(239,68,68,0.75)',   borderColor: '#ef4444', borderWidth: 1, borderRadius: 4, type: 'bar' },
-          { label: 'Solde net', data: soldeData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)',
-            borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#8b5cf6', fill: false, tension: 0.3, type: 'line', yAxisID: 'y' },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: Charts._leg('top'),
-          tooltip: { ...Charts._tip(), mode: 'index', callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: Charts._yAxis({ beginAtZero: false }), x: Charts._xAxis() },
-      },
-    });
-    Charts._instances['chart-dashboard-flux'] = chart;
+    Charts.fluxBar(labels, revData, depData, soldeData, 'chart-dashboard-flux');
   },
 
   _renderTopCategories(monthExp, totalDep, budgets) {
