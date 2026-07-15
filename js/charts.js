@@ -48,15 +48,10 @@ const Charts = {
     return `rgb(${r},${g},${b})`;
   },
 
+  // Toujours en nombre entier, jamais abrégé (k€/M€) : mélanger "500 €" et "1 k€" sur une même
+  // échelle n'est pas homogène — un seul format, quelle que soit l'ampleur des valeurs.
   _fmt(v) {
-    const fmt = (n) => {
-      const s = n.toFixed(1);
-      return s.endsWith('.0') ? String(Math.round(n)) : s.replace('.', ',');
-    };
-    const abs = Math.abs(v);
-    if (abs >= 1e6) return fmt(v / 1e6) + ' M€';
-    if (abs >= 1e3) return fmt(v / 1e3) + ' k€';
-    return Math.round(v) + ' €';
+    return `${Math.round(v).toLocaleString('fr-FR')} €`;
   },
 
   _yAxis(extra = {}) {
