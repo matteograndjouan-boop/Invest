@@ -468,16 +468,19 @@
           <h1>Comparaison de périodes</h1>
         </div>
 
-        <!-- Side-by-side panels -->
+        <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
+             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = ambre) plutôt que
+             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici. -->
         <div class="comp-panel-row">
-          <div class="comp-panel comp-panel-a">
-            <div class="comp-panel-header">
-              <div class="comp-period-name" id="comp-period-name-a">—</div>
+          <div class="flux-kpi-card comp-kpi comp-kpi-a">
+            <div class="fk-smoke"></div>
+            <div class="comp-kpi-top">
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
               <input type="month" id="comp-period-a" class="comp-month-input">
             </div>
-            <div class="comp-main-amount" id="comp-total-a">0 €</div>
-            <div class="comp-main-label">Dépenses totales</div>
-            <div class="comp-panel-stats" id="comp-stats-a"></div>
+            <div class="kpi-label" id="comp-period-name-a">—</div>
+            <div class="kpi-value" id="comp-total-a">0 €</div>
+            <div class="kpi-trend" id="comp-stats-a"></div>
           </div>
 
           <div class="comp-center-col">
@@ -489,14 +492,15 @@
             </div>
           </div>
 
-          <div class="comp-panel comp-panel-b">
-            <div class="comp-panel-header">
-              <div class="comp-period-name" id="comp-period-name-b">—</div>
+          <div class="flux-kpi-card comp-kpi comp-kpi-b">
+            <div class="fk-smoke"></div>
+            <div class="comp-kpi-top">
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
               <input type="month" id="comp-period-b" class="comp-month-input">
             </div>
-            <div class="comp-main-amount" id="comp-total-b">0 €</div>
-            <div class="comp-main-label">Dépenses totales</div>
-            <div class="comp-panel-stats" id="comp-stats-b"></div>
+            <div class="kpi-label" id="comp-period-name-b">—</div>
+            <div class="kpi-value" id="comp-total-b">0 €</div>
+            <div class="kpi-trend" id="comp-stats-b"></div>
           </div>
         </div>
 

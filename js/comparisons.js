@@ -55,8 +55,8 @@ const Comparisons = {
     set('comp-total-a', Utils.formatCurrency(totalA));
     set('comp-total-b', Utils.formatCurrency(totalB));
 
-    this._renderPanelStats('comp-stats-a', expA, totalA);
-    this._renderPanelStats('comp-stats-b', expB, totalB);
+    this._renderPanelStats('comp-stats-a', expA);
+    this._renderPanelStats('comp-stats-b', expB);
 
     // Delta card
     const diffEl  = document.getElementById('comp-total-diff');
@@ -75,19 +75,14 @@ const Comparisons = {
     this._renderCatChart(expA, expB);
   },
 
-  _renderPanelStats(containerId, expenses, total) {
+  // Panier moyen / Top catégorie retirés : peu pertinents pour une dépense perso (montants trop
+  // hétérogènes d'une transaction à l'autre) et redondants avec le graphique par catégorie
+  // juste en dessous. Ne reste que le nombre de transactions, en une ligne façon kpi-trend.
+  _renderPanelStats(containerId, expenses) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const count = expenses.length;
-    const avg   = count > 0 ? total / count : 0;
-    const cats  = {};
-    expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
-    const topCat = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
-    el.innerHTML = `
-      <div class="comp-stat-row"><span class="comp-stat-label">Transactions</span><span class="comp-stat-val">${count}</span></div>
-      <div class="comp-stat-row"><span class="comp-stat-label">Panier moyen</span><span class="comp-stat-val">${Utils.formatCurrency(avg)}</span></div>
-      ${topCat ? `<div class="comp-stat-row"><span class="comp-stat-label">Top catégorie</span><span class="comp-stat-val comp-stat-top">${topCat[0]}</span></div>` : ''}
-    `;
+    el.textContent = count > 1 ? `${count} transactions` : count === 1 ? '1 transaction' : 'Aucune transaction';
   },
 
   // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des

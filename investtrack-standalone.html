@@ -841,51 +841,54 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .text-center { text-align: center; }
 
 /* ---- Comparison redesign ---- */
-.comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; }
+.comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
 
-.comp-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px;
-  box-shadow: var(--shadow);
+/* Cartes période A/B : même carcasse "fumée" que les KPI Flux (.flux-kpi-card/.fk-smoke), deux
+   teintes (indigo/ambre) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
+   period A/B n'a pas ce sens-là. kpi-label/kpi-value/kpi-trend réutilisés tels quels (mêmes
+   règles que Flux) : le nom du mois tient le rôle de "label", le montant celui de "value". */
+.comp-kpi-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.comp-kpi-top .fk-icon { margin-bottom: 0; }
+.comp-kpi-a .fk-icon { color: #6366f1; }
+.comp-kpi-b .fk-icon { color: #f59e0b; }
+.comp-kpi-a .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 18% 10%, rgba(99,102,241,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 58% 0%,  rgba(99,102,241,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 92% 30%, rgba(99,102,241,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 42% 48%, rgba(99,102,241,.32) 0%, transparent 100%);
 }
-.comp-panel-a { border-top: 4px solid #6366f1; }
-.comp-panel-b { border-top: 4px solid #f59e0b; }
-
-.comp-panel-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-.comp-period-name { font-size: 20px; font-weight: 800; line-height: 1.1; }
-.comp-panel-a .comp-period-name { color: #6366f1; }
-.comp-panel-b .comp-period-name { color: #f59e0b; }
+.comp-kpi-b .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 82% 8%,  rgba(245,158,11,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 40% 0%,  rgba(245,158,11,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 8% 32%,  rgba(245,158,11,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 55% 48%, rgba(245,158,11,.32) 0%, transparent 100%);
+}
 .comp-month-input {
-  border: 1px solid var(--border); background: var(--bg); font-size: 12px; font-weight: 500;
-  color: var(--text-muted); cursor: pointer; padding: 4px 8px; outline: none;
-  border-radius: var(--radius-sm); width: fit-content;
+  border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,.85); cursor: pointer; padding: 4px 8px; outline: none;
+  border-radius: var(--radius-sm); width: fit-content; color-scheme: dark;
 }
-.comp-main-amount { font-size: 30px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
-.comp-panel-a .comp-main-amount { color: #6366f1; }
-.comp-panel-b .comp-main-amount { color: #f59e0b; }
-.comp-main-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 12px; }
-.comp-panel-stats { margin-top: 4px; display: flex; flex-direction: column; gap: 5px; }
-.comp-stat-row { display: flex; justify-content: space-between; align-items: center; }
-.comp-stat-label { font-size: 11px; color: var(--text-muted); }
-.comp-stat-val { font-size: 12px; font-weight: 700; color: var(--text); }
-.comp-stat-top { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .comp-center-col { display: flex; align-items: center; justify-content: center; }
 .comp-delta-card {
-  width: 100%; text-align: center; padding: 16px 8px;
-  border-radius: 14px; border: 1px solid var(--border);
-  background: var(--surface); box-shadow: var(--shadow);
+  width: 100%; text-align: center; padding: 18px 10px;
+  border-radius: 18px; border: 1px solid var(--border);
+  background: #0d0f1f; box-shadow: 0 10px 28px rgba(0,0,0,.3);
 }
-.comp-delta-card.good { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.04); }
-.comp-delta-card.bad  { border-color: rgba(239,68,68,0.35);  background: rgba(239,68,68,0.04); }
+.comp-delta-card.good { border-color: rgba(16,185,129,0.35); background: linear-gradient(160deg, rgba(16,185,129,0.10), #0d0f1f 65%); }
+.comp-delta-card.bad  { border-color: rgba(239,68,68,0.35);  background: linear-gradient(160deg, rgba(239,68,68,0.10), #0d0f1f 65%); }
 .comp-delta-arrow { font-size: 22px; margin-bottom: 6px; }
-.comp-delta-val { font-size: 16px; font-weight: 900; line-height: 1.1; }
+.comp-delta-val { font-size: 17px; font-weight: 900; line-height: 1.1; }
 .comp-delta-val.positive { color: #10b981; }
 .comp-delta-val.negative { color: #ef4444; }
-.comp-delta-pct { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 2px; }
-.comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-top: 6px; }
+.comp-delta-pct { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.62); margin-top: 3px; }
+.comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,.5); margin-top: 8px; }
 
 /* ---- Category comparison table ---- */
 .cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
@@ -2606,16 +2609,19 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           <h1>Comparaison de périodes</h1>
         </div>
 
-        <!-- Side-by-side panels -->
+        <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
+             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = ambre) plutôt que
+             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici. -->
         <div class="comp-panel-row">
-          <div class="comp-panel comp-panel-a">
-            <div class="comp-panel-header">
-              <div class="comp-period-name" id="comp-period-name-a">—</div>
+          <div class="flux-kpi-card comp-kpi comp-kpi-a">
+            <div class="fk-smoke"></div>
+            <div class="comp-kpi-top">
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
               <input type="month" id="comp-period-a" class="comp-month-input">
             </div>
-            <div class="comp-main-amount" id="comp-total-a">0 €</div>
-            <div class="comp-main-label">Dépenses totales</div>
-            <div class="comp-panel-stats" id="comp-stats-a"></div>
+            <div class="kpi-label" id="comp-period-name-a">—</div>
+            <div class="kpi-value" id="comp-total-a">0 €</div>
+            <div class="kpi-trend" id="comp-stats-a"></div>
           </div>
 
           <div class="comp-center-col">
@@ -2627,14 +2633,15 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             </div>
           </div>
 
-          <div class="comp-panel comp-panel-b">
-            <div class="comp-panel-header">
-              <div class="comp-period-name" id="comp-period-name-b">—</div>
+          <div class="flux-kpi-card comp-kpi comp-kpi-b">
+            <div class="fk-smoke"></div>
+            <div class="comp-kpi-top">
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
               <input type="month" id="comp-period-b" class="comp-month-input">
             </div>
-            <div class="comp-main-amount" id="comp-total-b">0 €</div>
-            <div class="comp-main-label">Dépenses totales</div>
-            <div class="comp-panel-stats" id="comp-stats-b"></div>
+            <div class="kpi-label" id="comp-period-name-b">—</div>
+            <div class="kpi-value" id="comp-total-b">0 €</div>
+            <div class="kpi-trend" id="comp-stats-b"></div>
           </div>
         </div>
 
@@ -5358,8 +5365,8 @@ const Comparisons = {
     set('comp-total-a', Utils.formatCurrency(totalA));
     set('comp-total-b', Utils.formatCurrency(totalB));
 
-    this._renderPanelStats('comp-stats-a', expA, totalA);
-    this._renderPanelStats('comp-stats-b', expB, totalB);
+    this._renderPanelStats('comp-stats-a', expA);
+    this._renderPanelStats('comp-stats-b', expB);
 
     // Delta card
     const diffEl  = document.getElementById('comp-total-diff');
@@ -5378,19 +5385,14 @@ const Comparisons = {
     this._renderCatChart(expA, expB);
   },
 
-  _renderPanelStats(containerId, expenses, total) {
+  // Panier moyen / Top catégorie retirés : peu pertinents pour une dépense perso (montants trop
+  // hétérogènes d'une transaction à l'autre) et redondants avec le graphique par catégorie
+  // juste en dessous. Ne reste que le nombre de transactions, en une ligne façon kpi-trend.
+  _renderPanelStats(containerId, expenses) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const count = expenses.length;
-    const avg   = count > 0 ? total / count : 0;
-    const cats  = {};
-    expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
-    const topCat = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
-    el.innerHTML = `
-      <div class="comp-stat-row"><span class="comp-stat-label">Transactions</span><span class="comp-stat-val">${count}</span></div>
-      <div class="comp-stat-row"><span class="comp-stat-label">Panier moyen</span><span class="comp-stat-val">${Utils.formatCurrency(avg)}</span></div>
-      ${topCat ? `<div class="comp-stat-row"><span class="comp-stat-label">Top catégorie</span><span class="comp-stat-val comp-stat-top">${topCat[0]}</span></div>` : ''}
-    `;
+    el.textContent = count > 1 ? `${count} transactions` : count === 1 ? '1 transaction' : 'Aucune transaction';
   },
 
   // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des
