@@ -3142,6 +3142,22 @@ const Charts = {
     };
   },
 
+  // Éclaircit (percent > 0) ou assombrit (percent < 0) une couleur hex #rrggbb en la mélangeant
+  // vers blanc/noir — utilisé pour dériver une teinte claire/sombre à partir d'une seule couleur
+  // de base (catégories, comptes, positions... toutes dynamiques, donc pas de paire clair/sombre
+  // fixe possible comme pour Revenus/Dépenses).
+  _shade(hex, percent) {
+    const h = hex.replace('#', '');
+    const num = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    let r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+    const t = percent < 0 ? 0 : 255;
+    const p = Math.abs(percent);
+    r = Math.round((t - r) * p) + r;
+    g = Math.round((t - g) * p) + g;
+    b = Math.round((t - b) * p) + b;
+    return `rgb(${r},${g},${b})`;
+  },
+
   _fmt(v) {
     const fmt = (n) => {
       const s = n.toFixed(1);
@@ -3289,7 +3305,7 @@ const Charts = {
       type: 'doughnut',
       data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
-      plugins: [this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
+      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
     });
   },
 
@@ -3309,7 +3325,7 @@ const Charts = {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
-      plugins: [this._donutGlossPlugin()],
+      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin()],
     });
   },
 
@@ -3575,6 +3591,46 @@ const Charts = {
     });
   },
 
+  // Dégradé radial PAR SEGMENT (clair vers le bord extérieur, sombre vers le trou central) —
+  // équivalent du dégradé vertical des barres, pour que les anneaux ne soient pas des aplats de
+  // couleur unie. Chaque segment garde sa propre teinte (dérivée via _shade, pas de palette
+  // fixe possible ici puisque les couleurs viennent de sources dynamiques : catégories, comptes,
+  // positions...). Clippé à la forme exacte du segment (secteur d'anneau) pour ne jamais déborder
+  // sur ses voisins. `x`/`y` lus sur CHAQUE arc (pas le centre du graphique, contrairement au
+  // glacis ci-dessous) : un segment "actif" décalé (offset) doit garder son dégradé centré sur
+  // sa propre position, pas sur le centre du donut.
+  _donutGradientPlugin() {
+    return {
+      id: 'donutGradient',
+      afterDatasetDraw(chart, args) {
+        const { ctx } = chart;
+        const raw = chart.data.datasets[args.index].backgroundColor;
+        args.meta.data.forEach((arc, i) => {
+          const color = Array.isArray(raw) ? raw[i] : raw;
+          if (typeof color !== 'string' || color.length !== 7 || color[0] !== '#') return;
+          const { x, y, startAngle, endAngle, innerRadius, outerRadius } = arc.getProps(
+            ['x', 'y', 'startAngle', 'endAngle', 'innerRadius', 'outerRadius'], true
+          );
+          if (!outerRadius) return;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, outerRadius, startAngle, endAngle);
+          ctx.arc(x, y, innerRadius, endAngle, startAngle, true);
+          ctx.closePath();
+          ctx.clip();
+
+          const grad = ctx.createRadialGradient(x, y, innerRadius, x, y, outerRadius);
+          grad.addColorStop(0, Charts._shade(color, -0.38));
+          grad.addColorStop(1, Charts._shade(color, 0.15));
+          ctx.fillStyle = grad;
+          ctx.fillRect(x - outerRadius, y - outerRadius, outerRadius * 2, outerRadius * 2);
+          ctx.restore();
+        });
+      },
+    };
+  },
+
   // Léger glacis lumineux sur le bord supérieur de l'anneau (effet de relief façon bouton
   // brillant) : un dégradé blanc→transparent, plaqué sur TOUT l'anneau (pas segment par
   // segment — plus simple, et le résultat perçu est le même : un reflet qui vient du haut)
@@ -3652,7 +3708,7 @@ const Charts = {
           ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
           : undefined,
       },
-      plugins: [this._donutGlossPlugin()],
+      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin()],
     });
   },
 
