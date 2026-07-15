@@ -322,7 +322,7 @@ const Charts = {
         labels,
         datasets: [
           { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 6 },
-          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 6 },
+          { label: labelB, data: dataB, backgroundColor: '#d946ef', borderWidth: 0, borderRadius: 6 },
         ],
       },
       options: {
@@ -334,7 +334,7 @@ const Charts = {
         },
         scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
-      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#6366f1', '#312e81'], ['#f59e0b', '#78350f']])],
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#6366f1', '#312e81'], ['#d946ef', '#701a75']])],
     });
   },
 

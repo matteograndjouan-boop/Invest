@@ -844,13 +844,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
 
 /* Cartes période A/B : même carcasse "fumée" que les KPI Flux (.flux-kpi-card/.fk-smoke), deux
-   teintes (indigo/ambre) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
-   period A/B n'a pas ce sens-là. kpi-label/kpi-value/kpi-trend réutilisés tels quels (mêmes
-   règles que Flux) : le nom du mois tient le rôle de "label", le montant celui de "value". */
+   teintes (indigo/rose) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
+   period A/B n'a pas ce sens-là. Rose #d946ef : même remplacement du jaune/ambre déjà fait pour
+   le KPI "Taux d'épargne" et la palette des catégories, plus aucune teinte jaune dans l'app.
+   kpi-label/kpi-value/kpi-trend réutilisés tels quels (mêmes règles que Flux) : le nom du mois
+   tient le rôle de "label", le montant celui de "value". */
 .comp-kpi-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
 .comp-kpi-top .fk-icon { margin-bottom: 0; }
 .comp-kpi-a .fk-icon { color: #6366f1; }
-.comp-kpi-b .fk-icon { color: #f59e0b; }
+.comp-kpi-b .fk-icon { color: #d946ef; }
 .comp-kpi-a .fk-smoke {
   background-color: #0d0f1f;
   background-image:
@@ -864,10 +866,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   background-color: #0d0f1f;
   background-image:
     linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
-    radial-gradient(55% 65% at 82% 8%,  rgba(245,158,11,.90) 0%, transparent 100%),
-    radial-gradient(50% 60% at 40% 0%,  rgba(245,158,11,.70) 0%, transparent 100%),
-    radial-gradient(60% 65% at 8% 32%,  rgba(245,158,11,.50) 0%, transparent 100%),
-    radial-gradient(70% 65% at 55% 48%, rgba(245,158,11,.32) 0%, transparent 100%);
+    radial-gradient(55% 65% at 82% 8%,  rgba(217,70,239,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 40% 0%,  rgba(217,70,239,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 8% 32%,  rgba(217,70,239,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 55% 48%, rgba(217,70,239,.32) 0%, transparent 100%);
 }
 .comp-month-input {
   border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600;
@@ -3456,7 +3458,7 @@ const Charts = {
         labels,
         datasets: [
           { label: labelA, data: dataA, backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 6 },
-          { label: labelB, data: dataB, backgroundColor: '#f59e0b', borderWidth: 0, borderRadius: 6 },
+          { label: labelB, data: dataB, backgroundColor: '#d946ef', borderWidth: 0, borderRadius: 6 },
         ],
       },
       options: {
@@ -3468,7 +3470,7 @@ const Charts = {
         },
         scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
-      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#6366f1', '#312e81'], ['#f59e0b', '#78350f']])],
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#6366f1', '#312e81'], ['#d946ef', '#701a75']])],
     });
   },
 
