@@ -190,12 +190,13 @@ const Charts = {
     const colors = keys.map(a => Utils.ACCOUNT_COLORS[a] || '#6b7280');
     const opts = this._doughnutOptions(Utils.formatCurrency);
     opts.cutout = '68%';
+    opts.spacing = 3;
     opts.plugins.legend = { display: false };
     this.create('chart-port-account', {
       type: 'doughnut',
       data: { labels, datasets: [{ data: Object.values(byAccount), backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
-      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
+      plugins: [this._donutShadowPlugin(), this._donutGradientPlugin(), this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
     });
   },
 
@@ -210,12 +211,13 @@ const Charts = {
     const colors = investments.map((_, i) => Utils.POSITION_COLORS[i % Utils.POSITION_COLORS.length]);
     const opts = this._doughnutOptions(Utils.formatCurrency);
     opts.cutout = '68%';
+    opts.spacing = 3;
     opts.plugins.legend = { display: false };
     this.create('chart-port-acc-alloc', {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#131525' }] },
       options: opts,
-      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin()],
+      plugins: [this._donutShadowPlugin(), this._donutGradientPlugin(), this._donutGlossPlugin()],
     });
   },
 
@@ -481,6 +483,25 @@ const Charts = {
     });
   },
 
+  // Ombre portée par segment : avec `spacing` (séparation entre segments), chaque segment est
+  // maintenant visuellement détaché de ses voisins, donc une ombre individuelle se voit vraiment
+  // (contrairement à des segments accolés où elle resterait cachée sous le voisin) — accentue le
+  // relief façon petites tuiles légèrement surélevées plutôt qu'un anneau plat.
+  _donutShadowPlugin(color = 'rgba(0,0,0,0.45)', blur = 6, offsetY = 3) {
+    return {
+      id: 'donutShadow',
+      beforeDatasetDraw(chart) {
+        chart.ctx.save();
+        chart.ctx.shadowColor = color;
+        chart.ctx.shadowBlur = blur;
+        chart.ctx.shadowOffsetY = offsetY;
+      },
+      afterDatasetDraw(chart) {
+        chart.ctx.restore();
+      },
+    };
+  },
+
   // Dégradé radial PAR SEGMENT (clair vers le bord extérieur, sombre vers le trou central) —
   // équivalent du dégradé vertical des barres, pour que les anneaux ne soient pas des aplats de
   // couleur unie. Chaque segment garde sa propre teinte (dérivée via _shade, pas de palette
@@ -495,6 +516,7 @@ const Charts = {
       afterDatasetDraw(chart, args) {
         const { ctx } = chart;
         const raw = chart.data.datasets[args.index].backgroundColor;
+        const spacing = chart.options.spacing || 0;
         args.meta.data.forEach((arc, i) => {
           const color = Array.isArray(raw) ? raw[i] : raw;
           if (typeof color !== 'string' || color.length !== 7 || color[0] !== '#') return;
@@ -503,10 +525,19 @@ const Charts = {
           );
           if (!outerRadius) return;
 
+          // `startAngle`/`endAngle` lus ci-dessus ne tiennent PAS compte de `spacing` — Chart.js
+          // ne rétrécit l'angle qu'au moment du dessin, sans le répercuter sur les propriétés de
+          // l'élément. Sans ce correctif, notre repeinte comblerait l'espace entre segments.
+          // Approximation : conversion pixels -> radians au rayon extérieur (suffisant, l'écart
+          // avec le calcul interne exact de Chart.js est imperceptible pour un espacement fin).
+          const gapAngle = spacing > 0 ? (spacing / 2) / outerRadius : 0;
+          const a0 = startAngle + gapAngle, a1 = endAngle - gapAngle;
+          if (a1 <= a0) return;
+
           ctx.save();
           ctx.beginPath();
-          ctx.arc(x, y, outerRadius, startAngle, endAngle);
-          ctx.arc(x, y, innerRadius, endAngle, startAngle, true);
+          ctx.arc(x, y, outerRadius, a0, a1);
+          ctx.arc(x, y, innerRadius, a1, a0, true);
           ctx.closePath();
           ctx.clip();
 
@@ -584,6 +615,8 @@ const Charts = {
       options: {
         responsive: true, maintainAspectRatio: false,
         cutout: '34%',   // anneau bien plus épais (42% avant) : plus petit = plus épais
+        spacing: 3,      // fine séparation entre segments (voir _donutGradientPlugin pour le
+                          // correctif nécessaire à cause de ce réglage)
         plugins: {
           legend: { display: false },
           tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.label}: ${Utils.formatCurrency(ctx.raw)}` } },
@@ -598,7 +631,7 @@ const Charts = {
           ? (event, elements) => { event.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
           : undefined,
       },
-      plugins: [this._donutGradientPlugin(), this._donutGlossPlugin()],
+      plugins: [this._donutShadowPlugin(), this._donutGradientPlugin(), this._donutGlossPlugin()],
     });
   },
 
