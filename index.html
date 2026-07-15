@@ -469,8 +469,13 @@
         </div>
 
         <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
-             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = ambre) plutôt que
-             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici. -->
+             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = rose) plutôt que
+             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici.
+             L'écart A/B n'est plus un encart séparé entre les 2 cartes (ça dénotait, ne
+             ressemblait à rien du reste de l'app) mais une ligne kpi-trend DANS la carte B —
+             exactement le même schéma que Flux (Charts._renderKpiTrend) : flèche + montant + %
+             colorés, directement sous le chiffre concerné. Juste une flèche discrète relie les
+             2 cartes visuellement, sans encadré. -->
         <div class="comp-panel-row">
           <div class="flux-kpi-card comp-kpi comp-kpi-a">
             <div class="fk-smoke"></div>
@@ -480,16 +485,11 @@
             </div>
             <div class="kpi-label" id="comp-period-name-a">—</div>
             <div class="kpi-value" id="comp-total-a">0 €</div>
-            <div class="kpi-trend" id="comp-stats-a"></div>
+            <div class="comp-kpi-count" id="comp-stats-a"></div>
           </div>
 
-          <div class="comp-center-col">
-            <div class="comp-delta-card" id="comp-total-diff-card">
-              <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
-              <div class="comp-delta-val" id="comp-total-diff">—</div>
-              <div class="comp-delta-pct" id="comp-delta-pct"></div>
-              <div class="comp-delta-label" id="comp-delta-label">— vs —</div>
-            </div>
+          <div class="comp-center-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </div>
 
           <div class="flux-kpi-card comp-kpi comp-kpi-b">
@@ -500,7 +500,8 @@
             </div>
             <div class="kpi-label" id="comp-period-name-b">—</div>
             <div class="kpi-value" id="comp-total-b">0 €</div>
-            <div class="kpi-trend" id="comp-stats-b"></div>
+            <div class="kpi-trend" id="comp-trend-b"></div>
+            <div class="comp-kpi-count" id="comp-stats-b"></div>
           </div>
         </div>
 

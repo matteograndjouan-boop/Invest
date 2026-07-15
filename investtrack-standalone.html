@@ -841,7 +841,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .text-center { text-align: center; }
 
 /* ---- Comparison redesign ---- */
-.comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.comp-panel-row { display: grid; grid-template-columns: 1fr 64px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
 
 /* Cartes période A/B : même carcasse "fumée" que les KPI Flux (.flux-kpi-card/.fk-smoke), deux
    teintes (indigo/rose) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
@@ -877,20 +877,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   border-radius: var(--radius-sm); width: fit-content; color-scheme: dark;
 }
 
-.comp-center-col { display: flex; align-items: center; justify-content: center; }
-.comp-delta-card {
-  width: 100%; text-align: center; padding: 18px 10px;
-  border-radius: 18px; border: 1px solid var(--border);
-  background: #0d0f1f; box-shadow: 0 10px 28px rgba(0,0,0,.3);
-}
-.comp-delta-card.good { border-color: rgba(16,185,129,0.35); background: linear-gradient(160deg, rgba(16,185,129,0.10), #0d0f1f 65%); }
-.comp-delta-card.bad  { border-color: rgba(239,68,68,0.35);  background: linear-gradient(160deg, rgba(239,68,68,0.10), #0d0f1f 65%); }
-.comp-delta-arrow { font-size: 22px; margin-bottom: 6px; }
-.comp-delta-val { font-size: 17px; font-weight: 900; line-height: 1.1; }
-.comp-delta-val.positive { color: #10b981; }
-.comp-delta-val.negative { color: #ef4444; }
-.comp-delta-pct { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.62); margin-top: 3px; }
-.comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,.5); margin-top: 8px; }
+/* Simple flèche discrète reliant les 2 cartes (aucun encadré séparé — l'écart lui-même vit
+   maintenant dans .kpi-trend à l'intérieur de la carte B, cf. comp-kpi-count ci-dessous). */
+.comp-center-arrow { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.2); }
+.comp-center-arrow svg { width: 30px; height: 30px; }
+
+/* Nombre de transactions : ligne discrète sous kpi-value (et sous kpi-trend sur la carte B). */
+.comp-kpi-count { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.45); }
 
 /* ---- Category comparison table ---- */
 .cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
@@ -2612,8 +2605,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
         </div>
 
         <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
-             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = ambre) plutôt que
-             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici. -->
+             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = rose) plutôt que
+             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici.
+             L'écart A/B n'est plus un encart séparé entre les 2 cartes (ça dénotait, ne
+             ressemblait à rien du reste de l'app) mais une ligne kpi-trend DANS la carte B —
+             exactement le même schéma que Flux (Charts._renderKpiTrend) : flèche + montant + %
+             colorés, directement sous le chiffre concerné. Juste une flèche discrète relie les
+             2 cartes visuellement, sans encadré. -->
         <div class="comp-panel-row">
           <div class="flux-kpi-card comp-kpi comp-kpi-a">
             <div class="fk-smoke"></div>
@@ -2623,16 +2621,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             </div>
             <div class="kpi-label" id="comp-period-name-a">—</div>
             <div class="kpi-value" id="comp-total-a">0 €</div>
-            <div class="kpi-trend" id="comp-stats-a"></div>
+            <div class="comp-kpi-count" id="comp-stats-a"></div>
           </div>
 
-          <div class="comp-center-col">
-            <div class="comp-delta-card" id="comp-total-diff-card">
-              <div class="comp-delta-arrow" id="comp-delta-icon">⟺</div>
-              <div class="comp-delta-val" id="comp-total-diff">—</div>
-              <div class="comp-delta-pct" id="comp-delta-pct"></div>
-              <div class="comp-delta-label" id="comp-delta-label">— vs —</div>
-            </div>
+          <div class="comp-center-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </div>
 
           <div class="flux-kpi-card comp-kpi comp-kpi-b">
@@ -2643,7 +2636,8 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             </div>
             <div class="kpi-label" id="comp-period-name-b">—</div>
             <div class="kpi-value" id="comp-total-b">0 €</div>
-            <div class="kpi-trend" id="comp-stats-b"></div>
+            <div class="kpi-trend" id="comp-trend-b"></div>
+            <div class="comp-kpi-count" id="comp-stats-b"></div>
           </div>
         </div>
 
@@ -5355,8 +5349,6 @@ const Comparisons = {
     const nameB = document.getElementById('comp-period-name-b');
     if (nameA) nameA.textContent = Utils.getMonthLabel(this.periodA);
     if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
-    const deltaLabel = document.getElementById('comp-delta-label');
-    if (deltaLabel) deltaLabel.textContent = `${this._shortLabel(this.periodB)} vs ${this._shortLabel(this.periodA)}`;
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
     const diff   = totalB - totalA;
@@ -5369,19 +5361,7 @@ const Comparisons = {
 
     this._renderPanelStats('comp-stats-a', expA);
     this._renderPanelStats('comp-stats-b', expB);
-
-    // Delta card
-    const diffEl  = document.getElementById('comp-total-diff');
-    const pctEl   = document.getElementById('comp-delta-pct');
-    const iconEl  = document.getElementById('comp-delta-icon');
-    const cardEl  = document.getElementById('comp-total-diff-card');
-    if (diffEl) {
-      diffEl.textContent = (diff >= 0 ? '+' : '') + Utils.formatCurrency(diff);
-      diffEl.className = 'comp-delta-val ' + (diff <= 0 ? 'positive' : 'negative');
-    }
-    if (pctEl)  pctEl.textContent  = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
-    if (iconEl) iconEl.textContent = diff > 0 ? '↑' : diff < 0 ? '↓' : '⟺';
-    if (cardEl) cardEl.className   = 'comp-delta-card ' + (diff <= 0 ? 'good' : 'bad');
+    this._renderDeltaTrend(diff, pct);
 
     this._renderCatTable(expA, expB);
     this._renderCatChart(expA, expB);
@@ -5389,12 +5369,27 @@ const Comparisons = {
 
   // Panier moyen / Top catégorie retirés : peu pertinents pour une dépense perso (montants trop
   // hétérogènes d'une transaction à l'autre) et redondants avec le graphique par catégorie
-  // juste en dessous. Ne reste que le nombre de transactions, en une ligne façon kpi-trend.
+  // juste en dessous. Ne reste que le nombre de transactions, en une ligne discrète.
   _renderPanelStats(containerId, expenses) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const count = expenses.length;
     el.textContent = count > 1 ? `${count} transactions` : count === 1 ? '1 transaction' : 'Aucune transaction';
+  },
+
+  // Écart B vs A directement dans la carte B (kpi-trend), même traitement que les tendances Flux
+  // (Charts._renderKpiTrend côté flux.js : flèche + signe + % colorés) plutôt qu'un encart séparé
+  // entre les 2 cartes. Contrairement à Flux (couleur = signe brut, agnostique à la métrique),
+  // ici on ne compare QUE des dépenses : "moins" est toujours souhaitable, donc vert/rouge
+  // suivent le sens dépenses en baisse/hausse plutôt que le signe mathématique de l'écart.
+  _renderDeltaTrend(diff, pct) {
+    const el = document.getElementById('comp-trend-b');
+    if (!el) return;
+    if (diff === 0) { el.innerHTML = `<span class="trend-neutral">→ égal à ${this._shortLabel(this.periodA)}</span>`; return; }
+    const cls   = diff <= 0 ? 'trend-good' : 'trend-bad';
+    const arrow = diff > 0 ? '↑' : '↓';
+    const sign  = diff > 0 ? '+' : '';
+    el.innerHTML = `<span class="${cls}">${arrow} ${sign}${Utils.formatCurrency(diff)} (${sign}${pct.toFixed(1)}%) vs ${this._shortLabel(this.periodA)}</span>`;
   },
 
   // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des

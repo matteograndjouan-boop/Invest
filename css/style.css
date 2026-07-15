@@ -834,7 +834,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .text-center { text-align: center; }
 
 /* ---- Comparison redesign ---- */
-.comp-panel-row { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.comp-panel-row { display: grid; grid-template-columns: 1fr 64px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
 
 /* Cartes période A/B : même carcasse "fumée" que les KPI Flux (.flux-kpi-card/.fk-smoke), deux
    teintes (indigo/rose) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
@@ -870,20 +870,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   border-radius: var(--radius-sm); width: fit-content; color-scheme: dark;
 }
 
-.comp-center-col { display: flex; align-items: center; justify-content: center; }
-.comp-delta-card {
-  width: 100%; text-align: center; padding: 18px 10px;
-  border-radius: 18px; border: 1px solid var(--border);
-  background: #0d0f1f; box-shadow: 0 10px 28px rgba(0,0,0,.3);
-}
-.comp-delta-card.good { border-color: rgba(16,185,129,0.35); background: linear-gradient(160deg, rgba(16,185,129,0.10), #0d0f1f 65%); }
-.comp-delta-card.bad  { border-color: rgba(239,68,68,0.35);  background: linear-gradient(160deg, rgba(239,68,68,0.10), #0d0f1f 65%); }
-.comp-delta-arrow { font-size: 22px; margin-bottom: 6px; }
-.comp-delta-val { font-size: 17px; font-weight: 900; line-height: 1.1; }
-.comp-delta-val.positive { color: #10b981; }
-.comp-delta-val.negative { color: #ef4444; }
-.comp-delta-pct { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.62); margin-top: 3px; }
-.comp-delta-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,.5); margin-top: 8px; }
+/* Simple flèche discrète reliant les 2 cartes (aucun encadré séparé — l'écart lui-même vit
+   maintenant dans .kpi-trend à l'intérieur de la carte B, cf. comp-kpi-count ci-dessous). */
+.comp-center-arrow { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.2); }
+.comp-center-arrow svg { width: 30px; height: 30px; }
+
+/* Nombre de transactions : ligne discrète sous kpi-value (et sous kpi-trend sur la carte B). */
+.comp-kpi-count { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.45); }
 
 /* ---- Category comparison table ---- */
 .cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }

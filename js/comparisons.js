@@ -43,8 +43,6 @@ const Comparisons = {
     const nameB = document.getElementById('comp-period-name-b');
     if (nameA) nameA.textContent = Utils.getMonthLabel(this.periodA);
     if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
-    const deltaLabel = document.getElementById('comp-delta-label');
-    if (deltaLabel) deltaLabel.textContent = `${this._shortLabel(this.periodB)} vs ${this._shortLabel(this.periodA)}`;
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
     const diff   = totalB - totalA;
@@ -57,19 +55,7 @@ const Comparisons = {
 
     this._renderPanelStats('comp-stats-a', expA);
     this._renderPanelStats('comp-stats-b', expB);
-
-    // Delta card
-    const diffEl  = document.getElementById('comp-total-diff');
-    const pctEl   = document.getElementById('comp-delta-pct');
-    const iconEl  = document.getElementById('comp-delta-icon');
-    const cardEl  = document.getElementById('comp-total-diff-card');
-    if (diffEl) {
-      diffEl.textContent = (diff >= 0 ? '+' : '') + Utils.formatCurrency(diff);
-      diffEl.className = 'comp-delta-val ' + (diff <= 0 ? 'positive' : 'negative');
-    }
-    if (pctEl)  pctEl.textContent  = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
-    if (iconEl) iconEl.textContent = diff > 0 ? '↑' : diff < 0 ? '↓' : '⟺';
-    if (cardEl) cardEl.className   = 'comp-delta-card ' + (diff <= 0 ? 'good' : 'bad');
+    this._renderDeltaTrend(diff, pct);
 
     this._renderCatTable(expA, expB);
     this._renderCatChart(expA, expB);
@@ -77,12 +63,27 @@ const Comparisons = {
 
   // Panier moyen / Top catégorie retirés : peu pertinents pour une dépense perso (montants trop
   // hétérogènes d'une transaction à l'autre) et redondants avec le graphique par catégorie
-  // juste en dessous. Ne reste que le nombre de transactions, en une ligne façon kpi-trend.
+  // juste en dessous. Ne reste que le nombre de transactions, en une ligne discrète.
   _renderPanelStats(containerId, expenses) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const count = expenses.length;
     el.textContent = count > 1 ? `${count} transactions` : count === 1 ? '1 transaction' : 'Aucune transaction';
+  },
+
+  // Écart B vs A directement dans la carte B (kpi-trend), même traitement que les tendances Flux
+  // (Charts._renderKpiTrend côté flux.js : flèche + signe + % colorés) plutôt qu'un encart séparé
+  // entre les 2 cartes. Contrairement à Flux (couleur = signe brut, agnostique à la métrique),
+  // ici on ne compare QUE des dépenses : "moins" est toujours souhaitable, donc vert/rouge
+  // suivent le sens dépenses en baisse/hausse plutôt que le signe mathématique de l'écart.
+  _renderDeltaTrend(diff, pct) {
+    const el = document.getElementById('comp-trend-b');
+    if (!el) return;
+    if (diff === 0) { el.innerHTML = `<span class="trend-neutral">→ égal à ${this._shortLabel(this.periodA)}</span>`; return; }
+    const cls   = diff <= 0 ? 'trend-good' : 'trend-bad';
+    const arrow = diff > 0 ? '↑' : '↓';
+    const sign  = diff > 0 ? '+' : '';
+    el.innerHTML = `<span class="${cls}">${arrow} ${sign}${Utils.formatCurrency(diff)} (${sign}${pct.toFixed(1)}%) vs ${this._shortLabel(this.periodA)}</span>`;
   },
 
   // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des
