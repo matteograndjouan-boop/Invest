@@ -378,7 +378,7 @@ const Budget = {
 
     wrap.innerHTML = `
       <div class="card-header-row" style="padding:14px 16px 8px">
-        <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">Détail des dépenses · ${PeriodFilter.getLabel()}</h3>
+        <h3>Détail des dépenses · ${PeriodFilter.getLabel()}</h3>
       </div>
       ${rows.join('')}`;
   },
