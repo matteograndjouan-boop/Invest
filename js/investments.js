@@ -268,10 +268,10 @@ const Investments = {
       return `<tr>
         <td><strong>${inv.name}</strong>${inv.ticker ? `<br><small class="text-muted">${inv.ticker}</small>` : ''}</td>
         <td><span class="badge badge-${inv.type}">${Utils.INVESTMENT_TYPES[inv.type] || inv.type}</span></td>
-        <td>${inv.quantity}</td>
-        <td>${Utils.formatCurrency(inv.buyPrice)}</td>
-        <td>${Utils.formatCurrency(inv.currentPrice)}</td>
-        <td><strong>${Utils.formatCurrency(value)}</strong><br><small class="text-muted">${pct.toFixed(1)}%</small></td>
+        <td class="text-right">${inv.quantity}</td>
+        <td class="text-right">${Utils.formatCurrency(inv.buyPrice)}</td>
+        <td class="text-right">${Utils.formatCurrency(inv.currentPrice)}</td>
+        <td class="text-right"><strong>${Utils.formatCurrency(value)}</strong><br><small class="text-muted">${pct.toFixed(1)}%</small></td>
         <td class="${cls}">
           <div class="pos-perf-cell">
             <div class="pos-perf-bar-wrap"><div class="pos-perf-bar" style="width:${barW}%;background:${barCol}"></div></div>

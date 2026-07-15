@@ -62,7 +62,7 @@ const Charts = {
   _yAxis(extra = {}) {
     return {
       beginAtZero: true,
-      ticks: { callback: (v) => Charts._fmt(v), color: '#9ca3af', font: { size: 11 } },
+      ticks: { callback: (v) => Charts._fmt(v), color: '#c7c9dd', font: { size: 13, weight: '600' } },
       grid: { color: 'rgba(255,255,255,0.06)' },
       border: { display: false },
       ...extra,
@@ -79,7 +79,7 @@ const Charts = {
 
   _xAxis(extra = {}) {
     return {
-      ticks: { color: '#9ca3af', font: { size: 11 } },
+      ticks: { color: '#c7c9dd', font: { size: 13, weight: '600' } },
       grid: { display: false },
       border: { display: false },
       ...extra,
