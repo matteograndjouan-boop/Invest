@@ -5326,13 +5326,27 @@ const Comparisons = {
 
     const selA = document.getElementById('comp-period-a');
     const selB = document.getElementById('comp-period-b');
-    if (selA) { selA.value = this.periodA; selA.addEventListener('change', (e) => { this.periodA = e.target.value; this.render(); }); }
-    if (selB) { selB.value = this.periodB; selB.addEventListener('change', (e) => { this.periodB = e.target.value; this.render(); }); }
+    if (selA) { selA.value = this.periodA; selA.addEventListener('change', (e) => { this.periodA = e.target.value; this._reorderPeriods(); this.render(); }); }
+    if (selB) { selB.value = this.periodB; selB.addEventListener('change', (e) => { this.periodB = e.target.value; this._reorderPeriods(); this.render(); }); }
 
     // Re-render quand le toggle Date comptable/effective change (filtre global).
     PeriodFilter.onChange(() => {
       if (!document.getElementById('section-comparisons')?.classList.contains('hidden')) this.render();
     });
+  },
+
+  // La carte de droite (B) doit toujours être la période la plus récente : cohérent avec le sens
+  // de la flèche/tendance A -> B (kpi-trend "vs période A" sur la carte de droite n'aurait pas de
+  // sens si B était en fait antérieure). Si le choix de l'utilisateur inverse l'ordre
+  // chronologique, on permute A/B — variables internes ET valeur affichée des deux <input>.
+  // Comparaison de chaînes 'YYYY-MM' : équivalente à une comparaison chronologique.
+  _reorderPeriods() {
+    if (this.periodA <= this.periodB) return;
+    [this.periodA, this.periodB] = [this.periodB, this.periodA];
+    const selA = document.getElementById('comp-period-a');
+    const selB = document.getElementById('comp-period-b');
+    if (selA) selA.value = this.periodA;
+    if (selB) selB.value = this.periodB;
   },
 
   render() {
