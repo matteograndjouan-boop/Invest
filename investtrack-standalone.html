@@ -1440,16 +1440,18 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-bar-card .chart-container canvas { max-height: none; }
 /* Donut à gauche, légende à droite (plus de place pour les noms qu'en 2 colonnes en dessous). */
 .flux-donut-wrap { display: flex; flex-direction: row; align-items: center; gap: 1rem; height: 100%; }
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 180px; }
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 210px; }
 
 /* ---- Donut Custom Legend ---- */
-/* Juste pastille + nom + pourcentage, pas de barre/montant. */
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden; }
+/* Juste pastille + nom + pourcentage, pas de barre/montant. Agrandie pour bien remplir l'espace
+   à côté du donut (au lieu de petites lignes perdues dans une grande carte) ; overflow-y en
+   sécurité si jamais 7 lignes (top 6 + Autres) à cette taille dépassaient la hauteur dispo. */
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
 
 .dl-item {
-  display: flex; align-items: center; gap: 7px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
   border-left: 3px solid transparent;
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s, opacity 0.14s;
@@ -1458,9 +1460,9 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .dl-item.active { background: var(--surface-alt); border-left-color: var(--ic); }
 .dl-item.dimmed { opacity: 0.38; }
 .dl-item.dimmed:hover { opacity: 1; }
-.dl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.dl-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl-pct { font-size: 13px; font-weight: 800; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+.dl-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+.dl-name { flex: 1; font-size: 16px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-pct { font-size: 17px; font-weight: 800; color: var(--text); white-space: nowrap; flex-shrink: 0; }
 
 /* ---- Flux Dépenses par catégorie (cartes) ---- */
 .flux-cat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
@@ -1646,14 +1648,18 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 /* Anneau donut + légende verticale (pastille/nom/montant/%), empilés — Vue globale (par
    compte) et onglets compte (par position), voir Investments._renderLegend. */
 .port-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.port-donut-wrap .chart-container { width: 100%; max-width: 220px; }
-.port-legend { width: 100%; display: flex; flex-direction: column; gap: 2px; }
-.port-legend-item { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.port-donut-wrap .chart-container { width: 100%; max-width: 240px; }
+.port-legend { width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.port-legend-item { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-bottom: 1px solid var(--border); }
 .port-legend-item:last-child { border-bottom: none; }
-.pl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.pl-name { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pl-amount { font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; }
-.pl-pct { font-size: 11px; font-weight: 600; color: var(--text-muted); width: 34px; text-align: right; flex-shrink: 0; }
+.pl-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+/* Nom sur sa propre ligne (toute la largeur dispo, pas de concurrence avec montant/% comme
+   avant) : évite la troncature des noms un peu longs (ex. "TotalEnergies") dans la colonne
+   étroite (min 280px) tout en permettant une police bien plus grande. Montant + % groupés sur
+   une 2e ligne, plus petits/secondaires. */
+.pl-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pl-name { font-size: 16px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-sub { font-size: 13.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 
 /* Tendance affichée à droite du titre "Évolution du patrimoine" (card-header-row). */
 .inv-evo-trend { font-size: 12px; font-weight: 700; }
@@ -3219,12 +3225,12 @@ const Charts = {
     return {
       position,
       labels: {
-        boxWidth: 8, boxHeight: 8,
-        padding: 14,
-        font: { size: 12 },
+        boxWidth: 11, boxHeight: 11,
+        padding: 20,
+        font: { size: 13, weight: '600' },
         usePointStyle: true,
         pointStyle: 'circle',
-        color: '#9497b8',
+        color: '#c7c9dd',
         ...extra,
       },
     };
@@ -4296,9 +4302,10 @@ const Investments = {
       const pct = total > 0 ? (e.value / total * 100) : 0;
       return `<div class="port-legend-item">
         <span class="pl-dot" style="background:${e.color}"></span>
-        <span class="pl-name">${e.label}</span>
-        <span class="pl-amount">${Utils.formatCurrency(e.value)}</span>
-        <span class="pl-pct">${pct.toFixed(0)}%</span>
+        <div class="pl-info">
+          <span class="pl-name">${e.label}</span>
+          <span class="pl-sub">${Utils.formatCurrency(e.value)} · ${pct.toFixed(0)}%</span>
+        </div>
       </div>`;
     }).join('');
   },

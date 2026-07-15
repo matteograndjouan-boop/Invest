@@ -104,12 +104,12 @@ const Charts = {
     return {
       position,
       labels: {
-        boxWidth: 8, boxHeight: 8,
-        padding: 14,
-        font: { size: 12 },
+        boxWidth: 11, boxHeight: 11,
+        padding: 20,
+        font: { size: 13, weight: '600' },
         usePointStyle: true,
         pointStyle: 'circle',
-        color: '#9497b8',
+        color: '#c7c9dd',
         ...extra,
       },
     };

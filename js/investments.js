@@ -88,9 +88,10 @@ const Investments = {
       const pct = total > 0 ? (e.value / total * 100) : 0;
       return `<div class="port-legend-item">
         <span class="pl-dot" style="background:${e.color}"></span>
-        <span class="pl-name">${e.label}</span>
-        <span class="pl-amount">${Utils.formatCurrency(e.value)}</span>
-        <span class="pl-pct">${pct.toFixed(0)}%</span>
+        <div class="pl-info">
+          <span class="pl-name">${e.label}</span>
+          <span class="pl-sub">${Utils.formatCurrency(e.value)} · ${pct.toFixed(0)}%</span>
+        </div>
       </div>`;
     }).join('');
   },
