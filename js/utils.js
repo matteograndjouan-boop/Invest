@@ -142,14 +142,16 @@ const Utils = {
 
   // Palette des catégories : uniquement 4 teintes (+ nuances), le vert et le rouge sont
   // réservés aux revenus/dépenses/tendances (voir --success/--danger) et ne doivent jamais
-  // servir à distinguer des catégories. Entrelacée par teinte (bleu/orange/violet/cyan) plutôt
+  // servir à distinguer des catégories. Entrelacée par teinte (bleu/rose/violet/cyan) plutôt
   // que groupée par nuance, pour que deux catégories consécutives (positions voisines dans
-  // Storage.getCategories()) ne partagent quasiment jamais la même famille de couleur.
+  // Storage.getCategories()) ne partagent quasiment jamais la même famille de couleur. L'orange
+  // d'origine a été remplacé par un rose/fuchsia (même teinte que le KPI "Taux d'épargne", voir
+  // .fk-savings dans style.css) — plus aucune teinte jaune/orangée dans la palette.
   CATEGORY_COLORS: [
-    '#3b82f6', '#d97706', '#8b5cf6', '#06b6d4', // bleu / orange / violet / cyan
-    '#60a5fa', '#f59e0b', '#a78bfa', '#22d3ee', // …clairs
-    '#2563eb', '#b45309', '#7c3aed', '#0891b2', // …foncés
-    '#1d4ed8', '#fbbf24', '#6d28d9', '#0e7490', // …extrêmes
+    '#3b82f6', '#d946ef', '#8b5cf6', '#06b6d4', // bleu / rose / violet / cyan
+    '#60a5fa', '#e879f9', '#a78bfa', '#22d3ee', // …clairs
+    '#2563eb', '#c026d3', '#7c3aed', '#0891b2', // …foncés
+    '#1d4ed8', '#a21caf', '#6d28d9', '#0e7490', // …extrêmes
   ],
 
   CATEGORY_COLOR_OTHER: '#6b7280',

@@ -1339,7 +1339,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fk-revenue .fk-icon { color: #00b37e; }
 .fk-expense .fk-icon { color: #e53e3e; }
 .fk-balance .fk-icon { color: #3b82f6; }
-.fk-savings .fk-icon { color: #d97706; }
+.fk-savings .fk-icon { color: #d946ef; }
 
 .fk-revenue .fk-smoke {
   background-color: #0d0f1f;
@@ -1372,10 +1372,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   background-color: #0d0f1f;
   background-image:
     linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
-    radial-gradient(55% 65% at 80% 10%, rgba(217,119,6,.90) 0%, transparent 100%),
-    radial-gradient(50% 60% at 35% 0%,  rgba(217,119,6,.70) 0%, transparent 100%),
-    radial-gradient(60% 65% at 8% 34%,  rgba(217,119,6,.50) 0%, transparent 100%),
-    radial-gradient(70% 65% at 55% 48%, rgba(217,119,6,.32) 0%, transparent 100%);
+    radial-gradient(55% 65% at 80% 10%, rgba(217,70,239,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 35% 0%,  rgba(217,70,239,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 8% 34%,  rgba(217,70,239,.50) 0%, transparent 100%),
+    radial-gradient(70% 65% at 55% 48%, rgba(217,70,239,.32) 0%, transparent 100%);
 }
 
 /* ---- Flux Category Pills ---- */
