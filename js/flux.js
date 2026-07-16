@@ -291,7 +291,11 @@ const Flux = {
     const max = Math.max(...entries.map(([, v]) => v));
     container.innerHTML = entries.map(([label, value]) => {
       const color = Utils.getCategoryColor(label);
-      const icon = Categories._meta(label).icon;
+      // Icône personnalisée de la catégorie si définie (Categories._setIcon), sinon repli sur
+      // l'auto-détection par mot-clé — _meta(label) seul ignorait tout changement d'icône fait
+      // dans l'onglet Catégories (toujours l'icône déduite du nom, jamais la valeur enregistrée).
+      const cat  = Storage.getCategories().find(c => c.name === label);
+      const icon = (cat && cat.icon) || Categories._meta(label).icon;
       const barW = max > 0 ? (value / max * 100).toFixed(1) : 0;
       const isActive = catFilters.size > 0 && catFilters.has(label);
       const isFiltered = catFilters.size > 0 && !catFilters.has(label);

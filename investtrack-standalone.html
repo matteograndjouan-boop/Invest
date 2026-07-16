@@ -5219,7 +5219,11 @@ const Flux = {
     const max = Math.max(...entries.map(([, v]) => v));
     container.innerHTML = entries.map(([label, value]) => {
       const color = Utils.getCategoryColor(label);
-      const icon = Categories._meta(label).icon;
+      // Icône personnalisée de la catégorie si définie (Categories._setIcon), sinon repli sur
+      // l'auto-détection par mot-clé — _meta(label) seul ignorait tout changement d'icône fait
+      // dans l'onglet Catégories (toujours l'icône déduite du nom, jamais la valeur enregistrée).
+      const cat  = Storage.getCategories().find(c => c.name === label);
+      const icon = (cat && cat.icon) || Categories._meta(label).icon;
       const barW = max > 0 ? (value / max * 100).toFixed(1) : 0;
       const isActive = catFilters.size > 0 && catFilters.has(label);
       const isFiltered = catFilters.size > 0 && !catFilters.has(label);
@@ -6917,7 +6921,11 @@ const Budget = {
         const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
         const color   = Utils.getCategoryColor(theme.name);
-        const icon    = Categories._meta(theme.name).icon;
+        // Même repli que Flux._renderCategoryCards : icône personnalisée de la catégorie si
+        // définie, sinon auto-détection par mot-clé (_meta seul ignorait les icônes changées
+        // dans l'onglet Catégories).
+        const themeCat = Storage.getCategories().find(c => c.name === theme.name);
+        const icon    = (themeCat && themeCat.icon) || Categories._meta(theme.name).icon;
         const status  = this._status(planned, pct);
         const vars    = `--cat-bar:linear-gradient(90deg,${color},${this._lighten(color, 0.35)})`;
 

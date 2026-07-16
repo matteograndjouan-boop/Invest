@@ -207,7 +207,11 @@ const Budget = {
         const planned = this._plannedForPeriod(theme);
         const pct     = planned > 0 ? (spent / planned * 100) : 0;
         const color   = Utils.getCategoryColor(theme.name);
-        const icon    = Categories._meta(theme.name).icon;
+        // Même repli que Flux._renderCategoryCards : icône personnalisée de la catégorie si
+        // définie, sinon auto-détection par mot-clé (_meta seul ignorait les icônes changées
+        // dans l'onglet Catégories).
+        const themeCat = Storage.getCategories().find(c => c.name === theme.name);
+        const icon    = (themeCat && themeCat.icon) || Categories._meta(theme.name).icon;
         const status  = this._status(planned, pct);
         const vars    = `--cat-bar:linear-gradient(90deg,${color},${this._lighten(color, 0.35)})`;
 
