@@ -4973,13 +4973,13 @@ const Flux = {
       this._activeFilters = new Set([[...this._activeFilters][0]]);
     }
     this._renderCatPills();
-    this.render();
+    this.render(true);
   },
 
   _clearFilters() {
     this._activeFilters = new Set();
     this._renderCatPills();
-    this.render();
+    this.render(true);
   },
 
   _togglePill(cat) {
@@ -4990,7 +4990,7 @@ const Flux = {
       this._activeFilters = this._activeFilters.has(cat) ? new Set() : new Set([cat]);
     }
     this._renderCatPills();
-    this.render();
+    this.render(true);
   },
 
   // Kept for donut click compatibility
@@ -5040,7 +5040,12 @@ const Flux = {
     el.innerHTML = `<span class="${cls}">${arrow} ${sign}${pct} % vs période préc.</span>`;
   },
 
-  render() {
+  // `skipBarChart` : passé à `true` par les actions de filtre de catégorie (pastilles, donut,
+  // cartes) — le graphique "Revenus vs Dépenses" n'en dépend jamais (voir _renderBarChart) et
+  // ne doit donc ni se recalculer ni se ré-animer à chaque clic de filtre, seulement quand la
+  // période ou le mode de date changent (PeriodFilter.onChange, ci-dessous) ou à l'ouverture
+  // de l'onglet.
+  render(skipBarChart = false) {
     const { start, end } = PeriodFilter.getDateRange();
     const catFilters = this._activeFilters;
 
@@ -5079,14 +5084,18 @@ const Flux = {
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     }
 
-    this._renderBarChart(allExpenses, allRevenues);
+    if (!skipBarChart) this._renderBarChart(allExpenses, allRevenues);
     this._renderDonut(catFilters);
     this._renderCategoryCards(catFilters);
     this._renderSummaryTable(allExpenses, start, end, catFilters);
   },
 
-  // Toujours Revenus vs Dépenses : ne suit QUE le filtre de période, jamais le filtre de
-  // catégorie (celui-ci pilote le graphique par catégorie, le donut et le tableau, pas celui-ci).
+  // Toujours Revenus vs Dépenses total, jamais filtré par catégorie (celle-ci pilote le donut,
+  // les cartes et le tableau, pas ce graphique) : `allExpenses`/`allRevenues` reçus ici ne sont
+  // jamais passés au crible de `catFilters`, et l'appelant (render) n'invoque même cette
+  // méthode que pour un changement de période/mode de date ou l'ouverture de l'onglet — jamais
+  // pour un simple clic de filtre (voir `skipBarChart` dans render) — pour que ce graphique ne
+  // se ré-anime pas non plus inutilement à chaque clic de pastille.
   _renderBarChart(allExpenses, allRevenues) {
     const { start, end } = PeriodFilter.getDateRange();
 
