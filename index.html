@@ -61,11 +61,14 @@
     <!-- Main Content -->
     <main class="main-content">
 
-      <!-- Onglets du mode courant (généré par app.js selon APP_MODES) -->
-      <div id="mode-tabs-container" class="mode-tabs"></div>
-
-      <!-- Global Period Filter Bar -->
-      <div id="period-filter-container" class="global-period-bar"></div>
+      <!-- Onglets du mode courant + filtre de période global sur la même ligne. Restent 2
+           conteneurs distincts (gérés indépendamment par renderModeTabs et PeriodFilter.renderUI,
+           chacun régénérant tout son innerHTML) simplement alignés en CSS — les imbriquer casserait
+           le filtre de période, écrasé au 1er changement d'onglet par renderModeTabs. -->
+      <div class="mode-tabs-and-filter">
+        <div id="mode-tabs-container" class="mode-tabs"></div>
+        <div id="period-filter-container" class="global-period-bar"></div>
+      </div>
 
       <!-- DASHBOARD -->
       <section class="section hidden" id="section-dashboard">

@@ -319,7 +319,16 @@ input:focus:not(:focus-visible) { outline: none; }
 
 /* ---- Onglets de mode (en haut du contenu, remplacent l'ancienne liste de nav-item par mode
    dans la barre latérale — voir renderModeTabs dans app.js) ---- */
-.mode-tabs { margin-bottom: 20px; }
+/* Onglets + filtre de période sur la même ligne (voir index.html) : le déclencheur du filtre
+   n'a qu'une ligne (~32px) contre 2 pour les onglets (fil d'ariane + rangée d'onglets, ~55px) —
+   flex-end aligne son bas sur celui de la rangée d'onglets, la seule des deux qui compte
+   visuellement (le fil d'ariane au-dessus n'a pas besoin d'être aligné avec quoi que ce soit).
+   min-width:0 laisse .mode-tabs-row (flex-wrap) se réduire plutôt que pousser le filtre hors
+   ligne sur les petits écrans ; le filtre lui-même ne doit jamais se comprimer (flex-shrink:0
+   plus bas, sur .global-period-bar). */
+.mode-tabs-and-filter { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+.mode-tabs-and-filter .mode-tabs { flex: 1; min-width: 0; }
+.mode-tabs { margin-bottom: 0; }
 .mode-tabs-crumb {
   font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;
@@ -886,8 +895,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   .comp-center-col { padding: 0; }
 }
 
-/* ---- Period Filter (déclencheur compact en haut à droite du contenu) ---- */
-.global-period-bar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+/* ---- Period Filter (déclencheur compact, sur la même ligne que les onglets de mode
+   — .mode-tabs-and-filter ci-dessus) ---- */
+.global-period-bar { display: flex; justify-content: flex-end; flex-shrink: 0; }
 .period-compact { position: relative; }
 .period-trigger {
   display: flex; align-items: center; gap: 7px;
