@@ -1545,19 +1545,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    BUDGET — redesign
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* KPI overview : conteneur = .kpi-grid-4 (comme Flux/Dashboard). Même carcasse que .kpi-card
-   (bande dégradée en haut, pas d'icône) mais fond légèrement différent (--bg au lieu de
-   --surface) pour bien les distinguer des cartes budget en dessous. */
-.budget-kpi-card { background: var(--bg); border-left-color: transparent !important; }
-.budget-kpi-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-}
-.bkpi-total::before  { background: linear-gradient(90deg, #6c63ff, #a09bff); }
-.bkpi-spent::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }
-.bkpi-remain::before { background: linear-gradient(90deg, #00b37e, #4ade80); }
-.bkpi-over::before   { background: linear-gradient(90deg, #e53e3e, #fc8181); }
+/* KPI overview : même carte "fumée" que Flux/Comparaisons (.flux-kpi-card/.fk-smoke, voir
+   js/budget.js) — plus de bande dégradée à part, les 4 teintes sémantiques fk-balance/fk-expense/
+   fk-revenue/fk-savings sont réutilisées telles quelles. */
 
-/* KPI Investissements (Vue globale + onglets compte) : même carcasse que .budget-kpi-card. */
+/* KPI Investissements (Vue globale + onglets compte) : bande dégradée en haut, pas d'icône. */
 .inv-kpi-card { background: var(--bg); border-left-color: transparent !important; }
 .inv-kpi-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
@@ -6818,28 +6810,45 @@ const Budget = {
     }).length;
     const globalPct = totalPlanned > 0 ? Math.min(100, totalSpent / totalPlanned * 100) : 0;
 
-    // KPI overview — 4 cartes façon Flux (bande dégradée en haut, pas d'icône).
+    // KPI overview — même carcasse "carte fumée" que Flux/Comparaisons (.flux-kpi-card/.fk-smoke),
+    // en réutilisant directement les 4 teintes sémantiques déjà établies (fk-balance/fk-expense/
+    // fk-revenue/fk-savings) plutôt que de dupliquer des recettes de dégradé : Budget total =
+    // référence neutre (bleu), Dépensé = une dépense (rouge), Restant = ressource positive (vert)
+    // qui bascule en rouge/alerte dès que ça devient un Dépassement, Dépassements = 4e teinte
+    // (rose) comme le Taux d'épargne de Flux.
     if (overviewBar) {
+      const isOver = totalRemain < 0;
+      const remainIcon = isOver
+        ? '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+        : '<path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/>';
       overviewBar.innerHTML = `
-        <div class="kpi-card budget-kpi-card bkpi-total">
+        <div class="flux-kpi-card fk-balance">
+          <div class="fk-smoke"></div>
+          <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
           <div class="kpi-label">Budget total</div>
           <div class="kpi-value">${Utils.formatCurrency(totalPlanned)}</div>
-          <div class="kpi-sub">Prévu · ${PeriodFilter.getLabel()}</div>
+          <div class="kpi-trend">Prévu · ${PeriodFilter.getLabel()}</div>
         </div>
-        <div class="kpi-card budget-kpi-card bkpi-spent">
+        <div class="flux-kpi-card fk-expense">
+          <div class="fk-smoke"></div>
+          <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
           <div class="kpi-label">Dépensé</div>
           <div class="kpi-value">${Utils.formatCurrency(totalSpent)}</div>
-          <div class="kpi-sub">${globalPct.toFixed(0)}% du budget</div>
+          <div class="kpi-trend">${globalPct.toFixed(0)}% du budget</div>
         </div>
-        <div class="kpi-card budget-kpi-card bkpi-remain">
-          <div class="kpi-label">${totalRemain >= 0 ? 'Restant' : 'Dépassement'}</div>
+        <div class="flux-kpi-card ${isOver ? 'fk-expense' : 'fk-revenue'}">
+          <div class="fk-smoke"></div>
+          <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${remainIcon}</svg></span>
+          <div class="kpi-label">${isOver ? 'Dépassement' : 'Restant'}</div>
           <div class="kpi-value">${Utils.formatCurrency(Math.abs(totalRemain))}</div>
-          <div class="kpi-sub">${totalRemain >= 0 ? 'Encore disponible' : 'Au-dessus du prévu'}</div>
+          <div class="kpi-trend">${isOver ? 'Au-dessus du prévu' : 'Encore disponible'}</div>
         </div>
-        <div class="kpi-card budget-kpi-card bkpi-over">
+        <div class="flux-kpi-card fk-savings">
+          <div class="fk-smoke"></div>
+          <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
           <div class="kpi-label">Dépassements</div>
           <div class="kpi-value">${overCount}</div>
-          <div class="kpi-sub">Catégorie${overCount !== 1 ? 's' : ''} au-dessus</div>
+          <div class="kpi-trend">Catégorie${overCount !== 1 ? 's' : ''} au-dessus</div>
         </div>`;
     }
 
