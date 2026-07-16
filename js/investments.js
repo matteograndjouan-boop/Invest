@@ -27,6 +27,19 @@ const Investments = {
     Storage.savePortfolioHistory(history);
   },
 
+  // Carte "Plus-value" : bascule fk-revenue (vert, trending-up) / fk-expense (rouge,
+  // trending-down) selon le signe, comme Budget.render() le fait déjà pour Restant/Dépassement —
+  // une moins-value doit se lire comme une mauvaise nouvelle, pas rester en vert fixe.
+  _setGainCard(cardId, iconId, gain) {
+    const card = document.getElementById(cardId);
+    const icon = document.getElementById(iconId);
+    const isUp = gain >= 0;
+    if (card) card.className = 'flux-kpi-card ' + (isUp ? 'fk-revenue' : 'fk-expense');
+    if (icon) icon.innerHTML = isUp
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 19"/><polyline points="15 19 21 19 21 13"/></svg>';
+  },
+
   _renderGlobalKpis(investments) {
     const totalValue = investments.reduce((s, i) => s + i.quantity * i.currentPrice, 0);
     const totalCost  = investments.reduce((s, i) => s + i.quantity * i.buyPrice, 0);
@@ -37,6 +50,7 @@ const Investments = {
     set('inv-kpi-value', Utils.formatCurrency(totalValue));
     set('inv-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
     set('inv-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+    this._setGainCard('inv-kpi-gain-card', 'inv-kpi-gain-icon', gain);
 
     const annualReturn = this._annualizedReturn(investments);
     set('inv-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
@@ -226,6 +240,7 @@ const Investments = {
     set('inv-acc-kpi-value-sub', investments.length ? `${pctOfPortfolio.toFixed(0)}% du portefeuille` : '');
     set('inv-acc-kpi-gain', (gain >= 0 ? '+' : '') + Utils.formatCurrency(gain));
     set('inv-acc-kpi-gain-pct', investments.length ? Utils.formatPercent(gainPct) : '—');
+    this._setGainCard('inv-acc-kpi-gain-card', 'inv-acc-kpi-gain-icon', gain);
     const annualReturn = this._annualizedReturn(investments);
     set('inv-acc-kpi-return', annualReturn === null ? '—' : Utils.formatPercent(annualReturn));
     set('inv-acc-kpi-cost', Utils.formatCurrency(cost));

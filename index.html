@@ -137,25 +137,33 @@
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card inv-kpi-card ikpi-value">
+          <div class="flux-kpi-card fk-balance">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
             <div class="kpi-label">Valeur du portefeuille</div>
             <div class="kpi-value" id="inv-kpi-value">0 €</div>
-            <div class="kpi-sub" id="inv-kpi-value-trend"></div>
+            <div class="kpi-trend" id="inv-kpi-value-trend"></div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-gain">
+          <div class="flux-kpi-card fk-revenue" id="inv-kpi-gain-card">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon" id="inv-kpi-gain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
             <div class="kpi-label">Plus-value latente</div>
             <div class="kpi-value" id="inv-kpi-gain">+0 €</div>
-            <div class="kpi-sub" id="inv-kpi-gain-pct"></div>
+            <div class="kpi-trend" id="inv-kpi-gain-pct"></div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-return">
+          <div class="flux-kpi-card fk-return">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
             <div class="kpi-label">Rendement annuel</div>
             <div class="kpi-value" id="inv-kpi-return">— %</div>
-            <div class="kpi-sub">Estimé net</div>
+            <div class="kpi-trend">Estimé net</div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-avg">
+          <div class="flux-kpi-card fk-savings">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
             <div class="kpi-label">Versement moyen</div>
             <div class="kpi-value" id="inv-kpi-avg">0 €</div>
-            <div class="kpi-sub">Par mois</div>
+            <div class="kpi-trend">Par mois</div>
           </div>
         </div>
         <div class="charts-grid">
@@ -185,25 +193,33 @@
           </div>
         </div>
         <div class="kpi-grid-4">
-          <div class="kpi-card inv-kpi-card ikpi-value">
+          <div class="flux-kpi-card fk-balance">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
             <div class="kpi-label" id="inv-acc-kpi-value-label">Valeur du compte</div>
             <div class="kpi-value" id="inv-acc-kpi-value">0 €</div>
-            <div class="kpi-sub" id="inv-acc-kpi-value-sub"></div>
+            <div class="kpi-trend" id="inv-acc-kpi-value-sub"></div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-gain">
+          <div class="flux-kpi-card fk-revenue" id="inv-acc-kpi-gain-card">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon" id="inv-acc-kpi-gain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
             <div class="kpi-label">Plus-value</div>
             <div class="kpi-value" id="inv-acc-kpi-gain">+0 €</div>
-            <div class="kpi-sub" id="inv-acc-kpi-gain-pct"></div>
+            <div class="kpi-trend" id="inv-acc-kpi-gain-pct"></div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-return">
+          <div class="flux-kpi-card fk-return">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
             <div class="kpi-label">Performance</div>
             <div class="kpi-value" id="inv-acc-kpi-return">— %</div>
-            <div class="kpi-sub">Annualisée</div>
+            <div class="kpi-trend">Annualisée</div>
           </div>
-          <div class="kpi-card inv-kpi-card ikpi-avg">
+          <div class="flux-kpi-card fk-savings">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
             <div class="kpi-label">Total investi</div>
             <div class="kpi-value" id="inv-acc-kpi-cost">0 €</div>
-            <div class="kpi-sub">Versements cumulés</div>
+            <div class="kpi-trend">Versements cumulés</div>
           </div>
         </div>
         <div class="charts-grid charts-grid-inv-acc">

@@ -1384,6 +1384,19 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
     radial-gradient(60% 65% at 8% 34%,  rgba(217,70,239,.50) 0%, transparent 100%),
     radial-gradient(70% 65% at 55% 48%, rgba(217,70,239,.32) 0%, transparent 100%);
 }
+/* 5e teinte (cyan, déjà utilisée par la palette catégories) : pas de concept Flux qui lui
+   corresponde, ajoutée pour Investissements (Rendement annuel/Performance). Même recette que
+   les 4 ci-dessus, seule la teinte change. */
+.fk-return .fk-icon { color: #06b6d4; }
+.fk-return .fk-smoke {
+  background-color: #0d0f1f;
+  background-image:
+    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
+    radial-gradient(55% 65% at 25% 8%,  rgba(6,182,212,.90) 0%, transparent 100%),
+    radial-gradient(50% 60% at 65% 14%, rgba(6,182,212,.70) 0%, transparent 100%),
+    radial-gradient(60% 65% at 90% 40%, rgba(6,182,212,.48) 0%, transparent 100%),
+    radial-gradient(70% 65% at 38% 50%, rgba(6,182,212,.30) 0%, transparent 100%);
+}
 
 /* ---- Flux Category Pills ---- */
 .flux-cat-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; align-items: center; }
@@ -1542,15 +1555,9 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    js/budget.js) — plus de bande dégradée à part, les 4 teintes sémantiques fk-balance/fk-expense/
    fk-revenue/fk-savings sont réutilisées telles quelles. */
 
-/* KPI Investissements (Vue globale + onglets compte) : bande dégradée en haut, pas d'icône. */
-.inv-kpi-card { background: var(--bg); border-left-color: transparent !important; }
-.inv-kpi-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-}
-.ikpi-value::before  { background: linear-gradient(90deg, #6c63ff, #a09bff); }
-.ikpi-gain::before   { background: linear-gradient(90deg, #00b37e, #4ade80); }
-.ikpi-return::before { background: linear-gradient(90deg, #06b6d4, #67e8f9); }
-.ikpi-avg::before    { background: linear-gradient(90deg, #d97706, #fbbf24); }
+/* KPI Investissements (Vue globale + onglets compte) : même carte "fumée" que Flux/Comparaisons/
+   Budget (.flux-kpi-card/.fk-smoke, voir js/investments.js) — fk-balance/fk-return (5e teinte,
+   cyan)/fk-savings fixes, fk-revenue/fk-expense pour Plus-value selon le signe. */
 
 /* Cards grid — grille fixe à 4 colonnes, comme l'onglet Catégories. */
 .budget-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }
