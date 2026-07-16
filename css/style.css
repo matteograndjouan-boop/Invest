@@ -990,10 +990,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .card-header-row h3 { margin: 0; }
-.flux-summary-title-clickable { cursor: pointer; }
-.flux-summary-title-clickable:hover { color: var(--primary); }
-.flux-summary-title-clear-ic { font-size: 0.75em; color: var(--text-muted); font-weight: 400; }
-.flux-summary-title-clickable:hover .flux-summary-title-clear-ic { color: var(--primary); }
+/* Le titre "Répartition" du tableau Flux embarque la pastille .flux-pill.active de la
+   catégorie filtrée (même recette que les pastilles au-dessus) — display:flex pour aligner
+   correctement le texte du <h3> et la pastille, qui n'ont pas la même taille de police. */
+#flux-summary-title { display: flex; align-items: center; gap: 8px; }
+#flux-summary-title .flux-pill { font-size: 0.78rem; }
 
 /* ---- Flux cross-filter badge ---- */
 .flux-active-filter-badge {

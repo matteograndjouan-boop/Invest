@@ -339,19 +339,17 @@ const Flux = {
 
     // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
     // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
-    // filtrée) — le titre devient donc le seul endroit où « recliquer sur cette même
-    // catégorie » pour annuler le filtre, comme sur le camembert/les pastilles.
+    // filtrée) — le titre affiche donc la catégorie active sous forme de pastille (même
+    // recette que .flux-pill.active dans _renderCatPills : couleur de la catégorie, pas une
+    // couleur générique), seul endroit cliquable pour l'annuler, comme sur le camembert/les
+    // pastilles au-dessus.
     if (title) {
       if (showSub) {
-        title.innerHTML = `Répartition — ${catLabel} <span class="flux-summary-title-clear-ic">✕</span>`;
-        title.classList.add('flux-summary-title-clickable');
-        title.title = 'Cliquer pour retirer le filtre';
-        title.onclick = () => this._togglePill(catLabel);
+        const color = Utils.getCategoryColor(catLabel);
+        const safeName = catLabel.replace(/'/g, "\\'");
+        title.innerHTML = `Répartition <button type="button" class="flux-pill active" style="background:${color};border-color:${color}" onclick="Flux._togglePill('${safeName}')"><span class="flux-pill-dot" style="background:#fff"></span>${catLabel}</button>`;
       } else {
         title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
-        title.classList.remove('flux-summary-title-clickable');
-        title.removeAttribute('title');
-        title.onclick = null;
       }
     }
     if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
