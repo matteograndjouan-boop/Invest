@@ -337,7 +337,23 @@ const Flux = {
     const catLabel = this._catLabel();
     const showSub = catFilters.size === 1;
 
-    if (title) title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
+    // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
+    // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
+    // filtrée) — le titre devient donc le seul endroit où « recliquer sur cette même
+    // catégorie » pour annuler le filtre, comme sur le camembert/les pastilles.
+    if (title) {
+      if (showSub) {
+        title.innerHTML = `Répartition — ${catLabel} <span class="flux-summary-title-clear-ic">✕</span>`;
+        title.classList.add('flux-summary-title-clickable');
+        title.title = 'Cliquer pour retirer le filtre';
+        title.onclick = () => this._togglePill(catLabel);
+      } else {
+        title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
+        title.classList.remove('flux-summary-title-clickable');
+        title.removeAttribute('title');
+        title.onclick = null;
+      }
+    }
     if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
     if (!expenses.length) {

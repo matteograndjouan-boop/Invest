@@ -997,6 +997,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .card-header-row h3 { margin: 0; }
+.flux-summary-title-clickable { cursor: pointer; }
+.flux-summary-title-clickable:hover { color: var(--primary); }
+.flux-summary-title-clear-ic { font-size: 0.75em; color: var(--text-muted); font-weight: 400; }
+.flux-summary-title-clickable:hover .flux-summary-title-clear-ic { color: var(--primary); }
 
 /* ---- Flux cross-filter badge ---- */
 .flux-active-filter-badge {
@@ -5265,7 +5269,23 @@ const Flux = {
     const catLabel = this._catLabel();
     const showSub = catFilters.size === 1;
 
-    if (title) title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
+    // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
+    // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
+    // filtrée) — le titre devient donc le seul endroit où « recliquer sur cette même
+    // catégorie » pour annuler le filtre, comme sur le camembert/les pastilles.
+    if (title) {
+      if (showSub) {
+        title.innerHTML = `Répartition — ${catLabel} <span class="flux-summary-title-clear-ic">✕</span>`;
+        title.classList.add('flux-summary-title-clickable');
+        title.title = 'Cliquer pour retirer le filtre';
+        title.onclick = () => this._togglePill(catLabel);
+      } else {
+        title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
+        title.classList.remove('flux-summary-title-clickable');
+        title.removeAttribute('title');
+        title.onclick = null;
+      }
+    }
     if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
     if (!expenses.length) {
