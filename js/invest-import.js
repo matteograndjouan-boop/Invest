@@ -54,36 +54,20 @@ const InvestImport = {
         }
 
         document.getElementById('modal')?.classList.add('modal-wide');
-        const apiKey = BankImport.getApiKey();
         Modal.open('Analyse du portefeuille…', `
           <div style="text-align:center;padding:52px 20px">
             <div style="font-size:52px;margin-bottom:20px">📊</div>
             <p style="font-size:15px;font-weight:700;margin-bottom:8px">Analyse en cours…</p>
-            <p style="color:var(--text-muted);font-size:13px">
-              ${apiKey ? 'Claude IA identifie vos positions' : 'Détection automatique des colonnes'}
-            </p>
+            <p style="color:var(--text-muted);font-size:13px">Détection automatique des colonnes</p>
           </div>
         `);
 
-        let mapping, aiTypes = null;
-
-        if (apiKey) {
-          try {
-            const result = await this._callClaude(headerRow, dataRows, apiKey);
-            mapping  = result.mapping;
-            aiTypes  = result.types;
-          } catch (err) {
-            console.warn('Claude API fallback:', err.message);
-            mapping = this._guessMapping(headerRow);
-          }
-        } else {
-          mapping = this._guessMapping(headerRow);
-        }
+        const mapping = this._guessMapping(headerRow);
 
         console.log('[InvestImport] header row', headerRowIdx, headerRow);
         console.log('[InvestImport] mapping', mapping);
 
-        const positions = this._parseWithMapping(dataRows, mapping, aiTypes);
+        const positions = this._parseWithMapping(dataRows, mapping);
 
         if (!positions.length) {
           document.getElementById('modal')?.classList.remove('modal-wide');
@@ -91,13 +75,12 @@ const InvestImport = {
           alert(
             'Aucune position valide détectée.\n\n' +
             'En-têtes trouvés (ligne ' + (headerRowIdx + 1) + ') :\n' +
-            headerRow.filter(Boolean).join(', ') + '\n\n' +
-            'Si votre fichier a des colonnes différentes, configurez la clé Claude IA (⚙) pour une détection automatique.'
+            headerRow.filter(Boolean).join(', ')
           );
           return;
         }
 
-        this._showPreview(positions, !apiKey || !aiTypes);
+        this._showPreview(positions);
 
       } catch (err) {
         console.error(err);
@@ -107,59 +90,6 @@ const InvestImport = {
       }
     };
     reader.readAsArrayBuffer(file);
-  },
-
-  async _callClaude(headerRow, dataRows, apiKey) {
-    const sampleRows = dataRows.slice(0, Math.min(6, dataRows.length));
-
-    const prompt = `Tu analyses un export de portefeuille boursier (PEA, assurance vie, CTO...).
-
-En-têtes (index 0 à ${headerRow.length - 1}) : ${headerRow.map((h, i) => `${i}:"${h}"`).join(', ')}
-
-${sampleRows.map((r, i) => `Ligne ${i + 1}: ${r.map((v, j) => `${j}:"${v}"`).join(', ')}`).join('\n')}
-
-Identifie les colonnes pour :
-- name : nom du titre / support / libellé (toujours présent)
-- isin : code ISIN 12 caractères (peut être absent ou "-")
-- quantity : quantité / nombre de parts (peut être en €  pour un fonds euros où VL=1)
-- buyPrice : prix d'achat unitaire / PRU (par titre, pas total ; peut être absent)
-- currentPrice : cours actuel / valeur liquidative par titre (pas le total ; peut être 1,00 pour fonds euros)
-- totalValue : valorisation totale = quantité × prix (montant, encours, épargne acquise)
-- currentIsTotal : true si AUCUN prix unitaire n'est disponible, seulement le montant total
-
-Pour chaque ligne, indique le type parmi : action, etf, obligations, immobilier, crypto, autre
-- ISIN IE*/LU* → etf ; FR* → action ; "WORLD","MSCI","INDEX","TRACKER","ETF" dans le nom → etf
-- "EURO","FONDS EUROS","FONDS EN EUROS" → autre (fonds euros d'assurance vie, capital garanti)
-- "SCPI","PIERRE" → immobilier
-
-Réponds UNIQUEMENT en JSON valide :
-{"mapping":{"name":<idx|null>,"isin":<idx|null>,"quantity":<idx|null>,"buyPrice":<idx|null>,"currentPrice":<idx|null>,"totalValue":<idx|null>,"currentIsTotal":<bool>},"types":[${sampleRows.map(() => '"…"').join(',')}]}`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 700,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Erreur API ${resp.status}`);
-    }
-
-    const data  = await resp.json();
-    const text  = data.content?.[0]?.text || '';
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Réponse invalide');
-    return JSON.parse(match[0]);
   },
 
   _guessMapping(headerRow) {
@@ -222,11 +152,11 @@ Réponds UNIQUEMENT en JSON valide :
     return 'autre';
   },
 
-  _parseWithMapping(dataRows, mapping, aiTypes) {
+  _parseWithMapping(dataRows, mapping) {
     const positions = [];
     const existing  = Storage.getInvestments();
 
-    dataRows.forEach((row, rowIdx) => {
+    dataRows.forEach((row) => {
       if (!row || row.every(c => c === '' || c === null || c === undefined)) return;
 
       // Si mapping.name est null, prendre la première cellule texte longue (> 3 chars)
@@ -260,10 +190,7 @@ Réponds UNIQUEMENT en JSON valide :
       if (!finalQty || finalQty <= 0) return;
       if (!currentPrice || currentPrice <= 0) return;
 
-      const aiType = aiTypes ? aiTypes[rowIdx] : null;
-      const type = (aiType && Object.keys(Utils.INVESTMENT_TYPES).includes(aiType))
-        ? aiType
-        : this._guessType(name, isin);
+      const type = this._guessType(name, isin);
 
       const cleanIsin = isin && isin !== '-' && /^[A-Z]{2}/.test(isin) ? isin : '';
 
@@ -286,7 +213,7 @@ Réponds UNIQUEMENT en JSON valide :
     return positions;
   },
 
-  _showPreview(positions, noAI) {
+  _showPreview(positions) {
     window._investPositions = positions;
 
     const accountOptions = Object.entries(Utils.INVESTMENT_ACCOUNTS)
@@ -319,9 +246,7 @@ Réponds UNIQUEMENT en JSON valide :
     }).join('');
 
     const totalVal = positions.reduce((s, p) => s + p.quantity * p.currentPrice, 0);
-    const note = noAI
-      ? `<div class="bank-import-note bank-note-warn">💡 <strong>Sans clé Claude :</strong> types détectés automatiquement. <a href="#" onclick="BankImport.openSettings();return false">Configurer l'IA →</a></div>`
-      : `<div class="bank-import-note bank-note-ok">🤖 <strong>Types suggérés par Claude IA.</strong> Vérifiez avant d'importer.</div>`;
+    const note = `<div class="bank-import-note bank-note-warn">💡 Types de titres détectés automatiquement d'après le nom et l'ISIN — vérifiez avant d'importer.</div>`;
 
     document.getElementById('modal')?.classList.add('modal-wide');
     Modal.open(`Import portefeuille — ${positions.length} position(s)`, `

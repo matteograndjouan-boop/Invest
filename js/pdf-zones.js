@@ -269,7 +269,7 @@ const PdfZones = {
     const scale   = containerW / vpBase.width;
     const viewport = page.getViewport({ scale });
 
-    const aiFallbackAvailable = BankImport._getPdfAiEnabled() && !!BankImport.getApiKey();
+    const aiFallbackAvailable = BankImport._getPdfAiEnabled() && !!GeminiCat.getApiKey();
 
     document.getElementById('modal')?.classList.add('modal-wide');
     Modal.open('Encadrement du relevé PDF', this._editorHTML(pdf.numPages, recognized, aiFallbackAvailable));
@@ -613,13 +613,13 @@ const PdfZones = {
     Modal.close();
   },
 
-  // Dernier recours, opt-in : envoie le texte complet du relevé à Claude.
+  // Dernier recours, opt-in : envoie le texte complet du relevé à Gemini.
   async useAiFallback() {
     const file = this._state?.file;
     this._state = null;
     if (!file) return;
     const go = confirm(
-      '⚠️ Envoyer le contenu complet du relevé (montants, dates, données personnelles) à Claude ?\n\n' +
+      '⚠️ Envoyer le contenu complet du relevé (montants, dates, données personnelles) à Gemini ?\n\n' +
       'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
     );
     if (!go) return;

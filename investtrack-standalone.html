@@ -7958,7 +7958,7 @@ const PdfZones = {
     const scale   = containerW / vpBase.width;
     const viewport = page.getViewport({ scale });
 
-    const aiFallbackAvailable = BankImport._getPdfAiEnabled() && !!BankImport.getApiKey();
+    const aiFallbackAvailable = BankImport._getPdfAiEnabled() && !!GeminiCat.getApiKey();
 
     document.getElementById('modal')?.classList.add('modal-wide');
     Modal.open('Encadrement du relevé PDF', this._editorHTML(pdf.numPages, recognized, aiFallbackAvailable));
@@ -8302,13 +8302,13 @@ const PdfZones = {
     Modal.close();
   },
 
-  // Dernier recours, opt-in : envoie le texte complet du relevé à Claude.
+  // Dernier recours, opt-in : envoie le texte complet du relevé à Gemini.
   async useAiFallback() {
     const file = this._state?.file;
     this._state = null;
     if (!file) return;
     const go = confirm(
-      '⚠️ Envoyer le contenu complet du relevé (montants, dates, données personnelles) à Claude ?\n\n' +
+      '⚠️ Envoyer le contenu complet du relevé (montants, dates, données personnelles) à Gemini ?\n\n' +
       'Confirmez seulement si vous acceptez l\'envoi de vos données financières.'
     );
     if (!go) return;
@@ -8334,8 +8334,6 @@ const PdfZones = {
 </script>
 <script>
 const BankImport = {
-  getApiKey()      { return localStorage.getItem('claude_api_key') || ''; },
-  saveApiKey(key)  { if (key) localStorage.setItem('claude_api_key', key); else localStorage.removeItem('claude_api_key'); },
   _getPdfAiEnabled() { return localStorage.getItem('bank_pdf_ai_enabled') === '1'; },
   _setPdfAiEnabled(v) { localStorage.setItem('bank_pdf_ai_enabled', v ? '1' : '0'); },
 
@@ -8354,15 +8352,12 @@ const BankImport = {
     const btn = document.getElementById('settings-btn');
     if (!btn) return;
     const hasGemini = !!GeminiCat.getApiKey();
-    const hasClaude = !!this.getApiKey();
-    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)'
-      : hasClaude ? 'Paramètres (Claude configuré)' : 'Paramètres';
-    btn.classList.toggle('settings-configured', hasGemini || hasClaude);
+    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)' : 'Paramètres';
+    btn.classList.toggle('settings-configured', hasGemini);
   },
 
   openSettings() {
     const geminiKey = GeminiCat.getApiKey();
-    const claudeKey = this.getApiKey();
     const pdfAi    = this._getPdfAiEnabled();
     Modal.open('Paramètres IA & Import', `
       <div class="settings-section">
@@ -8386,27 +8381,16 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">⚡ Claude Anthropic — Dernier recours PDF <span class="settings-badge-optional">Optionnel</span></div>
+          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
           <p class="settings-desc">
             Pour les relevés PDF, la méthode principale est l'encadrement local des colonnes
             (100 % privé). Si un relevé est trop atypique pour être encadré, un bouton
             « dernier recours » apparaît dans l'écran d'encadrement pour envoyer le texte
-            complet du relevé à Claude — uniquement si vous l'activez ci-dessous.
-          </p>
-          <div class="form-group" style="margin-top:14px">
-            <label class="settings-label">Clé API Anthropic</label>
-            <input type="password" id="settings-claude-key" class="form-input"
-              value="${claudeKey}" placeholder="sk-ant-api03-…"
-              style="width:100%;font-family:monospace;font-size:13px;margin-top:6px">
-          </div>
-        </div>
-
-        <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
-          <p class="settings-desc">
-            ⚠️ <strong>Attention :</strong> si activée, cette option permet d'envoyer le contenu
-            complet du relevé (montants, dates, données personnelles) à l'IA.
-            Contrairement à la catégorisation Gemini, ce mode ne se limite pas aux libellés.
+            complet du relevé à <strong>Gemini</strong> (même clé API que ci-dessus) —
+            uniquement si vous l'activez ci-dessous.<br><br>
+            ⚠️ <strong>Attention :</strong> contrairement à la catégorisation Gemini classique,
+            ce mode envoie le contenu complet du relevé (montants, dates, données personnelles),
+            pas seulement les libellés.
           </p>
           <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
             <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
@@ -8431,21 +8415,20 @@ const BankImport = {
           onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
           ${Utils.ICON_TRASH} Vider le cache Gemini
         </button>
-        ${(geminiKey || claudeKey) ? `<button class="btn-danger-soft" onclick="BankImport._clearAllKeys()">${Utils.ICON_TRASH} Effacer les clés</button>` : ''}
+        ${geminiKey ? `<button class="btn-danger-soft" onclick="BankImport._clearKey()">${Utils.ICON_TRASH} Effacer la clé</button>` : ''}
         <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
       </div>
     `);
   },
 
-  _clearAllKeys() {
-    this.saveApiKey(''); GeminiCat.saveApiKey('');
+  _clearKey() {
+    GeminiCat.saveApiKey('');
     Modal.close(); this._refreshSettingsIndicator();
   },
 
   _saveSettings() {
     GeminiCat.saveApiKey((document.getElementById('settings-gemini-key')?.value || '').trim());
-    this.saveApiKey((document.getElementById('settings-claude-key')?.value || '').trim());
     this._setPdfAiEnabled(document.getElementById('settings-pdf-ai')?.checked || false);
     Modal.close(); this._refreshSettingsIndicator();
   },
@@ -8952,41 +8935,26 @@ const BankImport = {
   },
 
   // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
-  // du relevé à Claude lorsque l'encadrement de zones n'est pas exploitable.
+  // du relevé à Gemini lorsque l'encadrement de zones n'est pas exploitable.
+  // Réutilise GeminiCat._generate (même clé, même repli multi-modèles que la
+  // catégorisation classique) plutôt que de dupliquer l'appel réseau.
   async _parsePDFWithAI(fullText) {
-    const apiKey = this.getApiKey();
-    if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
+    if (!GeminiCat.getApiKey()) { alert('Clé API Gemini requise (Paramètres).'); return; }
     try {
       Modal.open('Extraction IA…', `
         <div style="text-align:center;padding:52px 20px">
           <div style="font-size:52px;margin-bottom:20px">🤖</div>
           <p style="font-size:15px;font-weight:700">Extraction par IA en cours…</p>
-          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Claude.</p>
+          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Gemini.</p>
         </div>
       `);
 
       const text = fullText.slice(0, 15000); // limite ~15 000 caractères
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 4000,
-          messages: [{ role: 'user', content:
-            'Extrais les transactions bancaires de ce relevé.\n' +
-            'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
-            'Montant négatif = dépense, positif = crédit.\n\n' + text
-          }],
-        }),
-      });
-      if (!resp.ok) throw new Error('Claude HTTP ' + resp.status);
-      const data  = await resp.json();
-      const raw   = data.content?.[0]?.text || '';
+      const prompt =
+        'Extrais les transactions bancaires de ce relevé.\n' +
+        'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
+        'Montant négatif = dépense, positif = crédit.\n\n' + text;
+      const raw   = await GeminiCat._generate(prompt);
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('Réponse invalide');
       const allCats    = Storage.getCategories();
@@ -9605,36 +9573,20 @@ const InvestImport = {
         }
 
         document.getElementById('modal')?.classList.add('modal-wide');
-        const apiKey = BankImport.getApiKey();
         Modal.open('Analyse du portefeuille…', `
           <div style="text-align:center;padding:52px 20px">
             <div style="font-size:52px;margin-bottom:20px">📊</div>
             <p style="font-size:15px;font-weight:700;margin-bottom:8px">Analyse en cours…</p>
-            <p style="color:var(--text-muted);font-size:13px">
-              ${apiKey ? 'Claude IA identifie vos positions' : 'Détection automatique des colonnes'}
-            </p>
+            <p style="color:var(--text-muted);font-size:13px">Détection automatique des colonnes</p>
           </div>
         `);
 
-        let mapping, aiTypes = null;
-
-        if (apiKey) {
-          try {
-            const result = await this._callClaude(headerRow, dataRows, apiKey);
-            mapping  = result.mapping;
-            aiTypes  = result.types;
-          } catch (err) {
-            console.warn('Claude API fallback:', err.message);
-            mapping = this._guessMapping(headerRow);
-          }
-        } else {
-          mapping = this._guessMapping(headerRow);
-        }
+        const mapping = this._guessMapping(headerRow);
 
         console.log('[InvestImport] header row', headerRowIdx, headerRow);
         console.log('[InvestImport] mapping', mapping);
 
-        const positions = this._parseWithMapping(dataRows, mapping, aiTypes);
+        const positions = this._parseWithMapping(dataRows, mapping);
 
         if (!positions.length) {
           document.getElementById('modal')?.classList.remove('modal-wide');
@@ -9642,13 +9594,12 @@ const InvestImport = {
           alert(
             'Aucune position valide détectée.\n\n' +
             'En-têtes trouvés (ligne ' + (headerRowIdx + 1) + ') :\n' +
-            headerRow.filter(Boolean).join(', ') + '\n\n' +
-            'Si votre fichier a des colonnes différentes, configurez la clé Claude IA (⚙) pour une détection automatique.'
+            headerRow.filter(Boolean).join(', ')
           );
           return;
         }
 
-        this._showPreview(positions, !apiKey || !aiTypes);
+        this._showPreview(positions);
 
       } catch (err) {
         console.error(err);
@@ -9658,59 +9609,6 @@ const InvestImport = {
       }
     };
     reader.readAsArrayBuffer(file);
-  },
-
-  async _callClaude(headerRow, dataRows, apiKey) {
-    const sampleRows = dataRows.slice(0, Math.min(6, dataRows.length));
-
-    const prompt = `Tu analyses un export de portefeuille boursier (PEA, assurance vie, CTO...).
-
-En-têtes (index 0 à ${headerRow.length - 1}) : ${headerRow.map((h, i) => `${i}:"${h}"`).join(', ')}
-
-${sampleRows.map((r, i) => `Ligne ${i + 1}: ${r.map((v, j) => `${j}:"${v}"`).join(', ')}`).join('\n')}
-
-Identifie les colonnes pour :
-- name : nom du titre / support / libellé (toujours présent)
-- isin : code ISIN 12 caractères (peut être absent ou "-")
-- quantity : quantité / nombre de parts (peut être en €  pour un fonds euros où VL=1)
-- buyPrice : prix d'achat unitaire / PRU (par titre, pas total ; peut être absent)
-- currentPrice : cours actuel / valeur liquidative par titre (pas le total ; peut être 1,00 pour fonds euros)
-- totalValue : valorisation totale = quantité × prix (montant, encours, épargne acquise)
-- currentIsTotal : true si AUCUN prix unitaire n'est disponible, seulement le montant total
-
-Pour chaque ligne, indique le type parmi : action, etf, obligations, immobilier, crypto, autre
-- ISIN IE*/LU* → etf ; FR* → action ; "WORLD","MSCI","INDEX","TRACKER","ETF" dans le nom → etf
-- "EURO","FONDS EUROS","FONDS EN EUROS" → autre (fonds euros d'assurance vie, capital garanti)
-- "SCPI","PIERRE" → immobilier
-
-Réponds UNIQUEMENT en JSON valide :
-{"mapping":{"name":<idx|null>,"isin":<idx|null>,"quantity":<idx|null>,"buyPrice":<idx|null>,"currentPrice":<idx|null>,"totalValue":<idx|null>,"currentIsTotal":<bool>},"types":[${sampleRows.map(() => '"…"').join(',')}]}`;
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 700,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Erreur API ${resp.status}`);
-    }
-
-    const data  = await resp.json();
-    const text  = data.content?.[0]?.text || '';
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Réponse invalide');
-    return JSON.parse(match[0]);
   },
 
   _guessMapping(headerRow) {
@@ -9773,11 +9671,11 @@ Réponds UNIQUEMENT en JSON valide :
     return 'autre';
   },
 
-  _parseWithMapping(dataRows, mapping, aiTypes) {
+  _parseWithMapping(dataRows, mapping) {
     const positions = [];
     const existing  = Storage.getInvestments();
 
-    dataRows.forEach((row, rowIdx) => {
+    dataRows.forEach((row) => {
       if (!row || row.every(c => c === '' || c === null || c === undefined)) return;
 
       // Si mapping.name est null, prendre la première cellule texte longue (> 3 chars)
@@ -9811,10 +9709,7 @@ Réponds UNIQUEMENT en JSON valide :
       if (!finalQty || finalQty <= 0) return;
       if (!currentPrice || currentPrice <= 0) return;
 
-      const aiType = aiTypes ? aiTypes[rowIdx] : null;
-      const type = (aiType && Object.keys(Utils.INVESTMENT_TYPES).includes(aiType))
-        ? aiType
-        : this._guessType(name, isin);
+      const type = this._guessType(name, isin);
 
       const cleanIsin = isin && isin !== '-' && /^[A-Z]{2}/.test(isin) ? isin : '';
 
@@ -9837,7 +9732,7 @@ Réponds UNIQUEMENT en JSON valide :
     return positions;
   },
 
-  _showPreview(positions, noAI) {
+  _showPreview(positions) {
     window._investPositions = positions;
 
     const accountOptions = Object.entries(Utils.INVESTMENT_ACCOUNTS)
@@ -9870,9 +9765,7 @@ Réponds UNIQUEMENT en JSON valide :
     }).join('');
 
     const totalVal = positions.reduce((s, p) => s + p.quantity * p.currentPrice, 0);
-    const note = noAI
-      ? `<div class="bank-import-note bank-note-warn">💡 <strong>Sans clé Claude :</strong> types détectés automatiquement. <a href="#" onclick="BankImport.openSettings();return false">Configurer l'IA →</a></div>`
-      : `<div class="bank-import-note bank-note-ok">🤖 <strong>Types suggérés par Claude IA.</strong> Vérifiez avant d'importer.</div>`;
+    const note = `<div class="bank-import-note bank-note-warn">💡 Types de titres détectés automatiquement d'après le nom et l'ISIN — vérifiez avant d'importer.</div>`;
 
     document.getElementById('modal')?.classList.add('modal-wide');
     Modal.open(`Import portefeuille — ${positions.length} position(s)`, `

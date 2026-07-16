@@ -8,9 +8,9 @@ Toutes les données vivent dans le `localStorage` du navigateur de l'utilisateur
 
 Le seul appel réseau « métier » de l'app est l'envoi du **libellé nettoyé** d'une
 transaction (jamais le montant, la date, le solde, le numéro de compte ou toute autre
-donnée personnelle) à l'API Google Gemini pour suggérer une catégorie. Un mode Claude
-(Anthropic) existe en dernier recours, opt-in, pour les PDF trop atypiques — il envoie
-alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
+donnée personnelle) à l'API Google Gemini pour suggérer une catégorie. Un mode IA existe
+aussi en dernier recours, opt-in, pour les PDF trop atypiques — il envoie alors le texte
+complet du relevé à Gemini (même clé API), avec confirmation explicite de l'utilisateur.
 
 ## Architecture
 
@@ -72,11 +72,11 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 - **Patrimoine** : actifs/passifs manuels + valorisation auto du portefeuille.
 - **Import bancaire (CSV/Excel)** : détection automatique de la ligne d'en-tête, mapping de colonnes (assisté + mémorisable par profil de banque), gestion date unique ou Jour/Mois/Année séparés, montant signé ou Débit/Crédit séparés, détection de doublons (date+libellé+montant).
 - **Import bancaire (PDF) — méthode principale** : encadrement de zones par l'utilisateur (`js/pdf-zones.js`), pré-rempli automatiquement par détection de clusters x (dates/montants), mémorisation du gabarit par banque (signature = en-tête + dimensions de page), badge « Format reconnu », extraction multi-pages, détection des PDF scannés (pas d'OCR, message explicite).
-- **Import bancaire (PDF) — dernier recours** : envoi du texte complet du relevé à Claude (Anthropic), opt-in explicite + confirmation, accessible depuis l'écran d'encadrement quand l'extraction locale échoue.
+- **Import bancaire (PDF) — dernier recours** : envoi du texte complet du relevé à Gemini (même clé API que la catégorisation, via `GeminiCat._generate`), opt-in explicite + confirmation, accessible depuis l'écran d'encadrement quand l'extraction locale échoue.
 - **Catégorisation automatique** : Gemini (libellé uniquement) avec cache local et apprentissage des corrections ; fallback local par mots-clés (`guessCategory` dans `app.js`/`_smartGuess` dans `bank-import.js`) si pas de clé API ou erreur réseau.
 - **Correspondance des catégories à l'import (tableur)** : si le fichier a une colonne « Catégorie » (et/ou « Sous-catégorie »), correspondance exacte (insensible casse/accents/espaces, **reconnaît aussi les anciens noms `aliases`** d'une catégorie renommée, en priorisant les catégories actives ; pour une catégorie renommée à portée datée, `_versionedPick` choisit la version selon la **date de la dépense**) → sinon Gemini sur le **seul nom de catégorie** (`GeminiCat.matchCategories`, cache `invest_cat_map_cache` consultable/éditable dans les paramètres) → sinon fallback sur le libellé. Origine indiquée dans l'aperçu par pastille (🟢 fichier · 🟡 approchée · 🔵 IA · ⚪ à catégoriser).
 - **Date effective** (période réellement concernée, granularité mois `YYYY-MM`) : champ `effectiveDate` mappable à l'import (wizard + édition par ligne dans l'aperçu), éditable dans Données, et toggle global « Date comptable / Date effective » (`Storage.getDateMode` + `Utils.getExpenseDate`) respecté par Flux, Budget et Comparaisons.
-- **Confidentialité par construction** : seul le libellé nettoyé (ou, pour la correspondance de catégories, le seul nom de catégorie) part vers Gemini ; toute autre donnée (montant, date, solde, IBAN, titulaire...) reste strictement locale, sauf opt-in explicite pour le mode Claude de dernier recours.
+- **Confidentialité par construction** : seul le libellé nettoyé (ou, pour la correspondance de catégories, le seul nom de catégorie) part vers Gemini ; toute autre donnée (montant, date, solde, IBAN, titulaire...) reste strictement locale, sauf opt-in explicite pour le mode IA de dernier recours (PDF → Gemini).
 
 ## Conventions de code
 
@@ -84,7 +84,7 @@ alors le texte complet du relevé, avec confirmation explicite de l'utilisateur.
 - **Style des modules** : chaque fichier `js/xxx.js` expose un seul objet global en `PascalCase` (`Storage`, `BankImport`, `PdfZones`, `GeminiCat`...) avec des méthodes publiques sans préfixe et des méthodes privées préfixées par `_` (ex. `_cleanLabel`, `_matchCat`, `_renderEditor`).
 - **Commentaires en français**, concis, uniquement quand le pourquoi n'est pas évident (contrainte cachée, contournement, comportement surprenant) — pas de commentaires qui répètent ce que le code dit déjà.
 - **Pas de dépendances ajoutées sans nécessité** : tout passe par CDN (`<script src="https://...">`), jamais de `npm install`/`package.json`.
-- **Confidentialité non négociable** : toute nouvelle fonctionnalité qui touche à l'IA doit respecter la règle « seul le libellé part vers Gemini » ; tout envoi de données plus large (comme le mode Claude PDF) doit rester strictement opt-in avec confirmation explicite affichée à l'utilisateur.
+- **Confidentialité non négociable** : toute nouvelle fonctionnalité qui touche à l'IA doit respecter la règle « seul le libellé part vers Gemini » ; tout envoi de données plus large (comme le mode PDF dernier recours) doit rester strictement opt-in avec confirmation explicite affichée à l'utilisateur.
 - **Pièges connus à éviter** :
   - Un `<select>` dont aucune `<option>` n'a `selected` retombe silencieusement sur la première option — toujours normaliser/matcher (voir `_matchCat`/`_matchSubcat` dans `bank-import.js`) avant de construire les options, sous peine de catégorisation silencieusement fausse.
   - Toute donnée financière sensible (montant, date, IBAN...) ne doit jamais transiter par une requête réseau, même indirectement via un libellé mal nettoyé.

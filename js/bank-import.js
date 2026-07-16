@@ -1,6 +1,4 @@
 const BankImport = {
-  getApiKey()      { return localStorage.getItem('claude_api_key') || ''; },
-  saveApiKey(key)  { if (key) localStorage.setItem('claude_api_key', key); else localStorage.removeItem('claude_api_key'); },
   _getPdfAiEnabled() { return localStorage.getItem('bank_pdf_ai_enabled') === '1'; },
   _setPdfAiEnabled(v) { localStorage.setItem('bank_pdf_ai_enabled', v ? '1' : '0'); },
 
@@ -19,15 +17,12 @@ const BankImport = {
     const btn = document.getElementById('settings-btn');
     if (!btn) return;
     const hasGemini = !!GeminiCat.getApiKey();
-    const hasClaude = !!this.getApiKey();
-    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)'
-      : hasClaude ? 'Paramètres (Claude configuré)' : 'Paramètres';
-    btn.classList.toggle('settings-configured', hasGemini || hasClaude);
+    btn.title = hasGemini ? 'Paramètres (Gemini IA configuré ✓)' : 'Paramètres';
+    btn.classList.toggle('settings-configured', hasGemini);
   },
 
   openSettings() {
     const geminiKey = GeminiCat.getApiKey();
-    const claudeKey = this.getApiKey();
     const pdfAi    = this._getPdfAiEnabled();
     Modal.open('Paramètres IA & Import', `
       <div class="settings-section">
@@ -51,27 +46,16 @@ const BankImport = {
         </div>
 
         <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">⚡ Claude Anthropic — Dernier recours PDF <span class="settings-badge-optional">Optionnel</span></div>
+          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
           <p class="settings-desc">
             Pour les relevés PDF, la méthode principale est l'encadrement local des colonnes
             (100 % privé). Si un relevé est trop atypique pour être encadré, un bouton
             « dernier recours » apparaît dans l'écran d'encadrement pour envoyer le texte
-            complet du relevé à Claude — uniquement si vous l'activez ci-dessous.
-          </p>
-          <div class="form-group" style="margin-top:14px">
-            <label class="settings-label">Clé API Anthropic</label>
-            <input type="password" id="settings-claude-key" class="form-input"
-              value="${claudeKey}" placeholder="sk-ant-api03-…"
-              style="width:100%;font-family:monospace;font-size:13px;margin-top:6px">
-          </div>
-        </div>
-
-        <div class="settings-block" style="margin-top:14px">
-          <div class="settings-block-title">📄 Import PDF — IA en dernier recours <span class="settings-badge-optional">Désactivé par défaut</span></div>
-          <p class="settings-desc">
-            ⚠️ <strong>Attention :</strong> si activée, cette option permet d'envoyer le contenu
-            complet du relevé (montants, dates, données personnelles) à l'IA.
-            Contrairement à la catégorisation Gemini, ce mode ne se limite pas aux libellés.
+            complet du relevé à <strong>Gemini</strong> (même clé API que ci-dessus) —
+            uniquement si vous l'activez ci-dessous.<br><br>
+            ⚠️ <strong>Attention :</strong> contrairement à la catégorisation Gemini classique,
+            ce mode envoie le contenu complet du relevé (montants, dates, données personnelles),
+            pas seulement les libellés.
           </p>
           <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:13px">
             <input type="checkbox" id="settings-pdf-ai" ${pdfAi ? 'checked' : ''}>
@@ -96,21 +80,20 @@ const BankImport = {
           onclick="if(confirm('Vider le cache de catégorisation Gemini ? Les libellés déjà appris seront oubliés.')){GeminiCat.clearCache();alert('Cache vidé.');}">
           ${Utils.ICON_TRASH} Vider le cache Gemini
         </button>
-        ${(geminiKey || claudeKey) ? `<button class="btn-danger-soft" onclick="BankImport._clearAllKeys()">${Utils.ICON_TRASH} Effacer les clés</button>` : ''}
+        ${geminiKey ? `<button class="btn-danger-soft" onclick="BankImport._clearKey()">${Utils.ICON_TRASH} Effacer la clé</button>` : ''}
         <button class="btn-secondary" onclick="Modal.close()">Annuler</button>
         <button class="btn-primary" onclick="BankImport._saveSettings()">Enregistrer</button>
       </div>
     `);
   },
 
-  _clearAllKeys() {
-    this.saveApiKey(''); GeminiCat.saveApiKey('');
+  _clearKey() {
+    GeminiCat.saveApiKey('');
     Modal.close(); this._refreshSettingsIndicator();
   },
 
   _saveSettings() {
     GeminiCat.saveApiKey((document.getElementById('settings-gemini-key')?.value || '').trim());
-    this.saveApiKey((document.getElementById('settings-claude-key')?.value || '').trim());
     this._setPdfAiEnabled(document.getElementById('settings-pdf-ai')?.checked || false);
     Modal.close(); this._refreshSettingsIndicator();
   },
@@ -617,41 +600,26 @@ const BankImport = {
   },
 
   // Dernier recours (opt-in, désactivé par défaut) : envoie le texte complet
-  // du relevé à Claude lorsque l'encadrement de zones n'est pas exploitable.
+  // du relevé à Gemini lorsque l'encadrement de zones n'est pas exploitable.
+  // Réutilise GeminiCat._generate (même clé, même repli multi-modèles que la
+  // catégorisation classique) plutôt que de dupliquer l'appel réseau.
   async _parsePDFWithAI(fullText) {
-    const apiKey = this.getApiKey();
-    if (!apiKey) { alert('Clé API Anthropic requise.'); return; }
+    if (!GeminiCat.getApiKey()) { alert('Clé API Gemini requise (Paramètres).'); return; }
     try {
       Modal.open('Extraction IA…', `
         <div style="text-align:center;padding:52px 20px">
           <div style="font-size:52px;margin-bottom:20px">🤖</div>
           <p style="font-size:15px;font-weight:700">Extraction par IA en cours…</p>
-          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Claude.</p>
+          <p style="color:var(--text-muted);font-size:13px">⚠️ Le contenu complet du relevé est envoyé à Gemini.</p>
         </div>
       `);
 
       const text = fullText.slice(0, 15000); // limite ~15 000 caractères
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 4000,
-          messages: [{ role: 'user', content:
-            'Extrais les transactions bancaires de ce relevé.\n' +
-            'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
-            'Montant négatif = dépense, positif = crédit.\n\n' + text
-          }],
-        }),
-      });
-      if (!resp.ok) throw new Error('Claude HTTP ' + resp.status);
-      const data  = await resp.json();
-      const raw   = data.content?.[0]?.text || '';
+      const prompt =
+        'Extrais les transactions bancaires de ce relevé.\n' +
+        'Réponds UNIQUEMENT en JSON : {"t":[{"date":"AAAA-MM-JJ","desc":"...","amount":<nombre signé>}]}\n' +
+        'Montant négatif = dépense, positif = crédit.\n\n' + text;
+      const raw   = await GeminiCat._generate(prompt);
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('Réponse invalide');
       const allCats    = Storage.getCategories();
