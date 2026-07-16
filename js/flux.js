@@ -228,9 +228,26 @@ const Flux = {
     return { entries, total };
   },
 
+  // Nuance de bleu monochrome pour le donut, par RANG (pas par valeur exacte, pour que l'ordre
+  // décroissant reste lisible visuellement même quand deux montants sont proches l'un de
+  // l'autre) : le plus gros segment prend le bleu vif #3b82f6 (même bleu que le KPI "Solde
+  // net"), le plus petit le bleu presque noir #0f2a5e, nuances intermédiaires interpolées
+  // linéairement entre les deux selon la position dans le classement décroissant.
+  _monoBlueShade(index, count) {
+    const t = count > 1 ? index / (count - 1) : 0;
+    const bright = [0x3b, 0x82, 0xf6], dark = [0x0f, 0x2a, 0x5e];
+    const toHex = (n) => n.toString(16).padStart(2, '0');
+    const [r, g, b] = bright.map((c, i) => Math.round(c + (dark[i] - c) * t));
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  },
+
   _renderDonut(catFilters) {
     const { entries, total } = this._categoryBreakdown();
-    const colors = entries.map(([label]) => Utils.getCategoryColor(label));
+    // Monochrome par rang plutôt que Utils.getCategoryColor ici : deux catégories peuvent
+    // avoir des couleurs proches/identiques dans la palette, ce qui rendait le donut illisible
+    // (contrairement aux cartes de _renderCategoryCards, qui gardent l'identité couleur par
+    // catégorie — deux logiques différentes assumées pour deux besoins différents).
+    const colors = entries.map((_, i) => this._monoBlueShade(i, entries.length));
 
     Charts.fluxDonut(
       entries.map(([k]) => k),

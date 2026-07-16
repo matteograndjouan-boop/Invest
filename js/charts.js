@@ -583,9 +583,10 @@ const Charts = {
     };
   },
 
-  // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
-  // (Utils.getCategoryColor, couleur stable par catégorie) plutôt que calculée ici par position,
-  // pour qu'une catégorie garde toujours la même couleur quel que soit son rang.
+  // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant (Flux._renderDonut :
+  // dégradé monochrome par rang, pas Utils.getCategoryColor — deux catégories peuvent avoir des
+  // couleurs proches dans la palette, ce qui rendait le donut illisible ; ici la teinte encode le
+  // rang du segment, la légende à côté du donut suit donc aussi le rang, pas l'identité catégorie).
   fluxDonut(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
