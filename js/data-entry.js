@@ -4,6 +4,7 @@ const DataEntry = {
   _selectionMode: false,
   _selected: new Set(), // "id|type" strings
   _filteredRows: [],
+  _reassignTargetIds: null, // Set d'ids de dépenses ciblées par la modale Réaffecter ouverte
   _isDragging: false,
   _dragMode: 'select', // 'select' ou 'deselect' selon l'état de la 1ère ligne touchée
 
@@ -11,9 +12,11 @@ const DataEntry = {
     const search = document.getElementById('donnees-search');
     const typeFilter = document.getElementById('donnees-filter-type');
     const catFilter = document.getElementById('donnees-filter-cat');
+    const reassignFilter = document.getElementById('donnees-filter-reassign');
     if (search) search.addEventListener('input', () => this.render());
     if (typeFilter) typeFilter.addEventListener('change', () => this.render());
     if (catFilter) catFilter.addEventListener('change', () => this.render());
+    if (reassignFilter) reassignFilter.addEventListener('change', () => this.render());
 
     document.querySelectorAll('#donnees-table .sortable').forEach(th => {
       th.addEventListener('click', () => {
@@ -198,11 +201,24 @@ const DataEntry = {
       return { id: key.slice(0, sep), type: key.slice(sep + 1) };
     });
     const expenseIds = new Set(parsed.filter(p => p.type === 'expense').map(p => p.id));
+    const revenueCount = parsed.length - expenseIds.size;
+    this._openReassignModal(expenseIds, revenueCount);
+  },
+
+  // Icône "🏷️" par ligne (colonne Actions, à côté de ✏️/🗑️) : réaffecte cette seule dépense
+  // sans passer par la sélection multiple — même modale que la barre groupée, ciblée sur 1 id.
+  reassignOne(id) {
+    this._openReassignModal(new Set([id]), 0);
+  },
+
+  // Point d'entrée commun catégorie/sous-catégorie en masse : mémorise les ids ciblés dans
+  // _reassignTargetIds (lu par _confirmReassign) plutôt que de dépendre de this._selected, qui
+  // ne représente rien pour le raccourci ligne-par-ligne (reassignOne, hors mode sélection).
+  _openReassignModal(expenseIds, revenueCount) {
     if (!expenseIds.size) {
       alert('La réaffectation ne s\'applique qu\'aux dépenses — sélectionnez au moins une dépense.');
       return;
     }
-    const revenueCount = parsed.length - expenseIds.size;
     const targetExpenses = Storage.getExpenses().filter(e => expenseIds.has(e.id));
 
     // "Sous-catégorie seulement" n'a de sens que si toutes les dépenses ciblées partagent déjà
@@ -211,6 +227,7 @@ const DataEntry = {
     const distinctCats = [...new Set(targetExpenses.map(e => e.category))];
     const sameCategory = distinctCats.length === 1 ? distinctCats[0] : null;
 
+    this._reassignTargetIds = expenseIds;
     Modal.open('Réaffecter', this._reassignForm(targetExpenses.length, revenueCount, sameCategory));
   },
 
@@ -298,13 +315,8 @@ const DataEntry = {
     const fd = new FormData(event.target);
     const scope = fd.get('reassign_scope');
 
-    const expenseIds = new Set();
-    this._selected.forEach(key => {
-      const sep = key.lastIndexOf('|');
-      const id = key.slice(0, sep), type = key.slice(sep + 1);
-      if (type === 'expense') expenseIds.add(id);
-    });
-    if (!expenseIds.size) { Modal.close(); return; }
+    const expenseIds = this._reassignTargetIds;
+    if (!expenseIds || !expenseIds.size) { Modal.close(); return; }
 
     const expenses = Storage.getExpenses();
     // reassignedFrom mémorise catégorie/sous-catégorie AVANT ce changement (écrasé si déjà
@@ -332,6 +344,7 @@ const DataEntry = {
     }
     Storage.saveExpenses(expenses);
 
+    this._reassignTargetIds = null;
     this._selected.clear();
     Modal.close();
     this.render();
@@ -358,6 +371,14 @@ const DataEntry = {
     Dashboard.render();
   },
 
+  // Portée effective d'une réaffectation : le scope mémorisé, ou repli 'cat' pour les lignes
+  // réaffectées avant l'ajout de ce champ — null si la ligne n'a jamais été réaffectée. Source
+  // commune au badge de ligne (render) et au filtre "Catégorie/Sous-catégorie réaffectée".
+  _reassignScope(row) {
+    if (!row.reassignedFrom) return null;
+    return row.reassignedFrom.scope || 'cat';
+  },
+
   render() {
     // La barre d'actions (Ajouter/Supprimer) n'est sinon jamais générée avant la première
     // action utilisateur — le bouton statique de index.html restait alors affiché tel quel
@@ -366,6 +387,7 @@ const DataEntry = {
     const search = (document.getElementById('donnees-search')?.value || '').toLowerCase().trim();
     const typeFilter = document.getElementById('donnees-filter-type')?.value || '';
     const catFilter = document.getElementById('donnees-filter-cat')?.value || '';
+    const reassignFilter = document.getElementById('donnees-filter-reassign')?.value || '';
 
     const expenses = Storage.getExpenses().map(e => ({ ...e, _type: 'expense' }));
     const revenues = Storage.getRevenues().map(r => ({ ...r, _type: 'revenue' }));
@@ -374,6 +396,7 @@ const DataEntry = {
     if (typeFilter === 'expense') rows = rows.filter(r => r._type === 'expense');
     else if (typeFilter === 'revenue') rows = rows.filter(r => r._type === 'revenue');
     if (catFilter) rows = rows.filter(r => r.category === catFilter);
+    if (reassignFilter) rows = rows.filter(r => this._reassignScope(r) === reassignFilter);
     if (search) {
       rows = rows.filter(r =>
         (r.description || '').toLowerCase().includes(search) ||
@@ -431,8 +454,8 @@ const DataEntry = {
       // avant ce correctif (pas de scope mémorisé) : repli sur 'cat', comportement d'origine.
       // Seulement hors mode sélection, comme les icônes ✏️/🗑️ — en sélection, la ligne a déjà
       // un handler mousedown pour le glisser-sélectionner.
-      const showReassignBadge = !sel && isExpense && !!row.reassignedFrom;
-      const reassignScope = row.reassignedFrom?.scope || 'cat';
+      const reassignScope = isExpense ? this._reassignScope(row) : null;
+      const showReassignBadge = !sel && !!reassignScope;
       const catReassignBadge = (showReassignBadge && reassignScope === 'cat')
         ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
         : '';
@@ -440,8 +463,14 @@ const DataEntry = {
         ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${row.reassignedFrom.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
         : '';
       const amountClass = isExpense ? 'negative' : 'positive';
+      // Réaffecter (🏷️) : seulement sur les dépenses, comme le bouton groupé — les revenus n'ont
+      // pas de sous-catégorie et un modèle de catégories différent (voir openReassign).
+      const reassignIcon = isExpense
+        ? `<button class="btn-icon" onclick="DataEntry.reassignOne('${row.id}');event.stopPropagation()" title="Réaffecter">🏷️</button>`
+        : '';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
+        ${reassignIcon}
         <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>`;
 
