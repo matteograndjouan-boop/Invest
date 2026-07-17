@@ -665,6 +665,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .btn-icon.btn-danger:hover { background: var(--danger-bg); color: var(--danger); }
 .btn-icon svg { width: 16px; height: 16px; }
 
+/* Données (#donnees-tbody uniquement — pas .btn-icon partout ailleurs, réutilisé tel quel par
+   Investissements/Dépenses/Revenus/Patrimoine) : icônes rondes, teinte dédiée par action au
+   survol plutôt que le même gris neutre pour Modifier/Réaffecter — 🏷️ reprend l'identité ambre
+   du badge de réaffectation (.reassign-badge) pour une lecture cohérente dans tout l'onglet. */
+#donnees-tbody .btn-icon { border-radius: 999px; }
+#donnees-tbody .btn-icon:hover { background: var(--primary-light); color: var(--primary); }
+#donnees-tbody .btn-icon[title="Réaffecter"]:hover { background: rgba(245,158,11,0.16); color: #f59e0b; }
+
 /* ---- Badges ---- */
 .badge {
   display: inline-block;
@@ -1062,11 +1070,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   pointer-events: none;
   line-height: 1;
 }
+/* Pastilles façon déclencheur du filtre de période (.period-trigger, voir plus bas) : pilule +
+   même recette de survol (bordure/texte → primary, fond → primary-light) — auparavant un simple
+   rectangle à peine arrondi (var(--radius-sm)), sans aucun retour visuel au survol. */
 .donnees-search-input {
   width: 100%;
-  padding: 7px 12px 7px 34px;
+  padding: 7px 14px 7px 34px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-size: 13px;
   outline: none;
   background: var(--bg);
@@ -1075,17 +1086,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   box-sizing: border-box;
 }
 .donnees-search-input::placeholder { color: var(--text-muted); }
+.donnees-search-input:hover { border-color: var(--primary); }
 .donnees-search-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
 .dt-select {
-  padding: 7px 28px 7px 10px;
+  padding: 7px 30px 7px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 600;
   outline: none;
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   cursor: pointer;
   min-width: 160px;
@@ -1093,12 +1106,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: border-color .15s, box-shadow .15s;
+  background-position: right 12px center;
+  transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
+.dt-select:hover { border-color: var(--primary); color: var(--primary); background-color: var(--primary-light); }
 .dt-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+/* Barre d'actions (#donnees-header-actions uniquement — .btn-secondary est générique, réutilisé
+   tel quel par tous les autres onglets) : déjà en pilule (restyle global plus bas dans ce
+   fichier), mais un survol teinté par action plutôt que le simple assombrissement gris partagé —
+   Modifier/Sélectionner/Annuler en primary (défaut de .btn-secondary), Réaffecter en ambre —
+   même identité que son icône de ligne et son badge (.reassign-badge). Supprimer reste rouge via
+   .btn-danger/.btn-danger-soft, déjà distinct, pas besoin d'y toucher. */
+#donnees-header-actions .btn-secondary:hover:not(:disabled) {
+  border-color: var(--primary); color: var(--primary); background: var(--primary-light);
+}
+#donnees-header-actions #donnees-reassign-sel-btn:hover:not(:disabled) {
+  border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.12);
 }
 .donnees-count {
   margin-left: auto;
@@ -1309,15 +1336,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 }
 
 /* Marque une ligne réaffectée en masse (Données > barre groupée > 🏷️ Réaffecter) — survol =
-   catégorie/sous-catégorie précédentes, clic = annuler (DataEntry.undoReassign). */
+   catégorie/sous-catégorie précédentes, clic = annuler (DataEntry.undoReassign). Ambre : même
+   identité couleur que l'action Réaffecter (icône de ligne, bouton de la barre groupée). */
 .reassign-badge {
   display: inline-flex; align-items: center; justify-content: center;
   margin-left: 0.3rem; padding: 0.05rem 0.35rem;
   border-radius: 999px; font-size: 0.72rem;
-  background: rgba(99,102,241,0.12); cursor: pointer;
+  background: rgba(245,158,11,0.14); cursor: pointer;
   transition: background .12s;
 }
-.reassign-badge:hover { background: rgba(99,102,241,0.32); }
+.reassign-badge:hover { background: rgba(245,158,11,0.34); }
 
 /* ---- PDF Preview ---- */
 .modal-wide { max-width: 860px !important; }
