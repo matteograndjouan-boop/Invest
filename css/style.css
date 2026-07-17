@@ -1308,6 +1308,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   margin-left: 0.25rem;
 }
 
+/* Marque une ligne réaffectée en masse (Données > barre groupée > 🏷️ Réaffecter) — survol =
+   catégorie/sous-catégorie précédentes, clic = annuler (DataEntry.undoReassign). */
+.reassign-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-left: 0.3rem; padding: 0.05rem 0.35rem;
+  border-radius: 999px; font-size: 0.72rem;
+  background: rgba(99,102,241,0.12); cursor: pointer;
+  transition: background .12s;
+}
+.reassign-badge:hover { background: rgba(99,102,241,0.32); }
+
 /* ---- PDF Preview ---- */
 .modal-wide { max-width: 860px !important; }
 .preview-table-wrap { max-height: 52vh; overflow-y: auto; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }

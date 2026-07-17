@@ -307,18 +307,49 @@ const DataEntry = {
     if (!expenseIds.size) { Modal.close(); return; }
 
     const expenses = Storage.getExpenses();
+    // reassignedFrom mémorise catégorie/sous-catégorie AVANT ce changement (écrasé si déjà
+    // présent — un seul niveau d'annulation, le plus récent) : alimente le badge 🏷️ et
+    // undoReassign() sur chaque ligne concernée. save() (édition manuelle classique) remplace
+    // l'objet entier et efface donc ce marqueur automatiquement — une édition déclarée prend
+    // le pas sur l'annulation d'une réaffectation en masse.
     if (scope === 'subcat') {
       const newSub = fd.get('subcat_only') || '';
-      expenses.forEach(e => { if (expenseIds.has(e.id)) e.subcategory = newSub; });
+      expenses.forEach(e => {
+        if (!expenseIds.has(e.id)) return;
+        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '' };
+        e.subcategory = newSub;
+      });
     } else {
       const newCat = fd.get('new_category');
       const newSub = fd.get('new_subcategory') || '';
-      expenses.forEach(e => { if (expenseIds.has(e.id)) { e.category = newCat; e.subcategory = newSub; } });
+      expenses.forEach(e => {
+        if (!expenseIds.has(e.id)) return;
+        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '' };
+        e.category = newCat;
+        e.subcategory = newSub;
+      });
     }
     Storage.saveExpenses(expenses);
 
     this._selected.clear();
     Modal.close();
+    this.render();
+    Dashboard.render();
+  },
+
+  // Annule une réaffectation (clic sur le badge 🏷️ posé par _confirmReassign) : restaure
+  // catégorie + sous-catégorie mémorisées dans reassignedFrom et efface le marqueur, donc le
+  // badge disparaît — un seul niveau d'annulation (la dernière réaffectation en date).
+  undoReassign(id) {
+    const expenses = Storage.getExpenses();
+    const exp = expenses.find(e => e.id === id);
+    if (!exp || !exp.reassignedFrom) return;
+    const prev = exp.reassignedFrom;
+    if (!confirm(`Annuler la réaffectation ?\nCatégorie restaurée : ${prev.category}${prev.subcategory ? ' / ' + prev.subcategory : ''}`)) return;
+    exp.category = prev.category;
+    exp.subcategory = prev.subcategory || '';
+    delete exp.reassignedFrom;
+    Storage.saveExpenses(expenses);
     this.render();
     Dashboard.render();
   },
@@ -389,6 +420,12 @@ const DataEntry = {
         : '<span class="badge badge-revenue-type">Revenu</span>';
       const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
       const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
+      // Badge de réaffectation (posé par _confirmReassign, effacé par undoReassign ou par toute
+      // édition manuelle via save()) : seulement hors mode sélection, comme les icônes ✏️/🗑️ —
+      // en sélection, la ligne a déjà un handler mousedown pour le glisser-sélectionner.
+      const reassignBadge = (!sel && isExpense && row.reassignedFrom)
+        ? `<span class="reassign-badge" title="Réaffecté — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
+        : '';
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
@@ -401,7 +438,7 @@ const DataEntry = {
         <td class="donnees-effective-date">${row.effectiveDate ? (() => { const [y,m] = row.effectiveDate.split('-'); const MFR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']; return `<span class="effective-badge">${MFR[+m-1]} ${y}</span>`; })() : ''}</td>
         <td>${typeBadge}</td>
         <td class="donnees-desc">${row.description || '—'}</td>
-        <td>${catBadge}</td>
+        <td>${catBadge}${reassignBadge}</td>
         <td>${subcatBadge}</td>
         <td class="text-right"><strong class="${amountClass}">${Utils.formatCurrency(row.amount)}</strong></td>
         ${actionsTd}
