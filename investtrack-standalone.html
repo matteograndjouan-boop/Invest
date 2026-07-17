@@ -672,11 +672,14 @@ input:focus:not(:focus-visible) { outline: none; }
 .btn-icon.btn-danger:hover { background: var(--danger-bg); color: var(--danger); }
 .btn-icon svg { width: 16px; height: 16px; }
 
-/* Données (#donnees-tbody uniquement — pas .btn-icon partout ailleurs, réutilisé tel quel par
-   Investissements/Dépenses/Revenus/Patrimoine) : icônes rondes, teinte dédiée par action au
-   survol plutôt que le même gris neutre pour Modifier/Réaffecter — 🏷️ reprend l'identité ambre
-   du badge de réaffectation (.reassign-badge) pour une lecture cohérente dans tout l'onglet. */
-#donnees-tbody .btn-icon { border-radius: 999px; }
+/* Données (#donnees-tbody uniquement — .btn-icon/.actions-cell sont génériques, réutilisés tel
+   quels par Investissements/Dépenses/Revenus/Patrimoine) : icônes rondes un peu plus grandes,
+   espacement explicite entre elles (auparavant collées, seul l'espace blanc du template HTML les
+   séparait) et teinte dédiée par action au survol plutôt que le même gris neutre pour
+   Modifier/Réaffecter — 🏷️ reprend l'identité ambre du badge de réaffectation (.reassign-badge)
+   pour une lecture cohérente dans tout l'onglet. */
+#donnees-tbody .actions-cell { display: flex; align-items: center; gap: 4px; }
+#donnees-tbody .btn-icon { width: 32px; height: 32px; border-radius: 999px; }
 #donnees-tbody .btn-icon:hover { background: var(--primary-light); color: var(--primary); }
 #donnees-tbody .btn-icon[title="Réaffecter"]:hover { background: rgba(245,158,11,0.16); color: #f59e0b; }
 
@@ -1146,13 +1149,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   padding: 3px 12px;
 }
 /* Table */
-.donnees-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+/* background + shadow explicites : sans ça le wrap est transparent et hérite du fond de page
+   (--bg, body { background: var(--bg) }) — la table flottait donc "à plat" sur la page au lieu
+   de se lire comme une carte, comme .donnees-toolbar juste au-dessus (déjà en --surface). Même
+   fond que le thead sticky ci-dessous, pour un ensemble visuellement continu. */
+.donnees-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
 .donnees-table { width: 100%; border-collapse: collapse; min-width: 820px; table-layout: fixed; }
 .donnees-table thead th {
   position: sticky; top: 0;
   background: var(--surface);
   z-index: 2;
-  padding: 10px 14px;
+  padding: 12px 14px;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1163,9 +1176,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   white-space: nowrap;
 }
 .donnees-table thead th.text-right { text-align: right; }
-.donnees-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+.donnees-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
 .donnees-table tbody tr:last-child { border-bottom: none; }
-.donnees-table tbody tr:hover { background: var(--bg); }
+/* var(--bg) était un survol invisible (déjà le fond hérité de la page, aucune ligne n'avait de
+   fond propre avant le fix ci-dessus) ; le simple voile blanc de .selectable:hover ci-dessous
+   (rgba(255,255,255,.035)) reste lui aussi trop discret une fois testé à l'écran — une teinte
+   primary reprend la même identité couleur que le reste de cette refonte (pastilles, icônes). */
+.donnees-table tbody tr:hover { background: rgba(108,99,255,0.09); }
 .donnees-table tbody tr.selectable {
   cursor: pointer;
   user-select: none;
@@ -1174,10 +1191,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   touch-action: none;
 }
 @media (hover: hover) {
-  .donnees-table tbody tr.selectable:hover { background: rgba(255,255,255,0.035); }
+  .donnees-table tbody tr.selectable:hover { background: rgba(108,99,255,0.09); }
 }
 .donnees-table tbody tr.selected { background: rgba(108,99,255,0.14) !important; border-color: var(--primary) !important; }
-.donnees-table td { padding: 10px 14px; font-size: 0.875rem; vertical-align: middle; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.donnees-table td { padding: 12px 14px; font-size: 0.875rem; vertical-align: middle; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #donnees-th-actions[style*="none"] { display: none; }
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: var(--primary); }
@@ -1340,6 +1357,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   border-radius: 999px;
   font-weight: 500;
   margin-left: 0.25rem;
+}
+
+/* Données (#donnees-tbody uniquement — .badge-category/.badge-subcategory génériques,
+   réutilisés tel quels par Investissements/Dépenses/Revenus/Patrimoine) : pastilles un peu plus
+   confortables — un peu écrasées (11px/0.7rem) dans un tableau déjà dense en colonnes, même une
+   petite marge de respiration change beaucoup à l'échelle d'une ligne entière. */
+#donnees-tbody .badge-category,
+#donnees-tbody .badge-subcategory {
+  font-size: 0.75rem;
+  padding: 0.28rem 0.65rem;
+  font-weight: 600;
 }
 
 /* Marque une ligne réaffectée en masse (Données > barre groupée > 🏷️ Réaffecter) — survol =
