@@ -308,15 +308,16 @@ const DataEntry = {
 
     const expenses = Storage.getExpenses();
     // reassignedFrom mémorise catégorie/sous-catégorie AVANT ce changement (écrasé si déjà
-    // présent — un seul niveau d'annulation, le plus récent) : alimente le badge 🏷️ et
-    // undoReassign() sur chaque ligne concernée. save() (édition manuelle classique) remplace
-    // l'objet entier et efface donc ce marqueur automatiquement — une édition déclarée prend
-    // le pas sur l'annulation d'une réaffectation en masse.
+    // présent — un seul niveau d'annulation, le plus récent) + le scope réellement appliqué
+    // ('subcat'/'cat') : le badge 🏷️ se positionne sur la colonne effectivement modifiée
+    // (sous-catégorie seule vs catégorie) plutôt que toujours sur la catégorie. save() (édition
+    // manuelle classique) remplace l'objet entier et efface donc ce marqueur automatiquement —
+    // une édition déclarée prend le pas sur l'annulation d'une réaffectation en masse.
     if (scope === 'subcat') {
       const newSub = fd.get('subcat_only') || '';
       expenses.forEach(e => {
         if (!expenseIds.has(e.id)) return;
-        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '' };
+        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '', scope: 'subcat' };
         e.subcategory = newSub;
       });
     } else {
@@ -324,7 +325,7 @@ const DataEntry = {
       const newSub = fd.get('new_subcategory') || '';
       expenses.forEach(e => {
         if (!expenseIds.has(e.id)) return;
-        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '' };
+        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '', scope: 'cat' };
         e.category = newCat;
         e.subcategory = newSub;
       });
@@ -345,7 +346,10 @@ const DataEntry = {
     const exp = expenses.find(e => e.id === id);
     if (!exp || !exp.reassignedFrom) return;
     const prev = exp.reassignedFrom;
-    if (!confirm(`Annuler la réaffectation ?\nCatégorie restaurée : ${prev.category}${prev.subcategory ? ' / ' + prev.subcategory : ''}`)) return;
+    const msg = prev.scope === 'subcat'
+      ? `Annuler la réaffectation ?\nSous-catégorie restaurée : ${prev.subcategory || '—'}`
+      : `Annuler la réaffectation ?\nCatégorie restaurée : ${prev.category}${prev.subcategory ? ' / ' + prev.subcategory : ''}`;
+    if (!confirm(msg)) return;
     exp.category = prev.category;
     exp.subcategory = prev.subcategory || '';
     delete exp.reassignedFrom;
@@ -421,10 +425,19 @@ const DataEntry = {
       const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
       const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
       // Badge de réaffectation (posé par _confirmReassign, effacé par undoReassign ou par toute
-      // édition manuelle via save()) : seulement hors mode sélection, comme les icônes ✏️/🗑️ —
-      // en sélection, la ligne a déjà un handler mousedown pour le glisser-sélectionner.
-      const reassignBadge = (!sel && isExpense && row.reassignedFrom)
-        ? `<span class="reassign-badge" title="Réaffecté — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
+      // édition manuelle via save()) : sur la colonne effectivement modifiée — sous-catégorie
+      // seule (scope 'subcat') ou catégorie (scope 'cat', qui change aussi la sous-catégorie
+      // mais le badge reste sur la catégorie, l'origine du changement). Lignes réaffectées
+      // avant ce correctif (pas de scope mémorisé) : repli sur 'cat', comportement d'origine.
+      // Seulement hors mode sélection, comme les icônes ✏️/🗑️ — en sélection, la ligne a déjà
+      // un handler mousedown pour le glisser-sélectionner.
+      const showReassignBadge = !sel && isExpense && !!row.reassignedFrom;
+      const reassignScope = row.reassignedFrom?.scope || 'cat';
+      const catReassignBadge = (showReassignBadge && reassignScope === 'cat')
+        ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
+        : '';
+      const subReassignBadge = (showReassignBadge && reassignScope === 'subcat')
+        ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${row.reassignedFrom.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
         : '';
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
@@ -438,8 +451,8 @@ const DataEntry = {
         <td class="donnees-effective-date">${row.effectiveDate ? (() => { const [y,m] = row.effectiveDate.split('-'); const MFR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']; return `<span class="effective-badge">${MFR[+m-1]} ${y}</span>`; })() : ''}</td>
         <td>${typeBadge}</td>
         <td class="donnees-desc">${row.description || '—'}</td>
-        <td>${catBadge}${reassignBadge}</td>
-        <td>${subcatBadge}</td>
+        <td>${catBadge}${catReassignBadge}</td>
+        <td>${subcatBadge}${subReassignBadge}</td>
         <td class="text-right"><strong class="${amountClass}">${Utils.formatCurrency(row.amount)}</strong></td>
         ${actionsTd}
       </tr>`;
