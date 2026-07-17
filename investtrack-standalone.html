@@ -6394,7 +6394,7 @@ const DataEntry = {
   _selectionMode: false,
   _selected: new Set(), // "id|type" strings
   _filteredRows: [],
-  _reassignTargetIds: null, // Set d'ids de dépenses ciblées par la modale Réaffecter ouverte
+  _reassignTargets: null, // [{id, type}] ciblés par la modale Réaffecter ouverte (type = bucket)
   _isDragging: false,
   _dragMode: 'select', // 'select' ou 'deselect' selon l'état de la 1ère ligne touchée
 
@@ -6581,67 +6581,71 @@ const DataEntry = {
   },
 
   // Bouton "🏷️ Réaffecter" de la barre groupée : change catégorie et/ou sous-catégorie de
-  // toutes les dépenses sélectionnées en une fois. Ne s'applique qu'aux DÉPENSES — les revenus
-  // n'ont ni catégories ni sous-catégories communes (Utils.REVENUE_CATEGORIES, pas de
-  // sous-catégorie du tout, voir save()) ; un revenu dans la sélection est simplement ignoré
-  // (signalé dans la modale plutôt que silencieusement).
+  // toutes les lignes sélectionnées en une fois — dépenses, revenus ET investissements (Épargne),
+  // via un sélecteur de type qui suit Categories._TYPES (les mêmes 3 thèmes que l'onglet
+  // Catégories : ajouter un thème là-bas suffit à l'ajouter ici, aucune liste séparée).
   openReassign() {
-    const parsed = [...this._selected].map(key => {
+    const targets = [...this._selected].map(key => {
       const sep = key.lastIndexOf('|');
       return { id: key.slice(0, sep), type: key.slice(sep + 1) };
     });
-    const expenseIds = new Set(parsed.filter(p => p.type === 'expense').map(p => p.id));
-    const revenueCount = parsed.length - expenseIds.size;
-    this._openReassignModal(expenseIds, revenueCount);
+    this._openReassignModal(targets);
   },
 
-  // Icône "🏷️" par ligne (colonne Actions, à côté de ✏️/🗑️) : réaffecte cette seule dépense
-  // sans passer par la sélection multiple — même modale que la barre groupée, ciblée sur 1 id.
-  reassignOne(id) {
-    this._openReassignModal(new Set([id]), 0);
+  // Icône "🏷️" par ligne (colonne Actions, à côté de ✏️/🗑️) : réaffecte cette seule ligne sans
+  // passer par la sélection multiple — même modale que la barre groupée, ciblée sur 1 ligne.
+  // `type` = bucket de stockage actuel de la ligne ('expense' ou 'revenue', voir row._type).
+  reassignOne(id, type) {
+    this._openReassignModal([{ id, type }]);
   },
 
-  // Point d'entrée commun catégorie/sous-catégorie en masse : mémorise les ids ciblés dans
-  // _reassignTargetIds (lu par _confirmReassign) plutôt que de dépendre de this._selected, qui
-  // ne représente rien pour le raccourci ligne-par-ligne (reassignOne, hors mode sélection).
-  _openReassignModal(expenseIds, revenueCount) {
-    if (!expenseIds.size) {
-      alert('La réaffectation ne s\'applique qu\'aux dépenses — sélectionnez au moins une dépense.');
-      return;
-    }
-    const targetExpenses = Storage.getExpenses().filter(e => expenseIds.has(e.id));
+  // Point d'entrée commun : mémorise les cibles ({id, type=bucket actuel}) dans _reassignTargets
+  // (lu par _confirmReassign) plutôt que de dépendre de this._selected, qui ne représente rien
+  // pour le raccourci ligne-par-ligne (reassignOne, hors mode sélection).
+  _openReassignModal(targets) {
+    const expenses = Storage.getExpenses(), revenues = Storage.getRevenues();
+    const records = targets
+      .map(t => ({ ...t, record: (t.type === 'expense' ? expenses : revenues).find(r => r.id === t.id) }))
+      .filter(t => t.record);
+    if (!records.length) return;
 
-    // "Sous-catégorie seulement" n'a de sens que si toutes les dépenses ciblées partagent déjà
-    // la même catégorie (sinon : la sous-catégorie de laquelle ?) — sameCategory reste null sinon,
+    // "Sous-catégorie seulement" n'a de sens que si toutes les lignes ciblées partagent déjà la
+    // même catégorie (sinon : la sous-catégorie de laquelle ?) — sameCategory reste null sinon,
     // et _reassignForm désactive alors cette option au profit de "Catégorie (et sous-catégorie)".
-    const distinctCats = [...new Set(targetExpenses.map(e => e.category))];
+    // Une catégorie commune implique un thème commun (une catégorie n'appartient qu'à un thème),
+    // donc currentTheme s'en déduit directement pour présélectionner le type.
+    const distinctCats = [...new Set(records.map(r => r.record.category))];
     const sameCategory = distinctCats.length === 1 ? distinctCats[0] : null;
+    const sameCategoryObj = sameCategory ? Storage.getCategories().find(c => c.name === sameCategory) : null;
+    const currentTheme = sameCategoryObj ? Categories._catType(sameCategoryObj) : null;
 
-    this._reassignTargetIds = expenseIds;
-    Modal.open('Réaffecter', this._reassignForm(targetExpenses.length, revenueCount, sameCategory));
+    this._reassignTargets = targets;
+    Modal.open('Réaffecter', this._reassignForm(records.length, sameCategory, currentTheme));
   },
 
-  _reassignForm(count, revenueSkipped, sameCategory) {
-    const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === 'expense');
-    const catOptions = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
-    const firstSubcats = cats[0]?.subcategories || [];
-    const catSubcatOptions = firstSubcats.length
-      ? ['', ...firstSubcats].map(s => `<option value="${s}" ${s === '' ? 'selected' : ''}>${s || '—'}</option>`).join('')
-      : '<option value="">—</option>';
-
+  _reassignForm(count, sameCategory, currentTheme) {
     const sameCatSubcats = sameCategory ? (Categories.getSubcats(sameCategory) || []) : [];
     const subcatOnlyOptions = sameCatSubcats.length
       ? ['', ...sameCatSubcats].map(s => `<option value="${s}" ${s === '' ? 'selected' : ''}>${s || '—'}</option>`).join('')
       : '<option value="">—</option>';
 
-    const revenueHint = revenueSkipped
-      ? `<br>⚠️ ${revenueSkipped} revenu${revenueSkipped > 1 ? 's' : ''} sélectionné${revenueSkipped > 1 ? 's' : ''} ${revenueSkipped > 1 ? 'ne sont' : "n'est"} pas concerné${revenueSkipped > 1 ? 's' : ''} (réaffectation dépenses uniquement).`
-      : '';
+    // Type par défaut de "Catégorie (et sous-catégorie)" : le thème commun aux lignes ciblées
+    // s'il y en a un, sinon le 1er thème de Categories._TYPES (Dépenses).
+    const defaultType = currentTheme || Categories._TYPES[0].key;
+    const typeOptions = Categories._TYPES.map(T =>
+      `<option value="${T.key}" ${T.key === defaultType ? 'selected' : ''}>${T.icon} ${T.label}</option>`
+    ).join('');
+    const catsForType = Storage.getActiveCategories().filter(c => Categories._catType(c) === defaultType);
+    const catOptions = catsForType.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    const firstSubcats = catsForType[0]?.subcategories || [];
+    const catSubcatOptions = firstSubcats.length
+      ? ['', ...firstSubcats].map(s => `<option value="${s}" ${s === '' ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
 
     return `
       <form onsubmit="DataEntry._confirmReassign(event)">
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
-          ${count} dépense${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''} ser${count > 1 ? 'ont' : 'a'} réaffectée${count > 1 ? 's' : ''}.${revenueHint}
+          ${count} ligne${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''} ser${count > 1 ? 'ont' : 'a'} réaffectée${count > 1 ? 's' : ''}.
         </p>
         <div class="form-group form-full" style="margin-bottom:14px">
           <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;cursor:${sameCategory ? 'pointer' : 'not-allowed'};opacity:${sameCategory ? '1' : '0.55'}">
@@ -6649,7 +6653,7 @@ const DataEntry = {
               ${sameCategory ? 'checked' : 'disabled'} onchange="DataEntry._toggleReassignScope('subcat')">
             <span>Sous-catégorie seulement${sameCategory
               ? ` <span style="color:var(--text-muted)">(catégorie actuelle : <strong style="color:var(--text)">${sameCategory}</strong>, inchangée)</span>`
-              : ' <span style="font-size:12px">— nécessite que les dépenses sélectionnées partagent déjà la même catégorie</span>'}</span>
+              : ' <span style="font-size:12px">— nécessite que les lignes sélectionnées partagent déjà la même catégorie</span>'}</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="radio" name="reassign_scope" value="cat" ${sameCategory ? '' : 'checked'} onchange="DataEntry._toggleReassignScope('cat')">
@@ -6659,6 +6663,10 @@ const DataEntry = {
         <div class="form-group form-full" id="reassign-subcat-only-group" style="${sameCategory ? '' : 'display:none'}">
           <label>Nouvelle sous-catégorie</label>
           <select name="subcat_only" ${sameCatSubcats.length ? '' : 'disabled'}>${subcatOnlyOptions}</select>
+        </div>
+        <div class="form-group form-full" id="reassign-type-group" style="${sameCategory ? 'display:none' : ''}">
+          <label>Type</label>
+          <select name="new_type" id="reassign-type-select" onchange="DataEntry._updateReassignCats(this.value)">${typeOptions}</select>
         </div>
         <div class="form-group form-full" id="reassign-cat-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Nouvelle catégorie</label>
@@ -6677,14 +6685,26 @@ const DataEntry = {
 
   _toggleReassignScope(scope) {
     const subOnlyGroup = document.getElementById('reassign-subcat-only-group');
+    const typeGroup = document.getElementById('reassign-type-group');
     const catGroup = document.getElementById('reassign-cat-group');
     const catSubGroup = document.getElementById('reassign-cat-subcat-group');
-    if (!subOnlyGroup || !catGroup || !catSubGroup) return;
+    if (!subOnlyGroup || !typeGroup || !catGroup || !catSubGroup) return;
     if (scope === 'subcat') {
-      subOnlyGroup.style.display = ''; catGroup.style.display = 'none'; catSubGroup.style.display = 'none';
+      subOnlyGroup.style.display = ''; typeGroup.style.display = 'none'; catGroup.style.display = 'none'; catSubGroup.style.display = 'none';
     } else {
-      subOnlyGroup.style.display = 'none'; catGroup.style.display = ''; catSubGroup.style.display = '';
+      subOnlyGroup.style.display = 'none'; typeGroup.style.display = ''; catGroup.style.display = ''; catSubGroup.style.display = '';
     }
+  },
+
+  // Changement du sélecteur Type ("Catégorie (et sous-catégorie)") : recharge la liste des
+  // catégories sur ce thème (Categories._catType), puis cascade sur les sous-catégories de la
+  // 1ère catégorie du nouveau thème — même principe que _updateReassignSubcats pour Catégorie.
+  _updateReassignCats(type) {
+    const catSel = document.getElementById('reassign-cat-select');
+    if (!catSel) return;
+    const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === type);
+    catSel.innerHTML = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    this._updateReassignSubcats(cats[0]?.name || '');
   },
 
   _updateReassignSubcats(catName) {
@@ -6705,58 +6725,101 @@ const DataEntry = {
     const fd = new FormData(event.target);
     const scope = fd.get('reassign_scope');
 
-    const expenseIds = this._reassignTargetIds;
-    if (!expenseIds || !expenseIds.size) { Modal.close(); return; }
+    const targets = this._reassignTargets;
+    if (!targets || !targets.length) { Modal.close(); return; }
 
-    const expenses = Storage.getExpenses();
-    // reassignedFrom mémorise catégorie/sous-catégorie AVANT ce changement (écrasé si déjà
-    // présent — un seul niveau d'annulation, le plus récent) + le scope réellement appliqué
-    // ('subcat'/'cat') : le badge 🏷️ se positionne sur la colonne effectivement modifiée
-    // (sous-catégorie seule vs catégorie) plutôt que toujours sur la catégorie. save() (édition
-    // manuelle classique) remplace l'objet entier et efface donc ce marqueur automatiquement —
-    // une édition déclarée prend le pas sur l'annulation d'une réaffectation en masse.
+    const expenses = Storage.getExpenses(), revenues = Storage.getRevenues();
+    const findRec = (id, type) => (type === 'expense' ? expenses : revenues).find(r => r.id === id);
+
+    // reassignedFrom mémorise le bucket ('expense'/'revenue'), catégorie et sous-catégorie
+    // AVANT ce changement (écrasé si déjà présent — un seul niveau d'annulation, le plus
+    // récent) + le scope réellement appliqué ('subcat'/'cat') : alimente le badge 🏷️ (colonne
+    // catégorie ou sous-catégorie selon la portée) et undoReassign(), y compris pour rebasculer
+    // de bucket au besoin. save() (édition manuelle classique) remplace l'objet entier et efface
+    // donc ce marqueur automatiquement — une édition déclarée prend le pas sur l'annulation
+    // d'une réaffectation en masse.
     if (scope === 'subcat') {
+      // La sous-catégorie seule ne change jamais de bucket (sameCategory garantit déjà que
+      // toutes les lignes ciblées sont dans la même catégorie, donc le même thème/bucket) —
+      // simple mutation en place.
       const newSub = fd.get('subcat_only') || '';
-      expenses.forEach(e => {
-        if (!expenseIds.has(e.id)) return;
-        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '', scope: 'subcat' };
-        e.subcategory = newSub;
+      targets.forEach(({ id, type }) => {
+        const rec = findRec(id, type);
+        if (!rec) return;
+        rec.reassignedFrom = { type, category: rec.category, subcategory: rec.subcategory || '', scope: 'subcat' };
+        rec.subcategory = newSub;
       });
     } else {
+      const newType = fd.get('new_type'); // thème de catégorie choisi : 'expense'/'revenue'/'investment'
       const newCat = fd.get('new_category');
       const newSub = fd.get('new_subcategory') || '';
-      expenses.forEach(e => {
-        if (!expenseIds.has(e.id)) return;
-        e.reassignedFrom = { category: e.category, subcategory: e.subcategory || '', scope: 'cat' };
-        e.category = newCat;
-        e.subcategory = newSub;
+      // Bucket de stockage cible : 'revenue' si le thème choisi est 'revenue', sinon 'expense' —
+      // dépense ET investissement (Épargne) vivent tous deux dans invest_expenses, seule la
+      // catégorie les distingue, pas le bucket (voir Utils.isExpenseCategory).
+      const newBucket = newType === 'revenue' ? 'revenue' : 'expense';
+
+      targets.forEach(({ id, type: oldBucket }) => {
+        const rec = findRec(id, oldBucket);
+        if (!rec) return;
+        const reassignedFrom = { type: oldBucket, category: rec.category, subcategory: rec.subcategory || '', scope: 'cat' };
+
+        if (oldBucket === newBucket) {
+          rec.reassignedFrom = reassignedFrom;
+          rec.category = newCat;
+          rec.subcategory = newSub;
+        } else {
+          // Changement de bucket (dépense/épargne <-> revenu) : retire de l'ancien, recrée dans
+          // le nouveau avec un nouvel id — même logique que save() pour un changement de type
+          // manuel. effectiveDate n'a de sens que pour dépense/épargne, jamais pour un revenu.
+          const oldList = oldBucket === 'expense' ? expenses : revenues;
+          oldList.splice(oldList.indexOf(rec), 1);
+          const moved = { ...rec, id: Utils.generateId(), category: newCat, subcategory: newSub, reassignedFrom };
+          if (newBucket === 'revenue') delete moved.effectiveDate;
+          (newBucket === 'expense' ? expenses : revenues).push(moved);
+        }
       });
     }
     Storage.saveExpenses(expenses);
+    Storage.saveRevenues(revenues);
 
-    this._reassignTargetIds = null;
+    this._reassignTargets = null;
     this._selected.clear();
     Modal.close();
     this.render();
     Dashboard.render();
   },
 
-  // Annule une réaffectation (clic sur le badge 🏷️ posé par _confirmReassign) : restaure
-  // catégorie + sous-catégorie mémorisées dans reassignedFrom et efface le marqueur, donc le
-  // badge disparaît — un seul niveau d'annulation (la dernière réaffectation en date).
-  undoReassign(id) {
-    const expenses = Storage.getExpenses();
-    const exp = expenses.find(e => e.id === id);
-    if (!exp || !exp.reassignedFrom) return;
-    const prev = exp.reassignedFrom;
+  // Annule une réaffectation (clic sur le badge 🏷️ posé par _confirmReassign) : restaure bucket,
+  // catégorie et sous-catégorie mémorisés dans reassignedFrom et efface le marqueur, donc le
+  // badge disparaît — un seul niveau d'annulation (la dernière réaffectation en date). `type` =
+  // bucket ACTUEL de la ligne (voir row._type dans render), pas forcément celui d'avant.
+  undoReassign(id, type) {
+    const list = type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
+    const rec = list.find(r => r.id === id);
+    if (!rec || !rec.reassignedFrom) return;
+    const prev = rec.reassignedFrom;
     const msg = prev.scope === 'subcat'
       ? `Annuler la réaffectation ?\nSous-catégorie restaurée : ${prev.subcategory || '—'}`
       : `Annuler la réaffectation ?\nCatégorie restaurée : ${prev.category}${prev.subcategory ? ' / ' + prev.subcategory : ''}`;
     if (!confirm(msg)) return;
-    exp.category = prev.category;
-    exp.subcategory = prev.subcategory || '';
-    delete exp.reassignedFrom;
-    Storage.saveExpenses(expenses);
+
+    if (prev.type === type) {
+      rec.category = prev.category;
+      rec.subcategory = prev.subcategory || '';
+      delete rec.reassignedFrom;
+      Storage[type === 'expense' ? 'saveExpenses' : 'saveRevenues'](list);
+    } else {
+      // La réaffectation avait changé de bucket : on l'y ramène (même mécanique que
+      // _confirmReassign — retrait + recréation avec un nouvel id dans l'autre bucket).
+      list.splice(list.indexOf(rec), 1);
+      const restored = { ...rec, id: Utils.generateId(), category: prev.category, subcategory: prev.subcategory || '' };
+      delete restored.reassignedFrom;
+      if (prev.type === 'revenue') delete restored.effectiveDate;
+      const otherList = prev.type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
+      otherList.push(restored);
+      Storage[type === 'expense' ? 'saveExpenses' : 'saveRevenues'](list);
+      Storage[prev.type === 'expense' ? 'saveExpenses' : 'saveRevenues'](otherList);
+    }
     this.render();
     Dashboard.render();
   },
@@ -6843,24 +6906,20 @@ const DataEntry = {
       // mais le badge reste sur la catégorie, l'origine du changement). Lignes réaffectées
       // avant ce correctif (pas de scope mémorisé) : repli sur 'cat', comportement d'origine.
       // Seulement hors mode sélection, comme les icônes ✏️/🗑️ — en sélection, la ligne a déjà
-      // un handler mousedown pour le glisser-sélectionner.
-      const reassignScope = isExpense ? this._reassignScope(row) : null;
+      // un handler mousedown pour le glisser-sélectionner. Dépenses ET revenus peuvent être
+      // réaffectés (openReassign gère les deux buckets) — plus de restriction aux dépenses.
+      const reassignScope = this._reassignScope(row);
       const showReassignBadge = !sel && !!reassignScope;
       const catReassignBadge = (showReassignBadge && reassignScope === 'cat')
-        ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
+        ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}');event.stopPropagation()">🏷️</span>`
         : '';
       const subReassignBadge = (showReassignBadge && reassignScope === 'subcat')
-        ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${row.reassignedFrom.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}');event.stopPropagation()">🏷️</span>`
+        ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${row.reassignedFrom.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}');event.stopPropagation()">🏷️</span>`
         : '';
       const amountClass = isExpense ? 'negative' : 'positive';
-      // Réaffecter (🏷️) : seulement sur les dépenses, comme le bouton groupé — les revenus n'ont
-      // pas de sous-catégorie et un modèle de catégories différent (voir openReassign).
-      const reassignIcon = isExpense
-        ? `<button class="btn-icon" onclick="DataEntry.reassignOne('${row.id}');event.stopPropagation()" title="Réaffecter">🏷️</button>`
-        : '';
       const actionsTd = sel ? '' : `<td class="actions-cell">
         <button class="btn-icon" onclick="DataEntry.edit('${row.id}','${row._type}')" title="Modifier">✏️</button>
-        ${reassignIcon}
+        <button class="btn-icon" onclick="DataEntry.reassignOne('${row.id}','${row._type}');event.stopPropagation()" title="Réaffecter">🏷️</button>
         <button class="btn-icon btn-danger" onclick="DataEntry.delete('${row.id}','${row._type}');event.stopPropagation()" title="Supprimer">${Utils.ICON_TRASH}</button>
       </td>`;
 
