@@ -6731,22 +6731,23 @@ const DataEntry = {
     const expenses = Storage.getExpenses(), revenues = Storage.getRevenues();
     const findRec = (id, type) => (type === 'expense' ? expenses : revenues).find(r => r.id === id);
 
-    // reassignedFrom mémorise le bucket ('expense'/'revenue'), catégorie et sous-catégorie
-    // AVANT ce changement (écrasé si déjà présent — un seul niveau d'annulation, le plus
-    // récent) + le scope réellement appliqué ('subcat'/'cat') : alimente le badge 🏷️ (colonne
-    // catégorie ou sous-catégorie selon la portée) et undoReassign(), y compris pour rebasculer
-    // de bucket au besoin. save() (édition manuelle classique) remplace l'objet entier et efface
-    // donc ce marqueur automatiquement — une édition déclarée prend le pas sur l'annulation
-    // d'une réaffectation en masse.
+    // reassignedFrom = { cat, sub } : DEUX niveaux d'annulation indépendants (pas un seul global)
+    // — sinon réaffecter la sous-catégorie d'une ligne déjà réaffectée sur sa catégorie écrasait
+    // le souvenir de cette 1ère réaffectation, la rendant impossible à annuler. cat = catégorie
+    // (et bucket) d'avant le dernier changement de CATÉGORIE ; sub = sous-catégorie d'avant le
+    // dernier changement de SOUS-CATÉGORIE seule. save() (édition manuelle classique) remplace
+    // l'objet entier et efface donc les deux automatiquement — une édition déclarée prend le pas
+    // sur l'annulation d'une réaffectation en masse.
     if (scope === 'subcat') {
       // La sous-catégorie seule ne change jamais de bucket (sameCategory garantit déjà que
       // toutes les lignes ciblées sont dans la même catégorie, donc le même thème/bucket) —
-      // simple mutation en place.
+      // simple mutation en place. cat préservé tel quel (voir _reassignInfo).
       const newSub = fd.get('subcat_only') || '';
       targets.forEach(({ id, type }) => {
         const rec = findRec(id, type);
         if (!rec) return;
-        rec.reassignedFrom = { type, category: rec.category, subcategory: rec.subcategory || '', scope: 'subcat' };
+        const info = this._reassignInfo(rec);
+        rec.reassignedFrom = { cat: info.cat, sub: { subcategory: rec.subcategory || '' } };
         rec.subcategory = newSub;
       });
     } else {
@@ -6761,7 +6762,9 @@ const DataEntry = {
       targets.forEach(({ id, type: oldBucket }) => {
         const rec = findRec(id, oldBucket);
         if (!rec) return;
-        const reassignedFrom = { type: oldBucket, category: rec.category, subcategory: rec.subcategory || '', scope: 'cat' };
+        // sub remis à null : une sous-catégorie réaffectée séparément appartenait à l'ANCIENNE
+        // catégorie, elle n'a plus de sens à annuler une fois la catégorie elle-même changée.
+        const reassignedFrom = { cat: { type: oldBucket, category: rec.category, subcategory: rec.subcategory || '' }, sub: null };
 
         if (oldBucket === newBucket) {
           rec.reassignedFrom = reassignedFrom;
@@ -6789,47 +6792,60 @@ const DataEntry = {
     Dashboard.render();
   },
 
-  // Annule une réaffectation (clic sur le badge 🏷️ posé par _confirmReassign) : restaure bucket,
-  // catégorie et sous-catégorie mémorisés dans reassignedFrom et efface le marqueur, donc le
-  // badge disparaît — un seul niveau d'annulation (la dernière réaffectation en date). `type` =
-  // bucket ACTUEL de la ligne (voir row._type dans render), pas forcément celui d'avant.
-  undoReassign(id, type) {
+  // Normalise reassignedFrom vers la forme actuelle { cat, sub } quel que soit le format de
+  // stockage : lignes déjà réaffectées avec ce format, mais aussi lignes réaffectées par les 2
+  // versions précédentes de cette fonctionnalité (un seul niveau { type, category, subcategory,
+  // scope }, voire { category, subcategory } sans scope pour les toutes premières) — sinon leur
+  // badge disparaîtrait silencieusement après ce correctif. { cat: {...}|null, sub: {...}|null }.
+  _reassignInfo(row) {
+    const rf = row.reassignedFrom;
+    if (!rf) return { cat: null, sub: null };
+    if ('cat' in rf || 'sub' in rf) return { cat: rf.cat || null, sub: rf.sub || null };
+    return rf.scope === 'subcat'
+      ? { cat: null, sub: { subcategory: rf.subcategory || '' } }
+      : { cat: { type: rf.type || 'expense', category: rf.category, subcategory: rf.subcategory || '' }, sub: null };
+  },
+
+  // Annule un des deux niveaux de réaffectation (clic sur le badge 🏷️ catégorie ou
+  // sous-catégorie) : restaure les valeurs mémorisées dans reassignedFrom.cat ou .sub et efface
+  // CE niveau, donc SEUL ce badge disparaît — l'autre niveau (s'il existe) reste annulable
+  // séparément. Annuler la catégorie efface aussi le niveau sous-catégorie : une sous-catégorie
+  // réaffectée depuis appartenait à l'ancienne catégorie, la restaurer avec la nouvelle n'aurait
+  // aucun sens. `type` = bucket ACTUEL de la ligne (voir row._type dans render).
+  undoReassign(id, type, part) {
     const list = type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
     const rec = list.find(r => r.id === id);
-    if (!rec || !rec.reassignedFrom) return;
-    const prev = rec.reassignedFrom;
-    const msg = prev.scope === 'subcat'
-      ? `Annuler la réaffectation ?\nSous-catégorie restaurée : ${prev.subcategory || '—'}`
-      : `Annuler la réaffectation ?\nCatégorie restaurée : ${prev.category}${prev.subcategory ? ' / ' + prev.subcategory : ''}`;
-    if (!confirm(msg)) return;
+    if (!rec) return;
+    const info = this._reassignInfo(rec);
+    const target = part === 'sub' ? info.sub : info.cat;
+    if (!target) return;
 
-    if (prev.type === type) {
-      rec.category = prev.category;
-      rec.subcategory = prev.subcategory || '';
+    if (part === 'sub') {
+      if (!confirm(`Annuler la réaffectation ?\nSous-catégorie restaurée : ${target.subcategory || '—'}`)) return;
+      rec.subcategory = target.subcategory || '';
+      rec.reassignedFrom = { cat: info.cat, sub: null };
+      Storage[type === 'expense' ? 'saveExpenses' : 'saveRevenues'](list);
+    } else if (target.type === type) {
+      if (!confirm(`Annuler la réaffectation ?\nCatégorie restaurée : ${target.category}${target.subcategory ? ' / ' + target.subcategory : ''}`)) return;
+      rec.category = target.category;
+      rec.subcategory = target.subcategory || '';
       delete rec.reassignedFrom;
       Storage[type === 'expense' ? 'saveExpenses' : 'saveRevenues'](list);
     } else {
+      if (!confirm(`Annuler la réaffectation ?\nCatégorie restaurée : ${target.category}${target.subcategory ? ' / ' + target.subcategory : ''}`)) return;
       // La réaffectation avait changé de bucket : on l'y ramène (même mécanique que
       // _confirmReassign — retrait + recréation avec un nouvel id dans l'autre bucket).
       list.splice(list.indexOf(rec), 1);
-      const restored = { ...rec, id: Utils.generateId(), category: prev.category, subcategory: prev.subcategory || '' };
+      const restored = { ...rec, id: Utils.generateId(), category: target.category, subcategory: target.subcategory || '' };
       delete restored.reassignedFrom;
-      if (prev.type === 'revenue') delete restored.effectiveDate;
-      const otherList = prev.type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
+      if (target.type === 'revenue') delete restored.effectiveDate;
+      const otherList = target.type === 'expense' ? Storage.getExpenses() : Storage.getRevenues();
       otherList.push(restored);
       Storage[type === 'expense' ? 'saveExpenses' : 'saveRevenues'](list);
-      Storage[prev.type === 'expense' ? 'saveExpenses' : 'saveRevenues'](otherList);
+      Storage[target.type === 'expense' ? 'saveExpenses' : 'saveRevenues'](otherList);
     }
     this.render();
     Dashboard.render();
-  },
-
-  // Portée effective d'une réaffectation : le scope mémorisé, ou repli 'cat' pour les lignes
-  // réaffectées avant l'ajout de ce champ — null si la ligne n'a jamais été réaffectée. Source
-  // commune au badge de ligne (render) et au filtre "Catégorie/Sous-catégorie réaffectée".
-  _reassignScope(row) {
-    if (!row.reassignedFrom) return null;
-    return row.reassignedFrom.scope || 'cat';
   },
 
   render() {
@@ -6849,7 +6865,7 @@ const DataEntry = {
     if (typeFilter === 'expense') rows = rows.filter(r => r._type === 'expense');
     else if (typeFilter === 'revenue') rows = rows.filter(r => r._type === 'revenue');
     if (catFilter) rows = rows.filter(r => r.category === catFilter);
-    if (reassignFilter) rows = rows.filter(r => this._reassignScope(r) === reassignFilter);
+    if (reassignFilter) rows = rows.filter(r => !!this._reassignInfo(r)[reassignFilter === 'subcat' ? 'sub' : 'cat']);
     if (search) {
       rows = rows.filter(r =>
         (r.description || '').toLowerCase().includes(search) ||
@@ -6900,21 +6916,20 @@ const DataEntry = {
         : '<span class="badge badge-revenue-type">Revenu</span>';
       const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
       const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
-      // Badge de réaffectation (posé par _confirmReassign, effacé par undoReassign ou par toute
-      // édition manuelle via save()) : sur la colonne effectivement modifiée — sous-catégorie
-      // seule (scope 'subcat') ou catégorie (scope 'cat', qui change aussi la sous-catégorie
-      // mais le badge reste sur la catégorie, l'origine du changement). Lignes réaffectées
-      // avant ce correctif (pas de scope mémorisé) : repli sur 'cat', comportement d'origine.
-      // Seulement hors mode sélection, comme les icônes ✏️/🗑️ — en sélection, la ligne a déjà
-      // un handler mousedown pour le glisser-sélectionner. Dépenses ET revenus peuvent être
-      // réaffectés (openReassign gère les deux buckets) — plus de restriction aux dépenses.
-      const reassignScope = this._reassignScope(row);
-      const showReassignBadge = !sel && !!reassignScope;
-      const catReassignBadge = (showReassignBadge && reassignScope === 'cat')
-        ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${row.reassignedFrom.category}${row.reassignedFrom.subcategory ? ' / ' + row.reassignedFrom.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}');event.stopPropagation()">🏷️</span>`
+      // Badges de réaffectation (posés par _confirmReassign, effacés par undoReassign ou par
+      // toute édition manuelle via save()) : catégorie et sous-catégorie sont DEUX niveaux
+      // d'annulation indépendants (_reassignInfo), donc les deux badges peuvent coexister — ex.
+      // catégorie réaffectée hier, puis sa sous-catégorie retouchée aujourd'hui : les deux
+      // restent annulables séparément, chacun sur sa propre colonne. Seulement hors mode
+      // sélection, comme les icônes ✏️/🗑️ — en sélection, la ligne a déjà un handler mousedown
+      // pour le glisser-sélectionner. Dépenses ET revenus peuvent être réaffectés (openReassign
+      // gère les deux buckets) — plus de restriction aux dépenses.
+      const reassignInfo = this._reassignInfo(row);
+      const catReassignBadge = (!sel && reassignInfo.cat)
+        ? `<span class="reassign-badge" title="Catégorie réaffectée — était : ${reassignInfo.cat.category}${reassignInfo.cat.subcategory ? ' / ' + reassignInfo.cat.subcategory : ''}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}','cat');event.stopPropagation()">🏷️</span>`
         : '';
-      const subReassignBadge = (showReassignBadge && reassignScope === 'subcat')
-        ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${row.reassignedFrom.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}');event.stopPropagation()">🏷️</span>`
+      const subReassignBadge = (!sel && reassignInfo.sub)
+        ? `<span class="reassign-badge" title="Sous-catégorie réaffectée — était : ${reassignInfo.sub.subcategory || '—'}. Cliquer pour annuler." onclick="DataEntry.undoReassign('${row.id}','${row._type}','sub');event.stopPropagation()">🏷️</span>`
         : '';
       const amountClass = isExpense ? 'negative' : 'positive';
       const actionsTd = sel ? '' : `<td class="actions-cell">
