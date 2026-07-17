@@ -56,6 +56,10 @@ const DataEntry = {
     this.render();
   },
 
+  // Barre d'actions groupées (mode sélection) : Modifier (actif sur exactement 1 ligne cochée
+  // — réutilise le formulaire d'édition existant), Réaffecter (actif dès 1 ligne — catégorie
+  // et/ou sous-catégorie en masse) et Supprimer (inchangé) partagent toutes le même point
+  // d'entrée « ☑️ Sélectionner », plutôt que le bouton « Supprimer » unique d'avant.
   _updateHeaderButtons() {
     const actions = document.getElementById('donnees-header-actions');
     if (!actions) return;
@@ -65,14 +69,22 @@ const DataEntry = {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn" style="display:none"></button>
         <button class="btn-secondary btn-sm" onclick="DataEntry.toggleSelectionMode()">✕ Annuler</button>
-        <button class="btn-danger-soft" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">${Utils.ICON_TRASH} Tout supprimer (${total})</button>
+        <button class="btn-secondary btn-sm" id="donnees-edit-sel-btn" ${n === 1 ? '' : 'disabled'}
+          onclick="DataEntry.editSelected()" title="${n === 1 ? 'Modifier la ligne sélectionnée' : 'Sélectionnez exactement 1 ligne'}">
+          ✏️ Modifier
+        </button>
+        <button class="btn-secondary btn-sm" id="donnees-reassign-sel-btn" ${n === 0 ? 'disabled' : ''}
+          onclick="DataEntry.openReassign()" title="${n === 0 ? 'Sélectionnez des lignes' : ''}">
+          🏷️ Réaffecter${n > 0 ? ` (${n})` : ''}
+        </button>
         <button class="btn-danger btn-sm" id="donnees-delete-sel-btn" ${n === 0 ? 'disabled' : ''} onclick="DataEntry.deleteSelected()">
           ${Utils.ICON_TRASH} ${n > 0 ? `Supprimer ${n} ligne${n > 1 ? 's' : ''}` : 'Sélectionnez des lignes'}
-        </button>`;
+        </button>
+        <button class="btn-danger-soft" onclick="DataEntry.deleteAll()" id="donnees-delete-all-btn">${Utils.ICON_TRASH} Tout supprimer (${total})</button>`;
     } else {
       actions.innerHTML = `
         <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
-        <button class="btn-danger-soft" id="donnees-delete-mode-btn" onclick="DataEntry.toggleSelectionMode()">${Utils.ICON_TRASH} Supprimer</button>`;
+        <button class="btn-secondary" id="donnees-select-mode-btn" onclick="DataEntry.toggleSelectionMode()">☑️ Sélectionner</button>`;
       // Re-bind add button
       document.getElementById('add-donnees-btn')?.addEventListener('click', () => this.openAddForm());
     }
@@ -149,6 +161,17 @@ const DataEntry = {
     Dashboard.render();
   },
 
+  // Bouton "✏️ Modifier" de la barre groupée : n'a de sens que sur une seule ligne (contrairement
+  // à Supprimer/Réaffecter) — actif seulement si _selected en contient exactement 1 (voir
+  // _updateHeaderButtons) ; réutilise tel quel le formulaire d'édition existant (même modal que
+  // l'icône ✏️ par ligne).
+  editSelected() {
+    if (this._selected.size !== 1) return;
+    const key = [...this._selected][0];
+    const sep = key.lastIndexOf('|');
+    this.edit(key.slice(0, sep), key.slice(sep + 1));
+  },
+
   deleteAll() {
     const n = this._filteredRows.length;
     if (!n) return;
@@ -160,6 +183,142 @@ const DataEntry = {
     this._selected.clear();
     this._selectionMode = false;
     this._updateHeaderButtons();
+    this.render();
+    Dashboard.render();
+  },
+
+  // Bouton "🏷️ Réaffecter" de la barre groupée : change catégorie et/ou sous-catégorie de
+  // toutes les dépenses sélectionnées en une fois. Ne s'applique qu'aux DÉPENSES — les revenus
+  // n'ont ni catégories ni sous-catégories communes (Utils.REVENUE_CATEGORIES, pas de
+  // sous-catégorie du tout, voir save()) ; un revenu dans la sélection est simplement ignoré
+  // (signalé dans la modale plutôt que silencieusement).
+  openReassign() {
+    const parsed = [...this._selected].map(key => {
+      const sep = key.lastIndexOf('|');
+      return { id: key.slice(0, sep), type: key.slice(sep + 1) };
+    });
+    const expenseIds = new Set(parsed.filter(p => p.type === 'expense').map(p => p.id));
+    if (!expenseIds.size) {
+      alert('La réaffectation ne s\'applique qu\'aux dépenses — sélectionnez au moins une dépense.');
+      return;
+    }
+    const revenueCount = parsed.length - expenseIds.size;
+    const targetExpenses = Storage.getExpenses().filter(e => expenseIds.has(e.id));
+
+    // "Sous-catégorie seulement" n'a de sens que si toutes les dépenses ciblées partagent déjà
+    // la même catégorie (sinon : la sous-catégorie de laquelle ?) — sameCategory reste null sinon,
+    // et _reassignForm désactive alors cette option au profit de "Catégorie (et sous-catégorie)".
+    const distinctCats = [...new Set(targetExpenses.map(e => e.category))];
+    const sameCategory = distinctCats.length === 1 ? distinctCats[0] : null;
+
+    Modal.open('Réaffecter', this._reassignForm(targetExpenses.length, revenueCount, sameCategory));
+  },
+
+  _reassignForm(count, revenueSkipped, sameCategory) {
+    const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === 'expense');
+    const catOptions = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    const firstSubcats = cats[0]?.subcategories || [];
+    const catSubcatOptions = firstSubcats.length
+      ? ['', ...firstSubcats].map(s => `<option value="${s}" ${s === '' ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+
+    const sameCatSubcats = sameCategory ? (Categories.getSubcats(sameCategory) || []) : [];
+    const subcatOnlyOptions = sameCatSubcats.length
+      ? ['', ...sameCatSubcats].map(s => `<option value="${s}" ${s === '' ? 'selected' : ''}>${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+
+    const revenueHint = revenueSkipped
+      ? `<br>⚠️ ${revenueSkipped} revenu${revenueSkipped > 1 ? 's' : ''} sélectionné${revenueSkipped > 1 ? 's' : ''} ${revenueSkipped > 1 ? 'ne sont' : "n'est"} pas concerné${revenueSkipped > 1 ? 's' : ''} (réaffectation dépenses uniquement).`
+      : '';
+
+    return `
+      <form onsubmit="DataEntry._confirmReassign(event)">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+          ${count} dépense${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''} ser${count > 1 ? 'ont' : 'a'} réaffectée${count > 1 ? 's' : ''}.${revenueHint}
+        </p>
+        <div class="form-group form-full" style="margin-bottom:14px">
+          <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;cursor:${sameCategory ? 'pointer' : 'not-allowed'};opacity:${sameCategory ? '1' : '0.55'}">
+            <input type="radio" name="reassign_scope" value="subcat" style="margin-top:3px"
+              ${sameCategory ? 'checked' : 'disabled'} onchange="DataEntry._toggleReassignScope('subcat')">
+            <span>Sous-catégorie seulement${sameCategory
+              ? ` <span style="color:var(--text-muted)">(catégorie actuelle : <strong style="color:var(--text)">${sameCategory}</strong>, inchangée)</span>`
+              : ' <span style="font-size:12px">— nécessite que les dépenses sélectionnées partagent déjà la même catégorie</span>'}</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="radio" name="reassign_scope" value="cat" ${sameCategory ? '' : 'checked'} onchange="DataEntry._toggleReassignScope('cat')">
+            Catégorie (et sous-catégorie)
+          </label>
+        </div>
+        <div class="form-group form-full" id="reassign-subcat-only-group" style="${sameCategory ? '' : 'display:none'}">
+          <label>Nouvelle sous-catégorie</label>
+          <select name="subcat_only" ${sameCatSubcats.length ? '' : 'disabled'}>${subcatOnlyOptions}</select>
+        </div>
+        <div class="form-group form-full" id="reassign-cat-group" style="${sameCategory ? 'display:none' : ''}">
+          <label>Nouvelle catégorie</label>
+          <select name="new_category" id="reassign-cat-select" onchange="DataEntry._updateReassignSubcats(this.value)">${catOptions}</select>
+        </div>
+        <div class="form-group form-full" id="reassign-cat-subcat-group" style="${sameCategory ? 'display:none' : ''}">
+          <label>Nouvelle sous-catégorie</label>
+          <select name="new_subcategory" id="reassign-cat-subcat-select" ${firstSubcats.length ? '' : 'disabled'}>${catSubcatOptions}</select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">Réaffecter</button>
+        </div>
+      </form>`;
+  },
+
+  _toggleReassignScope(scope) {
+    const subOnlyGroup = document.getElementById('reassign-subcat-only-group');
+    const catGroup = document.getElementById('reassign-cat-group');
+    const catSubGroup = document.getElementById('reassign-cat-subcat-group');
+    if (!subOnlyGroup || !catGroup || !catSubGroup) return;
+    if (scope === 'subcat') {
+      subOnlyGroup.style.display = ''; catGroup.style.display = 'none'; catSubGroup.style.display = 'none';
+    } else {
+      subOnlyGroup.style.display = 'none'; catGroup.style.display = ''; catSubGroup.style.display = '';
+    }
+  },
+
+  _updateReassignSubcats(catName) {
+    const sel = document.getElementById('reassign-cat-subcat-select');
+    if (!sel) return;
+    const subcats = Categories.getSubcats(catName);
+    if (subcats.length) {
+      sel.disabled = false;
+      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
+    } else {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">—</option>';
+    }
+  },
+
+  _confirmReassign(event) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const scope = fd.get('reassign_scope');
+
+    const expenseIds = new Set();
+    this._selected.forEach(key => {
+      const sep = key.lastIndexOf('|');
+      const id = key.slice(0, sep), type = key.slice(sep + 1);
+      if (type === 'expense') expenseIds.add(id);
+    });
+    if (!expenseIds.size) { Modal.close(); return; }
+
+    const expenses = Storage.getExpenses();
+    if (scope === 'subcat') {
+      const newSub = fd.get('subcat_only') || '';
+      expenses.forEach(e => { if (expenseIds.has(e.id)) e.subcategory = newSub; });
+    } else {
+      const newCat = fd.get('new_category');
+      const newSub = fd.get('new_subcategory') || '';
+      expenses.forEach(e => { if (expenseIds.has(e.id)) { e.category = newCat; e.subcategory = newSub; } });
+    }
+    Storage.saveExpenses(expenses);
+
+    this._selected.clear();
+    Modal.close();
     this.render();
     Dashboard.render();
   },

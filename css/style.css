@@ -621,6 +621,8 @@ input:focus:not(:focus-visible) { outline: none; }
   white-space: nowrap;
 }
 .btn-secondary:hover { background: var(--bg); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-secondary:disabled:hover { background: var(--surface); }
 
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 
