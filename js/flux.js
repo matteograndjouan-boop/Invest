@@ -67,8 +67,39 @@ const Flux = {
 
   // Kept for donut click compatibility
   toggleFilter(label) {
-    if (!label || label === 'Autres') return;
+    if (!label) return;
+    if (label === 'Autres') { this._toggleAutres(); return; }
     this._togglePill(label);
+  },
+
+  // Catégories regroupées dans "Autres" sur le donut (au-delà du top 6 — _categoryBreakdown).
+  _autresCategories() {
+    return this._categoryTotals().slice(6).map(([label]) => label);
+  },
+
+  // "Autres" est actif quand la sélection courante correspond EXACTEMENT à l'ensemble de ses
+  // catégories (pas juste une intersection partielle) — sert au toggle ci-dessous ET à l'état
+  // visuel du donut (_renderDonut), puisque "Autres" est un label synthétique qui n'apparaît
+  // jamais lui-même dans _activeFilters (seules les vraies catégories qui le composent y sont).
+  _isAutresActive(others = this._autresCategories()) {
+    return others.length > 0 && others.length === this._activeFilters.size && others.every(c => this._activeFilters.has(c));
+  },
+
+  // Clic sur le segment/légende "Autres" du donut : sélectionne d'un coup TOUTES les catégories
+  // qui le composent, en mode multi (plusieurs catégories actives à la fois, comme ⊕ Multi). Un
+  // reclic sur "Autres" alors que cette sélection exacte est déjà active l'annule (même logique
+  // toggle que les autres catégories).
+  _toggleAutres() {
+    const others = this._autresCategories();
+    if (!others.length) return;
+    if (this._isAutresActive(others)) {
+      this._clearFilters();
+      return;
+    }
+    this._multiMode = true;
+    this._activeFilters = new Set(others);
+    this._renderCatPills();
+    this.render(true);
   },
 
   clearFilter() { this._clearFilters(); },
@@ -258,11 +289,18 @@ const Flux = {
     // catégorie — deux logiques différentes assumées pour deux besoins différents).
     const colors = entries.map((_, i) => this._monoBlueShade(i, entries.length));
 
+    // "Autres" est un label synthétique : il n'apparaît jamais lui-même dans catFilters (seules
+    // les vraies catégories qui le composent y sont), donc catFilters seul le montrerait toujours
+    // comme non sélectionné/estompé — même quand on vient de cliquer dessus. displayFilters
+    // substitue 'Autres' quand sa sélection exacte est active, pour que le donut/la légende le
+    // mettent en évidence comme n'importe quelle autre catégorie active.
+    const displayFilters = this._isAutresActive() ? new Set(['Autres']) : catFilters;
+
     Charts.fluxDonut(
       entries.map(([k]) => k),
       entries.map(([, v]) => v),
       colors,
-      catFilters,
+      displayFilters,
       (label) => this.toggleFilter(label)
     );
 
@@ -274,8 +312,8 @@ const Flux = {
         const pct = total > 0 ? (value / total * 100) : 0;
         const pctStr = pct.toFixed(1);
         const color = colors[i];
-        const isActive = catFilters.size > 0 && catFilters.has(label);
-        const isFiltered = catFilters.size > 0 && !catFilters.has(label);
+        const isActive = displayFilters.size > 0 && displayFilters.has(label);
+        const isFiltered = displayFilters.size > 0 && !displayFilters.has(label);
         const safeName = label.replace(/'/g, "\\'");
         return `<div class="dl-item${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--ic:${color}" onclick="Flux.toggleFilter('${safeName}')">
           <span class="dl-dot" style="background:${color}"></span>
