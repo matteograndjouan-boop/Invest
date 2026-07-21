@@ -446,12 +446,13 @@ const Charts = {
     // Avec 1 seul mois (filtre "Mois" ou plage plus courte), Chart.js n'a qu'une seule catégorie
     // sur l'axe X : à ses barPercentage/categoryPercentage par défaut (0.9/0.8), les 2 barres
     // Revenus/Dépenses se partagent alors presque toute la largeur du graphique et ressortent en
-    // gros pavés épais façon bâtons. Rétrécies explicitement dans ce cas ; au-delà de 1 mois,
-    // plusieurs catégories se partagent déjà l'espace et les valeurs par défaut restent bien.
+    // gros pavés épais façon bâtons. Rétrécies explicitement dans ce cas (mais modérément — un
+    // 1er essai à 0.5/0.35 rendait les barres trop fines) ; au-delà de 1 mois, plusieurs
+    // catégories se partagent déjà l'espace et les valeurs par défaut restent bien.
     const thin = labels.length <= 1;
     const barDatasets = [
-      { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.5 : 0.9, categoryPercentage: thin ? 0.35 : 0.8 },
-      { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.5 : 0.9, categoryPercentage: thin ? 0.35 : 0.8 },
+      { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
+      { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
     ];
 
     const soldeDataset = {

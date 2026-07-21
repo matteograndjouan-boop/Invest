@@ -1546,16 +1546,20 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    sur tout l'espace restant de la carte, donc centrer évite qu'un grand vide reste coincé sur
    le bord droit quand la carte est plus large que le contenu donut+légende. */
 .flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.25rem; height: 100%; }
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 260px; }
+/* La hauteur du conteneur (index.html, style="height:280px") pilotait déjà le diamètre réel du
+   donut (Chart.js le cale sur la plus petite des deux dimensions) — élargir seulement le
+   max-width ne suffisait pas tant que la hauteur restait plafonnée bas ; les deux montent
+   ensemble ici pour un camembert vraiment plus grand, pas juste une légende resserrée. */
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 320px; }
 
 /* ---- Donut Custom Legend ---- */
-/* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée à 240px (flex-basis, pas
+/* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée à 220px (flex-basis, pas
    flex:1) : sans ça, elle s'étirait pour occuper tout l'espace restant de la carte, laissant un
    grand vide entre le nom et le pourcentage sur chaque ligne dès que la carte dépassait la
-   largeur du contenu réel — le camembert (chart-container ci-dessus, élargi à 260px) reste ainsi
-   l'élément dominant de la carte plutôt que la légende. overflow-y en sécurité si jamais 7
-   lignes (top 6 + Autres) dépassaient la hauteur dispo. */
-.donut-legend { flex: 0 1 240px; max-width: 240px; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
+   largeur du contenu réel — le camembert (chart-container ci-dessus, agrandi à 320px) reste ainsi
+   nettement l'élément dominant de la carte, la légende un simple complément. overflow-y en
+   sécurité si jamais 7 lignes (top 6 + Autres) dépassaient la hauteur dispo. */
+.donut-legend { flex: 0 1 220px; max-width: 220px; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
 
 .dl-item {
   display: flex; align-items: center; gap: 10px;
@@ -1628,14 +1632,20 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .srow-expand-btn:hover { background: var(--border); }
 .srow-expand-btn.open { transform: rotate(90deg); border-color: var(--rc, var(--primary)); color: var(--rc, var(--primary)); }
 
-/* Amount column */
-.srow-td-amount { text-align: right; font-size: 15px; font-weight: 700; color: #dc2626; white-space: nowrap; width: 18%; padding-right: 20px !important; }
+/* Amount column : centré (pas aligné à droite avec un padding fixe) pour rester à équidistance
+   visuelle de la colonne Catégorie à gauche et de la colonne Répartition à droite, quelle que
+   soit la largeur du montant affiché. Un centrage strict retombait plus près de la barre que du
+   nom (la colonne Catégorie est plus large que le texte qu'elle contient, ce vide asymétrique
+   décale le vrai milieu visuel) — padding-right compense pour ramener le texte vers ce milieu.
+   Couleur normale du texte — le rouge suggérait une alerte sur CHAQUE ligne alors que ce ne sont
+   que des montants de dépense, pas des états "danger". */
+.srow-td-amount { text-align: center; font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; width: 18%; padding-right: 56px; }
 
 /* Bar column */
 .srow-td-bar { width: 40%; }
 .srow-bar-outer { display: flex; align-items: center; gap: 10px; }
-.srow-bar-track { flex: 1; height: 12px; border-radius: 6px; overflow: hidden; }
-.srow-bar-fill { height: 12px; border-radius: 6px; min-width: 3px; transition: width 0.4s ease; }
+.srow-bar-track { flex: 1; height: 16px; border-radius: 8px; overflow: hidden; }
+.srow-bar-fill { height: 16px; border-radius: 8px; min-width: 3px; transition: width 0.4s ease; }
 .srow-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 44px; text-align: right; white-space: nowrap; flex-shrink: 0; }
 
 /* Count column */
