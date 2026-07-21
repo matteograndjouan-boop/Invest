@@ -2259,7 +2259,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   position: fixed; z-index: 2000;
   background: var(--surface); border-radius: var(--radius);
   box-shadow: var(--shadow-md);
-  padding: 6px; max-height: 280px; overflow-y: auto;
+  padding: 6px; max-height: 70vh; overflow-y: auto;
   opacity: 0; transform: translateY(-8px);
   pointer-events: none;
   transition: opacity .16s ease, transform .16s ease;
@@ -3425,9 +3425,17 @@ const Dropdown = {
     const width = Math.max(r.width, 170);
     panel.style.width = width + 'px';
     panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) + 'px';
-    const panelH = Math.min(panel.scrollHeight || 200, 280);
-    const spaceBelow = window.innerHeight - r.bottom;
-    const openUp = spaceBelow < panelH + 12 && r.top > spaceBelow;
+
+    // Ouvre du côté (haut/bas) qui a le plus de place, et étire le panneau jusqu'à occuper tout
+    // cet espace disponible (max-height dynamique, pas un plafond fixe) — une liste réaliste
+    // (jusqu'à ~15-20 catégories) tient alors entièrement à l'écran sans avoir besoin de
+    // défiler. overflow-y:auto (CSS) reste un filet de sécurité pour les listes qui dépassent
+    // même ce budget-là (mapping de colonnes à l'import bancaire, etc.).
+    const MARGIN = 12;
+    const spaceBelow = window.innerHeight - r.bottom - MARGIN;
+    const spaceAbove = r.top - MARGIN;
+    const openUp = spaceBelow < spaceAbove;
+    panel.style.maxHeight = Math.max(openUp ? spaceAbove : spaceBelow, 120) + 'px';
     if (openUp) { panel.style.top = ''; panel.style.bottom = (window.innerHeight - r.top + 8) + 'px'; }
     else { panel.style.bottom = ''; panel.style.top = (r.bottom + 8) + 'px'; }
     wrap.classList.add('open');
@@ -3467,10 +3475,15 @@ const Dropdown = {
     });
 
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this._closeAll(); });
-    // Un scroll (page ou conteneur interne, d'où `true` = phase de capture) ou un resize rend la
-    // position déjà calculée du panneau obsolète — le refermer est plus simple/sûr que la
-    // recalculer en continu.
-    window.addEventListener('scroll', () => this._closeAll(), true);
+    // Un scroll (page ou conteneur interne, d'où `true` = phase de capture) rend la position déjà
+    // calculée du panneau obsolète — le refermer est plus simple/sûr que la recalculer en
+    // continu. Exception : le défilement DANS le panneau lui-même (sa propre liste d'options,
+    // overflow-y:auto quand elle dépasse la place disponible) ne doit surtout pas le refermer —
+    // sinon impossible de faire défiler la liste, elle se ferme dès le 1er pixel de scroll.
+    window.addEventListener('scroll', (e) => {
+      if (this._openEl && this._openEl.contains(e.target)) return;
+      this._closeAll();
+    }, true);
     window.addEventListener('resize', () => this._closeAll());
   },
 };
