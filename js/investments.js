@@ -322,8 +322,8 @@ const Investments = {
         <div class="form-grid">
           <div class="form-group"><label>Nom *</label><input name="name" required value="${inv?.name || ''}" placeholder="ex: Apple Inc."></div>
           <div class="form-group"><label>Ticker</label><input name="ticker" value="${inv?.ticker || ''}" placeholder="ex: AAPL"></div>
-          <div class="form-group"><label>Type *</label><select name="type" required>${typeOptions}</select></div>
-          <div class="form-group"><label>Compte *</label><select name="account" required>${accountOptions}</select></div>
+          <div class="form-group"><label>Type *</label>${Dropdown.render('type', typeOptions, { required: true })}</div>
+          <div class="form-group"><label>Compte *</label>${Dropdown.render('account', accountOptions, { required: true })}</div>
           <div class="form-group"><label>Quantité *</label><input name="quantity" type="number" step="0.000001" min="0" required value="${inv?.quantity || ''}"></div>
           <div class="form-group"><label>Prix d'achat moyen (€) *</label><input name="buyPrice" type="number" step="0.01" min="0" required value="${inv?.buyPrice || ''}"></div>
           <div class="form-group"><label>Prix actuel (€) *</label><input name="currentPrice" type="number" step="0.01" min="0" required value="${inv?.currentPrice || ''}"></div>

@@ -129,13 +129,7 @@
           <h1>Vue globale</h1>
           <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
-            <select id="inv-evo-window" class="select-input inv-period-select" onchange="Investments.setEvoWindow(this.value)">
-              <option value="3">3 derniers mois</option>
-              <option value="6">6 derniers mois</option>
-              <option value="12" selected>12 derniers mois</option>
-              <option value="24">24 derniers mois</option>
-              <option value="0">Tout</option>
-            </select>
+            <div id="inv-evo-window-slot" class="inv-period-select"></div>
             <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
         </div>
@@ -237,15 +231,7 @@
             <h3 id="inv-acc-pos-title">Positions détenues</h3>
             <div class="table-toolbar">
               <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input">
-              <select id="pos-filter-type" class="select-input">
-                <option value="">Tous les types</option>
-                <option value="action">Actions</option>
-                <option value="etf">ETF</option>
-                <option value="crypto">Crypto</option>
-                <option value="immobilier">Immobilier</option>
-                <option value="obligations">Obligations</option>
-                <option value="autre">Autre</option>
-              </select>
+              <div id="pos-filter-type-slot"></div>
             </div>
             <div class="table-wrapper">
               <table class="data-table">
@@ -394,9 +380,7 @@
         <div class="card">
           <div class="table-toolbar">
             <input type="text" id="rev-search" placeholder="Rechercher..." class="search-input">
-            <select id="rev-filter-cat" class="select-input">
-              <option value="">Toutes catégories</option>
-            </select>
+            <div id="rev-filter-cat-slot"></div>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
@@ -457,9 +441,7 @@
         <div class="card">
           <div class="table-toolbar">
             <input type="text" id="exp-search" placeholder="Rechercher..." class="search-input">
-            <select id="exp-filter-cat" class="select-input">
-              <option value="">Toutes catégories</option>
-            </select>
+            <div id="exp-filter-cat-slot"></div>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
@@ -596,17 +578,9 @@
             <span class="dt-search-icon">⌕</span>
             <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
           </div>
-          <select id="donnees-filter-type" class="dt-select">
-            <option value="">Dépenses + Revenus</option>
-            <option value="expense">Dépenses seulement</option>
-            <option value="revenue">Revenus seulement</option>
-          </select>
-          <select id="donnees-filter-cat" class="dt-select"><option value="">Toutes catégories</option></select>
-          <select id="donnees-filter-reassign" class="dt-select">
-            <option value="">Toutes les lignes</option>
-            <option value="cat">🏷️ Catégorie réaffectée</option>
-            <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
-          </select>
+          <div id="donnees-filter-type-slot"></div>
+          <div id="donnees-filter-cat-slot"></div>
+          <div id="donnees-filter-reassign-slot"></div>
           <span id="donnees-count" class="donnees-count"></span>
         </div>
         <div class="donnees-table-wrap">
@@ -719,6 +693,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/dropdown.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/period-filter.js"></script>
   <script src="js/investments.js"></script>

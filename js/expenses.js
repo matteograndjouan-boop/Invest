@@ -12,19 +12,12 @@ const Expenses = {
   },
 
   _populateCatFilter() {
-    const catFilter = document.getElementById('exp-filter-cat');
-    if (!catFilter) return;
-    const currentVal = catFilter.value;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().filter(c => Categories._catType(c) === 'expense').forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name;
-      opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
-    if (currentVal && catFilter.querySelector(`option[value="${currentVal}"]`)) {
-      catFilter.value = currentVal;
-    }
+    const currentVal = document.getElementById('exp-filter-cat')?.value || '';
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense');
+    const optsHtml = ['<option value="">Toutes catégories</option>']
+      .concat(cats.map(c => `<option value="${c.name}"${c.name === currentVal ? ' selected' : ''}>${c.name}</option>`))
+      .join('');
+    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml, { className: 'dt-select' });
   },
 
   render() {
@@ -120,11 +113,11 @@ const Expenses = {
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
           <div class="form-group">
             <label>Catégorie *</label>
-            <select name="category" required onchange="Expenses._updateSubcats(this.value)">${catOptions}</select>
+            ${Dropdown.render('category', catOptions, { required: true, onchange: 'Expenses._updateSubcats(this.value)' })}
           </div>
           <div class="form-group">
             <label>Sous-catégorie</label>
-            <select name="subcategory" id="exp-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+            ${Dropdown.render('subcategory', subcatOptions, { id: 'exp-subcat-select', disabled: !subcats.length })}
           </div>
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
@@ -141,16 +134,13 @@ const Expenses = {
   },
 
   _updateSubcats(catName) {
-    const sel = document.getElementById('exp-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('exp-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('exp-subcat-select', optsHtml);
+    Dropdown.setDisabled('exp-subcat-select', !subcats.length);
   },
 
   save(event, id) {

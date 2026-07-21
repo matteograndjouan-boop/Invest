@@ -128,10 +128,10 @@ const Assistant = {
           <div class="form-grid">
             <div class="form-group">
               <label>Type</label>
-              <select name="type" id="asst-type" onchange="Assistant._onTypeChange()">
+              ${Dropdown.render('type', `
                 <option value="depense"${d.isRevenue ? '' : ' selected'}>Dépense</option>
                 <option value="revenu"${d.isRevenue ? ' selected' : ''}>Revenu</option>
-              </select>
+              `, { id: 'asst-type', onchange: 'Assistant._onTypeChange()' })}
             </div>
             <div class="form-group">
               <label>Montant (€) *</label>
@@ -143,11 +143,11 @@ const Assistant = {
             </div>
             <div class="form-group">
               <label>Catégorie *</label>
-              <select name="category" id="asst-cat" required onchange="Assistant._onCatChange()">${catOptions}</select>
+              ${Dropdown.render('category', catOptions, { id: 'asst-cat', required: true, onchange: 'Assistant._onCatChange()' })}
             </div>
             <div class="form-group">
               <label>Sous-catégorie</label>
-              <select name="subcategory" id="asst-subcat">${subOptions}</select>
+              ${Dropdown.render('subcategory', subOptions, { id: 'asst-subcat' })}
             </div>
             <div class="form-group">
               <label>Date *</label>
@@ -164,16 +164,14 @@ const Assistant = {
 
   _onCatChange() {
     const cat = document.getElementById('asst-cat')?.value;
-    const sub = document.getElementById('asst-subcat');
-    if (sub) sub.innerHTML = BankImport._subcatOpts(cat, '');
+    if (document.getElementById('asst-subcat')) Dropdown.setOptions('asst-subcat', BankImport._subcatOpts(cat, ''));
   },
 
   _onTypeChange() {
     const type = document.getElementById('asst-type')?.value;
-    const catSel = document.getElementById('asst-cat');
-    if (!catSel) return;
+    if (!document.getElementById('asst-cat')) return;
     // Un revenu va toujours dans la catégorie "Revenus" par défaut.
-    if (type === 'revenu') catSel.value = BankImport._revenueCat(Storage.getCategories()).name;
+    if (type === 'revenu') Dropdown.setValue('asst-cat', BankImport._revenueCat(Storage.getCategories()).name);
     this._onCatChange();
   },
 
@@ -392,15 +390,15 @@ const Assistant = {
       const subOptions = BankImport._subcatOpts(d.category, d.subcategory || '');
       return `<tr>
         <td style="text-align:center"><input type="checkbox" data-row="${i}" checked></td>
-        <td><select id="am-type-${i}" onchange="Assistant._onMultiType(${i})">
+        <td>${Dropdown.render('am-type-' + i, `
           <option value="depense"${d.isRevenue ? '' : ' selected'}>Dépense</option>
           <option value="revenu"${d.isRevenue ? ' selected' : ''}>Revenu</option>
-        </select></td>
+        `, { small: true, onchange: `Assistant._onMultiType(${i})` })}</td>
         <td><input id="am-date-${i}" type="date" value="${this._esc(d.date)}"></td>
         <td><input id="am-desc-${i}" value="${this._esc(d.description)}" placeholder="libellé"></td>
         <td><input id="am-amt-${i}" type="number" step="0.01" min="0" value="${d.amount != null ? d.amount : ''}"></td>
-        <td><select id="am-cat-${i}" onchange="Assistant._onMultiCat(${i})">${catOptions}</select></td>
-        <td><select id="am-sub-${i}">${subOptions}</select></td>
+        <td>${Dropdown.render('am-cat-' + i, catOptions, { small: true, onchange: `Assistant._onMultiCat(${i})` })}</td>
+        <td>${Dropdown.render('am-sub-' + i, subOptions, { small: true })}</td>
       </tr>`;
     }).join('');
     return `
@@ -423,14 +421,13 @@ const Assistant = {
 
   _onMultiCat(i) {
     const cat = document.getElementById(`am-cat-${i}`)?.value;
-    const sub = document.getElementById(`am-sub-${i}`);
-    if (sub) sub.innerHTML = BankImport._subcatOpts(cat, '');
+    if (document.getElementById(`am-sub-${i}`)) Dropdown.setOptions(`am-sub-${i}`, BankImport._subcatOpts(cat, ''));
   },
 
   _onMultiType(i) {
     const type = document.getElementById(`am-type-${i}`)?.value;
-    const catSel = document.getElementById(`am-cat-${i}`);
-    if (catSel && type === 'revenu') catSel.value = BankImport._revenueCat(Storage.getCategories()).name;
+    if (!document.getElementById(`am-cat-${i}`)) return;
+    if (type === 'revenu') Dropdown.setValue(`am-cat-${i}`, BankImport._revenueCat(Storage.getCategories()).name);
     this._onMultiCat(i);
   },
 

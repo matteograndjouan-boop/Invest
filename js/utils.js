@@ -35,8 +35,8 @@ const Utils = {
       yearOpts.push(`<option value="${y}" ${selYear === y ? 'selected' : ''}>${y}</option>`);
     }
     return `<div class="month-year-picker">
-      <select name="effectiveMonth"><option value="">Mois</option>${monthOpts}</select>
-      <select name="effectiveYear"><option value="">Année</option>${yearOpts.join('')}</select>
+      ${Dropdown.render('effectiveMonth', `<option value="">Mois</option>${monthOpts}`)}
+      ${Dropdown.render('effectiveYear', `<option value="">Année</option>${yearOpts.join('')}`)}
     </div>`;
   },
 

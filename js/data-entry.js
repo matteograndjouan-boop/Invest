@@ -41,14 +41,11 @@ const DataEntry = {
   },
 
   _populateCatFilter() {
-    const catFilter = document.getElementById('donnees-filter-cat');
-    if (!catFilter) return;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name; opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
+    const currentVal = document.getElementById('donnees-filter-cat')?.value || '';
+    const optsHtml = ['<option value="">Toutes catégories</option>']
+      .concat(Storage.getCategories().map(cat => `<option value="${cat.name}"${cat.name === currentVal ? ' selected' : ''}>${cat.name}</option>`))
+      .join('');
+    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml, { className: 'dt-select' });
   },
 
   toggleSelectionMode() {
@@ -272,19 +269,19 @@ const DataEntry = {
         </div>
         <div class="form-group form-full" id="reassign-subcat-only-group" style="${sameCategory ? '' : 'display:none'}">
           <label>Nouvelle sous-catégorie</label>
-          <select name="subcat_only" ${sameCatSubcats.length ? '' : 'disabled'}>${subcatOnlyOptions}</select>
+          ${Dropdown.render('subcat_only', subcatOnlyOptions, { disabled: !sameCatSubcats.length })}
         </div>
         <div class="form-group form-full" id="reassign-type-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Type</label>
-          <select name="new_type" id="reassign-type-select" onchange="DataEntry._updateReassignCats(this.value)">${typeOptions}</select>
+          ${Dropdown.render('new_type', typeOptions, { id: 'reassign-type-select', onchange: 'DataEntry._updateReassignCats(this.value)' })}
         </div>
         <div class="form-group form-full" id="reassign-cat-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Nouvelle catégorie</label>
-          <select name="new_category" id="reassign-cat-select" onchange="DataEntry._updateReassignSubcats(this.value)">${catOptions}</select>
+          ${Dropdown.render('new_category', catOptions, { id: 'reassign-cat-select', onchange: 'DataEntry._updateReassignSubcats(this.value)' })}
         </div>
         <div class="form-group form-full" id="reassign-cat-subcat-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Nouvelle sous-catégorie</label>
-          <select name="new_subcategory" id="reassign-cat-subcat-select" ${firstSubcats.length ? '' : 'disabled'}>${catSubcatOptions}</select>
+          ${Dropdown.render('new_subcategory', catSubcatOptions, { id: 'reassign-cat-subcat-select', disabled: !firstSubcats.length })}
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
@@ -310,24 +307,21 @@ const DataEntry = {
   // catégories sur ce thème (Categories._catType), puis cascade sur les sous-catégories de la
   // 1ère catégorie du nouveau thème — même principe que _updateReassignSubcats pour Catégorie.
   _updateReassignCats(type) {
-    const catSel = document.getElementById('reassign-cat-select');
-    if (!catSel) return;
+    if (!document.getElementById('reassign-cat-select')) return;
     const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === type);
-    catSel.innerHTML = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    const optsHtml = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    Dropdown.setOptions('reassign-cat-select', optsHtml);
     this._updateReassignSubcats(cats[0]?.name || '');
   },
 
   _updateReassignSubcats(catName) {
-    const sel = document.getElementById('reassign-cat-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('reassign-cat-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('reassign-cat-subcat-select', optsHtml);
+    Dropdown.setDisabled('reassign-cat-subcat-select', !subcats.length);
   },
 
   _confirmReassign(event) {
@@ -618,10 +612,10 @@ const DataEntry = {
         <div class="form-grid">
           <div class="form-group form-full">
             <label>Type</label>
-            <select name="entry_type" onchange="DataEntry._toggleTypeFields(this.value)">
+            ${Dropdown.render('entry_type', `
               <option value="expense" ${type === 'expense' ? 'selected' : ''}>Dépense</option>
               <option value="revenue" ${type === 'revenue' ? 'selected' : ''}>Revenu</option>
-            </select>
+            `, { onchange: 'DataEntry._toggleTypeFields(this.value)' })}
           </div>
           <div class="form-group form-full">
             <label>Description *</label>
@@ -641,15 +635,15 @@ const DataEntry = {
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
-            <select name="category" required onchange="DataEntry._updateSubcats(this.value)">${catOptions}</select>
+            ${Dropdown.render('category', catOptions, { required: true, onchange: 'DataEntry._updateSubcats(this.value)' })}
           </div>
           <div class="form-group" id="de-rev-cat-group" style="display:none">
             <label>Catégorie (revenu) *</label>
-            <select name="rev_category">${revCats}</select>
+            ${Dropdown.render('rev_category', revCats)}
           </div>
           <div class="form-group" id="de-subcat-group">
             <label>Sous-catégorie</label>
-            <select name="subcategory" id="de-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+            ${Dropdown.render('subcategory', subcatOptions, { id: 'de-subcat-select', disabled: !subcats.length })}
           </div>
           <div class="form-group form-full">
             <label>Notes</label>
@@ -675,16 +669,13 @@ const DataEntry = {
   },
 
   _updateSubcats(catName) {
-    const sel = document.getElementById('de-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('de-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('de-subcat-select', optsHtml);
+    Dropdown.setDisabled('de-subcat-select', !subcats.length);
   },
 
   save(event, id, originalType) {

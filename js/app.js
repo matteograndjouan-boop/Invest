@@ -415,6 +415,7 @@ function navigateTo(sectionId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  Dropdown.init();
   PeriodFilter.renderUI();
   BankImport.init();
   InvestImport.init();
@@ -425,15 +426,42 @@ document.addEventListener('DOMContentLoaded', () => {
   DataEntry.init();
   Comparisons.init();
 
-  // Populate revenue category filter
-  const revCatFilter = document.getElementById('rev-filter-cat');
-  if (revCatFilter) {
-    Utils.REVENUE_CATEGORIES.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat; opt.textContent = cat;
-      revCatFilter.appendChild(opt);
-    });
-  }
+  // Dropdowns à options fixes (ne changent jamais après le chargement) : rendus une seule fois
+  // ici. Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt
+  // reconstruits par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter
+  // dans expenses.js/data-entry.js.
+  const renderSlot = (slotId, name, optsHtml, opts) => {
+    const slot = document.getElementById(slotId);
+    if (slot) slot.innerHTML = Dropdown.render(name, optsHtml, opts);
+  };
+  renderSlot('inv-evo-window-slot', 'inv-evo-window', `
+    <option value="3">3 derniers mois</option>
+    <option value="6">6 derniers mois</option>
+    <option value="12" selected>12 derniers mois</option>
+    <option value="24">24 derniers mois</option>
+    <option value="0">Tout</option>
+  `, { onchange: 'Investments.setEvoWindow(this.value)' });
+  renderSlot('pos-filter-type-slot', 'pos-filter-type', `
+    <option value="">Tous les types</option>
+    <option value="action">Actions</option>
+    <option value="etf">ETF</option>
+    <option value="crypto">Crypto</option>
+    <option value="immobilier">Immobilier</option>
+    <option value="obligations">Obligations</option>
+    <option value="autre">Autre</option>
+  `);
+  renderSlot('rev-filter-cat-slot', 'rev-filter-cat',
+    ['<option value="">Toutes catégories</option>'].concat(Utils.REVENUE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`)).join(''));
+  renderSlot('donnees-filter-type-slot', 'donnees-filter-type', `
+    <option value="">Dépenses + Revenus</option>
+    <option value="expense">Dépenses seulement</option>
+    <option value="revenue">Revenus seulement</option>
+  `, { className: 'dt-select' });
+  renderSlot('donnees-filter-reassign-slot', 'donnees-filter-reassign', `
+    <option value="">Toutes les lignes</option>
+    <option value="cat">🏷️ Catégorie réaffectée</option>
+    <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
+  `, { className: 'dt-select' });
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

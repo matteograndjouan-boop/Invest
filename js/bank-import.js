@@ -112,7 +112,7 @@ const BankImport = {
       return `<div class="catmap-row">
         <span class="catmap-from" title="${this._esc(e.original || k)}">${this._esc(e.original || k)}</span>
         <span class="catmap-arrow">→</span>
-        <select class="select-input catmap-sel" onchange="BankImport._catMapAction(${idx},'set',this.value)">${opts}</select>
+        ${Dropdown.render('catmap-' + idx, opts, { small: true, onchange: `BankImport._catMapAction(${idx},'set',this.value)` })}
         <button class="btn-icon btn-danger" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">${Utils.ICON_TRASH}</button>
       </div>`;
     }).join('');
@@ -289,24 +289,24 @@ const BankImport = {
                   Colonnes séparées (Jour / Mois / Année)</label>
               </div>
               <div id="map-date-single"${isDateSplit ? ' style="display:none"' : ''}>
-                <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+                ${Dropdown.render('map-date', colOpts(mapping.date, true))}
               </div>
               <div id="map-date-parts"${!isDateSplit ? ' style="display:none"' : ''}>
                 <div class="mapping-split-row mapping-split-3">
-                  <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label><select id="map-date-day" class="select-input">${colOpts(mapping.dateDay, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Mois</label><select id="map-date-month" class="select-input">${colOpts(mapping.dateMonth, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Année <small style="color:var(--text-muted)">(an en cours si vide)</small></label><select id="map-date-year" class="select-input">${colOpts(mapping.dateYear, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label>${Dropdown.render('map-date-day', colOpts(mapping.dateDay, true))}</div>
+                  <div><label class="mapping-sub-lbl">Mois</label>${Dropdown.render('map-date-month', colOpts(mapping.dateMonth, true))}</div>
+                  <div><label class="mapping-sub-lbl">Année <small style="color:var(--text-muted)">(an en cours si vide)</small></label>${Dropdown.render('map-date-year', colOpts(mapping.dateYear, true))}</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">📆 Date effective <small style="font-weight:400;color:var(--text-muted)">(optionnel)</small></label>
-            <select id="map-date-effective" class="select-input">${colOpts(mapping.dateEffective, true)}</select>
+            ${Dropdown.render('map-date-effective', colOpts(mapping.dateEffective, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">📝 Libellé</label>
-            <select id="map-desc" class="select-input">${colOpts(mapping.description, true)}</select>
+            ${Dropdown.render('map-desc', colOpts(mapping.description, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">💶 Montant</label>
@@ -320,23 +320,23 @@ const BankImport = {
                   Débit / Crédit séparés</label>
               </div>
               <div id="map-single-wrap"${isSplit ? ' style="display:none"' : ''}>
-                <select id="map-amount" class="select-input">${colOpts(mapping.amount, true)}</select>
+                ${Dropdown.render('map-amount', colOpts(mapping.amount, true))}
               </div>
               <div id="map-split-wrap"${!isSplit ? ' style="display:none"' : ''}>
                 <div class="mapping-split-row">
-                  <div><label class="mapping-sub-lbl">Débit (sorties)</label><select id="map-debit" class="select-input">${colOpts(mapping.debit, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label><select id="map-credit" class="select-input">${colOpts(mapping.credit, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Débit (sorties)</label>${Dropdown.render('map-debit', colOpts(mapping.debit, true))}</div>
+                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label>${Dropdown.render('map-credit', colOpts(mapping.credit, true))}</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">🏷️ Catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
-            <select id="map-category" class="select-input">${colOpts(mapping.category, true)}</select>
+            ${Dropdown.render('map-category', colOpts(mapping.category, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">🏷️ Sous-catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
-            <select id="map-subcategory" class="select-input">${colOpts(mapping.subcategory, true)}</select>
+            ${Dropdown.render('map-subcategory', colOpts(mapping.subcategory, true))}
           </div>
         </div>
 
@@ -1027,15 +1027,14 @@ const BankImport = {
         if (ob) ob.innerHTML = this._catOriginBadge(t);
       }
     }
-    const subcatSel = document.querySelector(`[data-subcat="${idx}"]`);
-    if (subcatSel) subcatSel.innerHTML = this._subcatOpts(newCat, '');
+    if (document.getElementById('bank-subcat-' + idx)) Dropdown.setOptions('bank-subcat-' + idx, this._subcatOpts(newCat, ''));
   },
 
   // Mémorise la correction manuelle de sous-catégorie (cache libellé + cache correspondance).
   _onSubcatChange(sel, idx) {
     const t = (window._bankTransactions || [])[idx];
     if (!t) return;
-    const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
+    const cat = document.getElementById('bank-cat-' + idx)?.value || t.category;
     GeminiCat.learn(t.descriptionClean || t.description, cat, sel.value);
     if (t.fileCat) GeminiCat.learnCatMatch(t.fileCat, cat, sel.value);
   },
@@ -1075,8 +1074,9 @@ const BankImport = {
       if (!isLocal) {
         const cats = t.isRevenue ? [revCatName] : expCats;
         const opts = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
-        const subcatHtml = `<select data-subcat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
-        catCells = `<td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span><select data-cat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onCatChange(this,${i})">${opts}</select></td><td>${subcatHtml}</td>`;
+        const subcatHtml = Dropdown.render('bank-subcat-' + i, this._subcatOpts(t.category, t.subcategory), { small: true, onchange: `BankImport._onSubcatChange(this,${i})` });
+        const catHtml = Dropdown.render('bank-cat-' + i, opts, { small: true, onchange: `BankImport._onCatChange(this,${i})` });
+        catCells = `<td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span>${catHtml}</td><td>${subcatHtml}</td>`;
       }
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
@@ -1138,22 +1138,18 @@ const BankImport = {
   _confirmImport() {
     const transactions = window._bankTransactions || [];
     const checkboxes   = document.querySelectorAll('[data-idx]');
-    const catSelects   = document.querySelectorAll('[data-cat]');
-    const subcatSelects = document.querySelectorAll('[data-subcat]');
     const expenses     = Storage.getExpenses();
     const revenues     = Storage.getRevenues();
     let impExp = 0, impRev = 0;
 
-    const subcatByIdx = {};
-    subcatSelects.forEach(el => { subcatByIdx[el.dataset.subcat] = el.value; });
     const effByIdx = {};
     document.querySelectorAll('[data-eff]').forEach(el => { effByIdx[el.dataset.eff] = el.value; });
 
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
       const t      = transactions[i];
-      const cat    = catSelects[i]?.value || t.category;
-      const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
+      const cat    = document.getElementById('bank-cat-' + i)?.value ?? t.category;
+      const subcat = document.getElementById('bank-subcat-' + i)?.value ?? t.subcategory ?? '';
       const eff    = (effByIdx[i] || t.effectiveDate || '').trim();
       if (cat !== t.category || subcat !== t.subcategory) {
         GeminiCat.learn(t.descriptionClean || t.description, cat, subcat);

@@ -355,7 +355,7 @@ const Categories = {
         <div class="form-group">
           <label>Appliquer le nouveau nom à :</label>
           <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="date"> <span><strong>À une date charnière</strong> — nouveau nom <select name="dir" class="rename-dir"><option value="after">à partir du (inclus)</option><option value="before">jusqu'au (inclus)</option></select> <input type="date" name="fromdate" value="${today}"> <small>— l'autre côté garde l'ancien nom (imports compris)</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="date"> <span><strong>À une date charnière</strong> — nouveau nom ${Dropdown.render('dir', '<option value="after">à partir du (inclus)</option><option value="before">jusqu\'au (inclus)</option>', { small: true })} <input type="date" name="fromdate" value="${today}"> <small>— l'autre côté garde l'ancien nom (imports compris)</small></span></label>
           <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> du <input type="date" name="pfrom"> au <input type="date" name="pto"> <small>— dans la plage : nouveau nom · en dehors : ancien</small></span></label>
         </div>
         <p class="rename-hint">↪ Le découpage utilise la date comptable de chaque transaction. À l'import, le bon nom est choisi automatiquement selon la date de la dépense.</p>

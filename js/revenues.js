@@ -79,7 +79,7 @@ const Revenues = {
         <div class="form-grid">
           <div class="form-group form-full"><label>Description *</label><input name="description" required value="${rev?.description || ''}" placeholder="ex: Salaire mars"></div>
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${rev?.amount || ''}"></div>
-          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group"><label>Catégorie *</label>${Dropdown.render('category', catOptions, { required: true })}</div>
           <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${rev?.date || today}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${rev?.notes || ''}</textarea></div>
         </div>

@@ -433,11 +433,11 @@ const Budget = {
     return `<form onsubmit="Budget.saveTheme(event)">
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie *</label>
-          <select name="category" required>${cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+          ${Dropdown.render('category', cats.map(c => `<option value="${c.name}">${c.name}</option>`).join(''), { required: true })}</div>
         <div class="form-group"><label>Montant (€) *</label>
           <input name="amount" type="number" step="1" min="0" required placeholder="ex: 400"></div>
         <div class="form-group"><label>Périodicité *</label>
-          <select name="periodMonths">${this._periodOptions(1)}</select></div>
+          ${Dropdown.render('periodMonths', this._periodOptions(1))}</div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${today}">
           <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant (ramené au mois), à partir de cette date.</p></div>
@@ -456,7 +456,7 @@ const Budget = {
         <div class="form-group"><label>Montant (€) *</label>
           <input name="amount" type="number" step="1" min="0" value="${theme.inputAmount || 0}" required></div>
         <div class="form-group"><label>Périodicité *</label>
-          <select name="periodMonths">${this._periodOptions(theme.inputPeriodMonths)}</select></div>
+          ${Dropdown.render('periodMonths', this._periodOptions(theme.inputPeriodMonths))}</div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${theme.startDate || ''}">
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>

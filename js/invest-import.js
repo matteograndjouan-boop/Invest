@@ -233,7 +233,7 @@ const InvestImport = {
           <div style="font-weight:600;font-size:12px">${p.name}</div>
           ${p.isin ? `<div style="font-size:10px;color:var(--text-muted);font-family:monospace">${p.isin}</div>` : ''}
         </td>
-        <td><select data-inv-type="${i}" class="select-input" style="font-size:11px;padding:3px 5px">${typeOptions(p.type)}</select></td>
+        <td>${Dropdown.render('inv-type-' + i, typeOptions(p.type), { small: true })}</td>
         <td style="text-align:right;font-size:12px">${qtyFmt}</td>
         <td style="text-align:right;font-size:12px">${p.buyPrice !== p.currentPrice ? Utils.formatCurrency(p.buyPrice) : '—'}</td>
         <td style="text-align:right;font-size:12px">
@@ -254,7 +254,7 @@ const InvestImport = {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <label style="font-size:13px;font-weight:600;white-space:nowrap">Compte :</label>
-          <select id="invest-import-account" class="select-input" style="font-size:13px">${accountOptions}</select>
+          ${Dropdown.render('invest-import-account', accountOptions)}
         </div>
         <div style="margin-left:auto;font-size:13px;color:var(--text-muted)">
           Valorisation totale : <strong style="color:var(--text)">${Utils.formatCurrency(totalVal)}</strong>
@@ -294,7 +294,6 @@ const InvestImport = {
   _confirmImport() {
     const positions  = window._investPositions || [];
     const checkboxes = document.querySelectorAll('[data-inv-idx]');
-    const typeSelects = document.querySelectorAll('[data-inv-type]');
     const account    = document.getElementById('invest-import-account')?.value || 'autre';
     const existing   = Storage.getInvestments();
     let added = 0, updated = 0;
@@ -302,7 +301,7 @@ const InvestImport = {
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
       const p    = positions[i];
-      const type = typeSelects[i]?.value || p.type;
+      const type = document.getElementById('inv-type-' + i)?.value || p.type;
       const today = new Date().toISOString().split('T')[0];
 
       if (p.existingId) {

@@ -2222,6 +2222,56 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .category-card.cat-ver-add::before { content: none; }
 .category-card.cat-ver-add:hover { border-color: var(--primary); color: var(--primary); transform: none; box-shadow: none; }
 .cat-ver-add-plus { font-size: 26px; line-height: 1; font-weight: 300; }
+
+/* ==================== Dropdown (js/dropdown.js) ====================
+   Remplace les <select> natifs partout dans l'app SAUF le filtre de période (.period-*,
+   js/period-filter.js — composant à part, laissé inchangé). Pilule fermée en dégradé accent,
+   panneau flottant sombre animé (fade + slide), option active = barre colorée à gauche.
+   .dd-panel est en position:fixed, repositionné en JS à l'ouverture (Dropdown._open) pour
+   échapper à tout ancêtre overflow:hidden/auto (tableaux à défilement, modales...). */
+.dd { position: relative; display: inline-block; }
+.form-group .dd, .form-full .dd { display: block; width: 100%; }
+
+.dd-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; min-width: 150px; box-sizing: border-box;
+  padding: 7px 14px; border-radius: 999px; border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff; font-size: 0.8125rem; font-weight: 600; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+  transition: box-shadow .15s, filter .15s;
+}
+.dd-trigger:hover { box-shadow: 0 4px 14px rgba(108,99,255,.4); filter: brightness(1.08); }
+.dd-trigger:disabled { opacity: .45; cursor: not-allowed; filter: none; box-shadow: none; }
+.dd-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-trigger-chev { font-size: 0.65rem; opacity: .9; flex-shrink: 0; transition: transform .18s ease; }
+.dd.open .dd-trigger-chev { transform: rotate(180deg); }
+
+.dd-sm .dd-trigger { padding: 4px 10px; font-size: 0.75rem; min-width: 0; gap: 5px; }
+
+.dd-panel {
+  position: fixed; z-index: 2000;
+  background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 6px; max-height: 280px; overflow-y: auto;
+  opacity: 0; transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+}
+.dd.open .dd-panel { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+.dd-opt {
+  display: block; width: 100%; text-align: left; box-sizing: border-box;
+  padding: 8px 12px 8px 13px; margin: 1px 0;
+  border: none; border-left: 3px solid transparent; border-radius: 8px;
+  background: none; color: var(--text-muted); font-size: 0.8125rem; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.dd-opt:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.dd-opt.active { border-left-color: var(--primary); color: var(--primary); font-weight: 700; background: rgba(108,99,255,.1); }
+.dd-opt:disabled { opacity: .4; cursor: not-allowed; }
+.dd-empty { display: block; padding: 10px 14px; color: var(--text-muted); font-size: 0.8rem; font-style: italic; }
 .cat-ver-add-lbl { font-size: 12px; font-weight: 600; }
 </style>
 </head>
@@ -2348,13 +2398,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           <h1>Vue globale</h1>
           <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
-            <select id="inv-evo-window" class="select-input inv-period-select" onchange="Investments.setEvoWindow(this.value)">
-              <option value="3">3 derniers mois</option>
-              <option value="6">6 derniers mois</option>
-              <option value="12" selected>12 derniers mois</option>
-              <option value="24">24 derniers mois</option>
-              <option value="0">Tout</option>
-            </select>
+            <div id="inv-evo-window-slot" class="inv-period-select"></div>
             <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
         </div>
@@ -2456,15 +2500,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             <h3 id="inv-acc-pos-title">Positions détenues</h3>
             <div class="table-toolbar">
               <input type="text" id="pos-search" placeholder="Rechercher..." class="search-input">
-              <select id="pos-filter-type" class="select-input">
-                <option value="">Tous les types</option>
-                <option value="action">Actions</option>
-                <option value="etf">ETF</option>
-                <option value="crypto">Crypto</option>
-                <option value="immobilier">Immobilier</option>
-                <option value="obligations">Obligations</option>
-                <option value="autre">Autre</option>
-              </select>
+              <div id="pos-filter-type-slot"></div>
             </div>
             <div class="table-wrapper">
               <table class="data-table">
@@ -2613,9 +2649,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
         <div class="card">
           <div class="table-toolbar">
             <input type="text" id="rev-search" placeholder="Rechercher..." class="search-input">
-            <select id="rev-filter-cat" class="select-input">
-              <option value="">Toutes catégories</option>
-            </select>
+            <div id="rev-filter-cat-slot"></div>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
@@ -2676,9 +2710,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
         <div class="card">
           <div class="table-toolbar">
             <input type="text" id="exp-search" placeholder="Rechercher..." class="search-input">
-            <select id="exp-filter-cat" class="select-input">
-              <option value="">Toutes catégories</option>
-            </select>
+            <div id="exp-filter-cat-slot"></div>
           </div>
           <div class="table-wrapper">
             <table class="data-table">
@@ -2815,17 +2847,9 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             <span class="dt-search-icon">⌕</span>
             <input type="text" id="donnees-search" placeholder="Rechercher…" class="donnees-search-input">
           </div>
-          <select id="donnees-filter-type" class="dt-select">
-            <option value="">Dépenses + Revenus</option>
-            <option value="expense">Dépenses seulement</option>
-            <option value="revenue">Revenus seulement</option>
-          </select>
-          <select id="donnees-filter-cat" class="dt-select"><option value="">Toutes catégories</option></select>
-          <select id="donnees-filter-reassign" class="dt-select">
-            <option value="">Toutes les lignes</option>
-            <option value="cat">🏷️ Catégorie réaffectée</option>
-            <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
-          </select>
+          <div id="donnees-filter-type-slot"></div>
+          <div id="donnees-filter-cat-slot"></div>
+          <div id="donnees-filter-reassign-slot"></div>
           <span id="donnees-count" class="donnees-count"></span>
         </div>
         <div class="donnees-table-wrap">
@@ -3089,8 +3113,8 @@ const Utils = {
       yearOpts.push(`<option value="${y}" ${selYear === y ? 'selected' : ''}>${y}</option>`);
     }
     return `<div class="month-year-picker">
-      <select name="effectiveMonth"><option value="">Mois</option>${monthOpts}</select>
-      <select name="effectiveYear"><option value="">Année</option>${yearOpts.join('')}</select>
+      ${Dropdown.render('effectiveMonth', `<option value="">Mois</option>${monthOpts}`)}
+      ${Dropdown.render('effectiveYear', `<option value="">Année</option>${yearOpts.join('')}`)}
     </div>`;
   },
 
@@ -3250,6 +3274,198 @@ const Utils = {
     const sameType = cats.filter(c => Categories._catType(c) === type).map(c => c.name);
     const idx = sameType.indexOf(catName);
     return this.CATEGORY_COLORS[(idx >= 0 ? idx : 0) % this.CATEGORY_COLORS.length];
+  },
+};
+
+</script>
+<script>
+// Dropdown : liste déroulante custom (pilule fermée en dégradé accent + panneau flottant sombre
+// animé) qui remplace les <select> natifs partout dans l'app SAUF le filtre de période
+// (js/period-filter.js, laissé inchangé à la demande explicite — c'est un composant totalement
+// à part, pas basé sur Dropdown). Un <select> natif ne peut pas avoir de coins arrondis/ombre/
+// animation sur sa liste déroulante ouverte (popup rendu par l'OS, hors de portée du CSS) —
+// Dropdown.render() produit donc un markup custom, mais garde un <input type="hidden"> avec le
+// MÊME id/name que l'ancien <select> pour que tout le code existant (FormData, document.
+// getElementById(id).value, attribut onchange="...") continue de fonctionner sans changement.
+// Panneau en position:fixed, repositionné en JS à chaque ouverture (Dropdown._open) : échappe à
+// tout ancêtre overflow:hidden/auto (tableau à défilement, modale...), contrairement à
+// position:absolute qui resterait piégé dans le premier ancêtre positionné.
+const Dropdown = {
+  _openEl: null,
+  _bound: false,
+
+  // Parse une chaîne "<option value=...>Label</option>..." via un <select> hors-DOM — réutilise
+  // le parsing HTML natif du navigateur plutôt qu'un regex, et préserve le comportement du
+  // <select> sans option "selected" (1re option gagne silencieusement), pour un comportement
+  // strictement inchangé par rapport à l'ancien <select>.
+  _parseOptionsHtml(html) {
+    const tmp = document.createElement('select');
+    tmp.innerHTML = html;
+    return [...tmp.options].map(o => ({ value: o.value, label: o.textContent, selected: o.selected, disabled: o.disabled }));
+  },
+
+  _esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  },
+
+  _optsHtml(items) {
+    if (!items.length) return `<span class="dd-empty">Aucune option</span>`;
+    const sel = items.find(o => o.selected) || items[0];
+    return items.map(o => `<button type="button" class="dd-opt${o.value === sel.value ? ' active' : ''}" data-value="${this._esc(o.value)}"${o.disabled ? ' disabled' : ''}>${this._esc(o.label)}</button>`).join('');
+  },
+
+  // options : soit la même chaîne "<option>...</option>" qu'avant (parsée telle quelle), soit un
+  // tableau [{value,label,selected,disabled}] déjà prêt.
+  // opts : { id, name, className, disabled, required, small (variante compacte, tableaux
+  // denses), onchange (chaîne, même style que l'attribut onchange="..." d'avant — s'exécute
+  // avec this = le <input hidden>, donc this.value reste valide) }
+  render(nameOrId, options, opts = {}) {
+    const items = typeof options === 'string' ? this._parseOptionsHtml(options) : (options || []);
+    const selectedItem = items.find(o => o.selected) || items[0] || { value: '', label: '' };
+    const id = opts.id || nameOrId;
+    const name = opts.name !== undefined ? opts.name : nameOrId;
+    const cls = ['dd'];
+    if (opts.small) cls.push('dd-sm');
+    if (opts.className) cls.push(opts.className);
+    if (opts.disabled) cls.push('dd-disabled');
+    const onchangeAttr = opts.onchange ? ` onchange="${this._esc(opts.onchange)}"` : '';
+    const extraAttrs = opts.dataAttrs ? Object.entries(opts.dataAttrs).map(([k, v]) => ` data-${k}="${this._esc(v)}"`).join('') : '';
+
+    return `<div class="${cls.join(' ')}"${extraAttrs}>
+      <button type="button" class="dd-trigger"${opts.disabled ? ' disabled' : ''}>
+        <span class="dd-trigger-label">${this._esc(selectedItem.label || '')}</span>
+        <span class="dd-trigger-chev">▾</span>
+      </button>
+      <input type="hidden" id="${this._esc(id)}" name="${this._esc(name)}" value="${this._esc(selectedItem.value)}"${onchangeAttr}${opts.required ? ' required' : ''}>
+      <div class="dd-panel">${this._optsHtml(items)}</div>
+    </div>`;
+  },
+
+  _wrapOf(id) {
+    const input = document.getElementById(id);
+    return input && input.closest('.dd');
+  },
+
+  // Pour les dropdowns "filtre" recréés à chaque render() : si un listener externe a été
+  // attaché une fois sur l'élément (ex. document.getElementById('x').addEventListener('change',
+  // ...) au chargement), remplacer le noeud via render()+innerHTML le détacherait silencieusement
+  // à la 1re reconstruction. mount() met à jour EN PLACE (setOptions, garde le même <input>) si le
+  // dropdown existe déjà, et ne fait un render() complet que la toute première fois.
+  mount(slotId, name, options, opts = {}) {
+    const id = opts.id || name;
+    if (document.getElementById(id)) {
+      this.setOptions(id, options, opts.silent);
+      if (opts.disabled !== undefined) this.setDisabled(id, opts.disabled);
+    } else {
+      const slot = document.getElementById(slotId);
+      if (slot) slot.innerHTML = this.render(name, options, opts);
+    }
+  },
+
+  // Reconstruit les options d'un dropdown déjà rendu — équivalent de l'ancien
+  // `select.innerHTML = newOptionsHtml` pour les cascades catégorie -> sous-catégorie. `id` =
+  // id de l'ancien <select> (porté aujourd'hui par le <input hidden>). Redéclenche 'change' si
+  // la valeur effectivement sélectionnée diffère de l'ancienne (nouvelle liste ne contenant
+  // plus l'ancienne valeur, ex. changement de catégorie qui vide la sous-catégorie).
+  setOptions(id, options, silent = false) {
+    const wrap = this._wrapOf(id);
+    if (!wrap) return;
+    const input = document.getElementById(id);
+    const items = typeof options === 'string' ? this._parseOptionsHtml(options) : (options || []);
+    const selectedItem = items.find(o => o.selected) || items[0] || { value: '', label: '' };
+    const panel = wrap.querySelector('.dd-panel');
+    if (panel) panel.innerHTML = this._optsHtml(items);
+    const label = wrap.querySelector('.dd-trigger-label');
+    if (label) label.textContent = selectedItem.label || '';
+    const changed = input.value !== selectedItem.value;
+    input.value = selectedItem.value;
+    if (changed && !silent) input.dispatchEvent(new Event('change', { bubbles: true }));
+  },
+
+  // Change juste la valeur sélectionnée sans toucher à la liste d'options (équivalent de
+  // `select.value = x`).
+  setValue(id, value, silent = false) {
+    const wrap = this._wrapOf(id);
+    if (!wrap) return;
+    const input = document.getElementById(id);
+    const opt = [...wrap.querySelectorAll('.dd-opt')].find(o => o.dataset.value === String(value));
+    wrap.querySelectorAll('.dd-opt').forEach(o => o.classList.toggle('active', o === opt));
+    const label = wrap.querySelector('.dd-trigger-label');
+    if (label && opt) label.textContent = opt.textContent;
+    const changed = input.value !== value;
+    input.value = value;
+    if (changed && !silent) input.dispatchEvent(new Event('change', { bubbles: true }));
+  },
+
+  // (Dés)active un dropdown déjà rendu (équivalent de `select.disabled = bool`).
+  setDisabled(id, disabled) {
+    const wrap = this._wrapOf(id);
+    if (!wrap) return;
+    wrap.classList.toggle('dd-disabled', !!disabled);
+    const trigger = wrap.querySelector('.dd-trigger');
+    if (trigger) trigger.disabled = !!disabled;
+    if (disabled && this._openEl === wrap) this._closeAll();
+  },
+
+  _closeAll() {
+    if (this._openEl) { this._openEl.classList.remove('open'); this._openEl = null; }
+  },
+
+  _open(wrap) {
+    const trigger = wrap.querySelector('.dd-trigger');
+    const panel = wrap.querySelector('.dd-panel');
+    if (!trigger || !panel || trigger.disabled) return;
+    const r = trigger.getBoundingClientRect();
+    const width = Math.max(r.width, 170);
+    panel.style.width = width + 'px';
+    panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) + 'px';
+    const panelH = Math.min(panel.scrollHeight || 200, 280);
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openUp = spaceBelow < panelH + 12 && r.top > spaceBelow;
+    if (openUp) { panel.style.top = ''; panel.style.bottom = (window.innerHeight - r.top + 8) + 'px'; }
+    else { panel.style.bottom = ''; panel.style.top = (r.bottom + 8) + 'px'; }
+    wrap.classList.add('open');
+    this._openEl = wrap;
+  },
+
+  init() {
+    if (this._bound) return;
+    this._bound = true;
+
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.dd-trigger');
+      if (trigger) {
+        e.stopPropagation();
+        const wrap = trigger.closest('.dd');
+        if (!wrap || wrap.classList.contains('dd-disabled') || trigger.disabled) return;
+        if (this._openEl === wrap) this._closeAll();
+        else { this._closeAll(); this._open(wrap); }
+        return;
+      }
+      const opt = e.target.closest('.dd-opt');
+      if (opt && !opt.disabled) {
+        e.stopPropagation();
+        const wrap = opt.closest('.dd');
+        const input = wrap.querySelector('input[type="hidden"]');
+        const label = wrap.querySelector('.dd-trigger-label');
+        const value = opt.dataset.value;
+        wrap.querySelectorAll('.dd-opt').forEach(o => o.classList.toggle('active', o === opt));
+        if (label) label.textContent = opt.textContent;
+        const changed = input.value !== value;
+        input.value = value;
+        this._closeAll();
+        if (changed) input.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      if (this._openEl && !this._openEl.contains(e.target)) this._closeAll();
+    });
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this._closeAll(); });
+    // Un scroll (page ou conteneur interne, d'où `true` = phase de capture) ou un resize rend la
+    // position déjà calculée du panneau obsolète — le refermer est plus simple/sûr que la
+    // recalculer en continu.
+    window.addEventListener('scroll', () => this._closeAll(), true);
+    window.addEventListener('resize', () => this._closeAll());
   },
 };
 
@@ -4667,8 +4883,8 @@ const Investments = {
         <div class="form-grid">
           <div class="form-group"><label>Nom *</label><input name="name" required value="${inv?.name || ''}" placeholder="ex: Apple Inc."></div>
           <div class="form-group"><label>Ticker</label><input name="ticker" value="${inv?.ticker || ''}" placeholder="ex: AAPL"></div>
-          <div class="form-group"><label>Type *</label><select name="type" required>${typeOptions}</select></div>
-          <div class="form-group"><label>Compte *</label><select name="account" required>${accountOptions}</select></div>
+          <div class="form-group"><label>Type *</label>${Dropdown.render('type', typeOptions, { required: true })}</div>
+          <div class="form-group"><label>Compte *</label>${Dropdown.render('account', accountOptions, { required: true })}</div>
           <div class="form-group"><label>Quantité *</label><input name="quantity" type="number" step="0.000001" min="0" required value="${inv?.quantity || ''}"></div>
           <div class="form-group"><label>Prix d'achat moyen (€) *</label><input name="buyPrice" type="number" step="0.01" min="0" required value="${inv?.buyPrice || ''}"></div>
           <div class="form-group"><label>Prix actuel (€) *</label><input name="currentPrice" type="number" step="0.01" min="0" required value="${inv?.currentPrice || ''}"></div>
@@ -4739,19 +4955,12 @@ const Expenses = {
   },
 
   _populateCatFilter() {
-    const catFilter = document.getElementById('exp-filter-cat');
-    if (!catFilter) return;
-    const currentVal = catFilter.value;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().filter(c => Categories._catType(c) === 'expense').forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name;
-      opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
-    if (currentVal && catFilter.querySelector(`option[value="${currentVal}"]`)) {
-      catFilter.value = currentVal;
-    }
+    const currentVal = document.getElementById('exp-filter-cat')?.value || '';
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense');
+    const optsHtml = ['<option value="">Toutes catégories</option>']
+      .concat(cats.map(c => `<option value="${c.name}"${c.name === currentVal ? ' selected' : ''}>${c.name}</option>`))
+      .join('');
+    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml, { className: 'dt-select' });
   },
 
   render() {
@@ -4847,11 +5056,11 @@ const Expenses = {
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${exp?.amount || ''}"></div>
           <div class="form-group">
             <label>Catégorie *</label>
-            <select name="category" required onchange="Expenses._updateSubcats(this.value)">${catOptions}</select>
+            ${Dropdown.render('category', catOptions, { required: true, onchange: 'Expenses._updateSubcats(this.value)' })}
           </div>
           <div class="form-group">
             <label>Sous-catégorie</label>
-            <select name="subcategory" id="exp-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+            ${Dropdown.render('subcategory', subcatOptions, { id: 'exp-subcat-select', disabled: !subcats.length })}
           </div>
           <div class="form-group"><label>Date de transaction *</label><input name="date" type="date" required value="${exp?.date || today}"></div>
           <div class="form-group">
@@ -4868,16 +5077,13 @@ const Expenses = {
   },
 
   _updateSubcats(catName) {
-    const sel = document.getElementById('exp-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('exp-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('exp-subcat-select', optsHtml);
+    Dropdown.setDisabled('exp-subcat-select', !subcats.length);
   },
 
   save(event, id) {
@@ -4996,7 +5202,7 @@ const Revenues = {
         <div class="form-grid">
           <div class="form-group form-full"><label>Description *</label><input name="description" required value="${rev?.description || ''}" placeholder="ex: Salaire mars"></div>
           <div class="form-group"><label>Montant (€) *</label><input name="amount" type="number" step="0.01" min="0" required value="${rev?.amount || ''}"></div>
-          <div class="form-group"><label>Catégorie *</label><select name="category" required>${catOptions}</select></div>
+          <div class="form-group"><label>Catégorie *</label>${Dropdown.render('category', catOptions, { required: true })}</div>
           <div class="form-group"><label>Date *</label><input name="date" type="date" required value="${rev?.date || today}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${rev?.notes || ''}</textarea></div>
         </div>
@@ -6040,7 +6246,7 @@ const Categories = {
         <div class="form-group">
           <label>Appliquer le nouveau nom à :</label>
           <label class="rename-scope"><input type="radio" name="scope" value="all" checked> <span><strong>Toutes</strong> les transactions <small>— renommage simple</small></span></label>
-          <label class="rename-scope"><input type="radio" name="scope" value="date"> <span><strong>À une date charnière</strong> — nouveau nom <select name="dir" class="rename-dir"><option value="after">à partir du (inclus)</option><option value="before">jusqu'au (inclus)</option></select> <input type="date" name="fromdate" value="${today}"> <small>— l'autre côté garde l'ancien nom (imports compris)</small></span></label>
+          <label class="rename-scope"><input type="radio" name="scope" value="date"> <span><strong>À une date charnière</strong> — nouveau nom ${Dropdown.render('dir', '<option value="after">à partir du (inclus)</option><option value="before">jusqu\'au (inclus)</option>', { small: true })} <input type="date" name="fromdate" value="${today}"> <small>— l'autre côté garde l'ancien nom (imports compris)</small></span></label>
           <label class="rename-scope"><input type="radio" name="scope" value="period"> <span><strong>Sur une période</strong> du <input type="date" name="pfrom"> au <input type="date" name="pto"> <small>— dans la plage : nouveau nom · en dehors : ancien</small></span></label>
         </div>
         <p class="rename-hint">↪ Le découpage utilise la date comptable de chaque transaction. À l'import, le bon nom est choisi automatiquement selon la date de la dépense.</p>
@@ -6496,14 +6702,11 @@ const DataEntry = {
   },
 
   _populateCatFilter() {
-    const catFilter = document.getElementById('donnees-filter-cat');
-    if (!catFilter) return;
-    catFilter.innerHTML = '<option value="">Toutes catégories</option>';
-    Storage.getCategories().forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name; opt.textContent = cat.name;
-      catFilter.appendChild(opt);
-    });
+    const currentVal = document.getElementById('donnees-filter-cat')?.value || '';
+    const optsHtml = ['<option value="">Toutes catégories</option>']
+      .concat(Storage.getCategories().map(cat => `<option value="${cat.name}"${cat.name === currentVal ? ' selected' : ''}>${cat.name}</option>`))
+      .join('');
+    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml, { className: 'dt-select' });
   },
 
   toggleSelectionMode() {
@@ -6727,19 +6930,19 @@ const DataEntry = {
         </div>
         <div class="form-group form-full" id="reassign-subcat-only-group" style="${sameCategory ? '' : 'display:none'}">
           <label>Nouvelle sous-catégorie</label>
-          <select name="subcat_only" ${sameCatSubcats.length ? '' : 'disabled'}>${subcatOnlyOptions}</select>
+          ${Dropdown.render('subcat_only', subcatOnlyOptions, { disabled: !sameCatSubcats.length })}
         </div>
         <div class="form-group form-full" id="reassign-type-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Type</label>
-          <select name="new_type" id="reassign-type-select" onchange="DataEntry._updateReassignCats(this.value)">${typeOptions}</select>
+          ${Dropdown.render('new_type', typeOptions, { id: 'reassign-type-select', onchange: 'DataEntry._updateReassignCats(this.value)' })}
         </div>
         <div class="form-group form-full" id="reassign-cat-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Nouvelle catégorie</label>
-          <select name="new_category" id="reassign-cat-select" onchange="DataEntry._updateReassignSubcats(this.value)">${catOptions}</select>
+          ${Dropdown.render('new_category', catOptions, { id: 'reassign-cat-select', onchange: 'DataEntry._updateReassignSubcats(this.value)' })}
         </div>
         <div class="form-group form-full" id="reassign-cat-subcat-group" style="${sameCategory ? 'display:none' : ''}">
           <label>Nouvelle sous-catégorie</label>
-          <select name="new_subcategory" id="reassign-cat-subcat-select" ${firstSubcats.length ? '' : 'disabled'}>${catSubcatOptions}</select>
+          ${Dropdown.render('new_subcategory', catSubcatOptions, { id: 'reassign-cat-subcat-select', disabled: !firstSubcats.length })}
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
@@ -6765,24 +6968,21 @@ const DataEntry = {
   // catégories sur ce thème (Categories._catType), puis cascade sur les sous-catégories de la
   // 1ère catégorie du nouveau thème — même principe que _updateReassignSubcats pour Catégorie.
   _updateReassignCats(type) {
-    const catSel = document.getElementById('reassign-cat-select');
-    if (!catSel) return;
+    if (!document.getElementById('reassign-cat-select')) return;
     const cats = Storage.getActiveCategories().filter(c => Categories._catType(c) === type);
-    catSel.innerHTML = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    const optsHtml = cats.map((c, i) => `<option value="${c.name}" ${i === 0 ? 'selected' : ''}>${c.name}</option>`).join('');
+    Dropdown.setOptions('reassign-cat-select', optsHtml);
     this._updateReassignSubcats(cats[0]?.name || '');
   },
 
   _updateReassignSubcats(catName) {
-    const sel = document.getElementById('reassign-cat-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('reassign-cat-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('reassign-cat-subcat-select', optsHtml);
+    Dropdown.setDisabled('reassign-cat-subcat-select', !subcats.length);
   },
 
   _confirmReassign(event) {
@@ -7073,10 +7273,10 @@ const DataEntry = {
         <div class="form-grid">
           <div class="form-group form-full">
             <label>Type</label>
-            <select name="entry_type" onchange="DataEntry._toggleTypeFields(this.value)">
+            ${Dropdown.render('entry_type', `
               <option value="expense" ${type === 'expense' ? 'selected' : ''}>Dépense</option>
               <option value="revenue" ${type === 'revenue' ? 'selected' : ''}>Revenu</option>
-            </select>
+            `, { onchange: 'DataEntry._toggleTypeFields(this.value)' })}
           </div>
           <div class="form-group form-full">
             <label>Description *</label>
@@ -7096,15 +7296,15 @@ const DataEntry = {
           </div>
           <div class="form-group" id="de-cat-group">
             <label>Catégorie *</label>
-            <select name="category" required onchange="DataEntry._updateSubcats(this.value)">${catOptions}</select>
+            ${Dropdown.render('category', catOptions, { required: true, onchange: 'DataEntry._updateSubcats(this.value)' })}
           </div>
           <div class="form-group" id="de-rev-cat-group" style="display:none">
             <label>Catégorie (revenu) *</label>
-            <select name="rev_category">${revCats}</select>
+            ${Dropdown.render('rev_category', revCats)}
           </div>
           <div class="form-group" id="de-subcat-group">
             <label>Sous-catégorie</label>
-            <select name="subcategory" id="de-subcat-select" ${!subcats.length ? 'disabled' : ''}>${subcatOptions}</select>
+            ${Dropdown.render('subcategory', subcatOptions, { id: 'de-subcat-select', disabled: !subcats.length })}
           </div>
           <div class="form-group form-full">
             <label>Notes</label>
@@ -7130,16 +7330,13 @@ const DataEntry = {
   },
 
   _updateSubcats(catName) {
-    const sel = document.getElementById('de-subcat-select');
-    if (!sel) return;
+    if (!document.getElementById('de-subcat-select')) return;
     const subcats = Categories.getSubcats(catName);
-    if (subcats.length) {
-      sel.disabled = false;
-      sel.innerHTML = ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('');
-    } else {
-      sel.disabled = true;
-      sel.innerHTML = '<option value="">—</option>';
-    }
+    const optsHtml = subcats.length
+      ? ['', ...subcats].map(s => `<option value="${s}">${s || '—'}</option>`).join('')
+      : '<option value="">—</option>';
+    Dropdown.setOptions('de-subcat-select', optsHtml);
+    Dropdown.setDisabled('de-subcat-select', !subcats.length);
   },
 
   save(event, id, originalType) {
@@ -7621,11 +7818,11 @@ const Budget = {
     return `<form onsubmit="Budget.saveTheme(event)">
       <div class="form-grid">
         <div class="form-group form-full"><label>Catégorie *</label>
-          <select name="category" required>${cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+          ${Dropdown.render('category', cats.map(c => `<option value="${c.name}">${c.name}</option>`).join(''), { required: true })}</div>
         <div class="form-group"><label>Montant (€) *</label>
           <input name="amount" type="number" step="1" min="0" required placeholder="ex: 400"></div>
         <div class="form-group"><label>Périodicité *</label>
-          <select name="periodMonths">${this._periodOptions(1)}</select></div>
+          ${Dropdown.render('periodMonths', this._periodOptions(1))}</div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${today}">
           <p class="rename-hint">Le montant prévu de chaque période est calculé à partir de ce montant (ramené au mois), à partir de cette date.</p></div>
@@ -7644,7 +7841,7 @@ const Budget = {
         <div class="form-group"><label>Montant (€) *</label>
           <input name="amount" type="number" step="1" min="0" value="${theme.inputAmount || 0}" required></div>
         <div class="form-group"><label>Périodicité *</label>
-          <select name="periodMonths">${this._periodOptions(theme.inputPeriodMonths)}</select></div>
+          ${Dropdown.render('periodMonths', this._periodOptions(theme.inputPeriodMonths))}</div>
         <div class="form-group form-full"><label>Date de début</label>
           <input name="startDate" type="date" value="${theme.startDate || ''}">
           <p class="rename-hint">Laisser vide = budget actif depuis toujours.</p></div>
@@ -7810,14 +8007,14 @@ const Patrimony = {
           <div class="form-group form-full"><label>Nom *</label><input name="name" required value="${item?.name || ''}" placeholder="ex: Résidence principale"></div>
           <div class="form-group">
             <label>Type *</label>
-            <select name="type" required onchange="Patrimony._updateCats(this.value)">
+            ${Dropdown.render('type', `
               <option value="actif" ${type === 'actif' ? 'selected' : ''}>Actif</option>
               <option value="passif" ${type === 'passif' ? 'selected' : ''}>Passif</option>
-            </select>
+            `, { required: true, onchange: 'Patrimony._updateCats(this.value)' })}
           </div>
           <div class="form-group">
             <label>Catégorie *</label>
-            <select name="category" id="pat-cat-select" required>${catOptions(type)}</select>
+            ${Dropdown.render('category', catOptions(type), { id: 'pat-cat-select', required: true })}
           </div>
           <div class="form-group"><label>Valeur (€) *</label><input name="value" type="number" step="0.01" min="0" required value="${item?.value || ''}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${item?.notes || ''}</textarea></div>
@@ -7830,10 +8027,9 @@ const Patrimony = {
   },
 
   _updateCats(type) {
-    const sel = document.getElementById('pat-cat-select');
-    if (!sel) return;
-    sel.innerHTML = Utils.PATRIMONY_CATEGORIES[type]
-      .map(c => `<option value="${c}">${c}</option>`).join('');
+    if (!document.getElementById('pat-cat-select')) return;
+    const optsHtml = Utils.PATRIMONY_CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+    Dropdown.setOptions('pat-cat-select', optsHtml);
   },
 
   save(event, id) {
@@ -8921,7 +9117,7 @@ const BankImport = {
       return `<div class="catmap-row">
         <span class="catmap-from" title="${this._esc(e.original || k)}">${this._esc(e.original || k)}</span>
         <span class="catmap-arrow">→</span>
-        <select class="select-input catmap-sel" onchange="BankImport._catMapAction(${idx},'set',this.value)">${opts}</select>
+        ${Dropdown.render('catmap-' + idx, opts, { small: true, onchange: `BankImport._catMapAction(${idx},'set',this.value)` })}
         <button class="btn-icon btn-danger" title="Oublier cette correspondance" onclick="BankImport._catMapAction(${idx},'del')">${Utils.ICON_TRASH}</button>
       </div>`;
     }).join('');
@@ -9098,24 +9294,24 @@ const BankImport = {
                   Colonnes séparées (Jour / Mois / Année)</label>
               </div>
               <div id="map-date-single"${isDateSplit ? ' style="display:none"' : ''}>
-                <select id="map-date" class="select-input">${colOpts(mapping.date, true)}</select>
+                ${Dropdown.render('map-date', colOpts(mapping.date, true))}
               </div>
               <div id="map-date-parts"${!isDateSplit ? ' style="display:none"' : ''}>
                 <div class="mapping-split-row mapping-split-3">
-                  <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label><select id="map-date-day" class="select-input">${colOpts(mapping.dateDay, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Mois</label><select id="map-date-month" class="select-input">${colOpts(mapping.dateMonth, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Année <small style="color:var(--text-muted)">(an en cours si vide)</small></label><select id="map-date-year" class="select-input">${colOpts(mapping.dateYear, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Jour <small>(optionnel)</small></label>${Dropdown.render('map-date-day', colOpts(mapping.dateDay, true))}</div>
+                  <div><label class="mapping-sub-lbl">Mois</label>${Dropdown.render('map-date-month', colOpts(mapping.dateMonth, true))}</div>
+                  <div><label class="mapping-sub-lbl">Année <small style="color:var(--text-muted)">(an en cours si vide)</small></label>${Dropdown.render('map-date-year', colOpts(mapping.dateYear, true))}</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">📆 Date effective <small style="font-weight:400;color:var(--text-muted)">(optionnel)</small></label>
-            <select id="map-date-effective" class="select-input">${colOpts(mapping.dateEffective, true)}</select>
+            ${Dropdown.render('map-date-effective', colOpts(mapping.dateEffective, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">📝 Libellé</label>
-            <select id="map-desc" class="select-input">${colOpts(mapping.description, true)}</select>
+            ${Dropdown.render('map-desc', colOpts(mapping.description, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">💶 Montant</label>
@@ -9129,23 +9325,23 @@ const BankImport = {
                   Débit / Crédit séparés</label>
               </div>
               <div id="map-single-wrap"${isSplit ? ' style="display:none"' : ''}>
-                <select id="map-amount" class="select-input">${colOpts(mapping.amount, true)}</select>
+                ${Dropdown.render('map-amount', colOpts(mapping.amount, true))}
               </div>
               <div id="map-split-wrap"${!isSplit ? ' style="display:none"' : ''}>
                 <div class="mapping-split-row">
-                  <div><label class="mapping-sub-lbl">Débit (sorties)</label><select id="map-debit" class="select-input">${colOpts(mapping.debit, true)}</select></div>
-                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label><select id="map-credit" class="select-input">${colOpts(mapping.credit, true)}</select></div>
+                  <div><label class="mapping-sub-lbl">Débit (sorties)</label>${Dropdown.render('map-debit', colOpts(mapping.debit, true))}</div>
+                  <div><label class="mapping-sub-lbl">Crédit (entrées)</label>${Dropdown.render('map-credit', colOpts(mapping.credit, true))}</div>
                 </div>
               </div>
             </div>
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">🏷️ Catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
-            <select id="map-category" class="select-input">${colOpts(mapping.category, true)}</select>
+            ${Dropdown.render('map-category', colOpts(mapping.category, true))}
           </div>
           <div class="mapping-field-row">
             <label class="mapping-field-label">🏷️ Sous-catégorie <small style="font-weight:400;color:var(--text-muted)">(fichier, optionnel)</small></label>
-            <select id="map-subcategory" class="select-input">${colOpts(mapping.subcategory, true)}</select>
+            ${Dropdown.render('map-subcategory', colOpts(mapping.subcategory, true))}
           </div>
         </div>
 
@@ -9836,15 +10032,14 @@ const BankImport = {
         if (ob) ob.innerHTML = this._catOriginBadge(t);
       }
     }
-    const subcatSel = document.querySelector(`[data-subcat="${idx}"]`);
-    if (subcatSel) subcatSel.innerHTML = this._subcatOpts(newCat, '');
+    if (document.getElementById('bank-subcat-' + idx)) Dropdown.setOptions('bank-subcat-' + idx, this._subcatOpts(newCat, ''));
   },
 
   // Mémorise la correction manuelle de sous-catégorie (cache libellé + cache correspondance).
   _onSubcatChange(sel, idx) {
     const t = (window._bankTransactions || [])[idx];
     if (!t) return;
-    const cat = document.querySelector(`[data-cat="${idx}"]`)?.value || t.category;
+    const cat = document.getElementById('bank-cat-' + idx)?.value || t.category;
     GeminiCat.learn(t.descriptionClean || t.description, cat, sel.value);
     if (t.fileCat) GeminiCat.learnCatMatch(t.fileCat, cat, sel.value);
   },
@@ -9884,8 +10079,9 @@ const BankImport = {
       if (!isLocal) {
         const cats = t.isRevenue ? [revCatName] : expCats;
         const opts = cats.map(c => `<option value="${c}"${c === t.category ? ' selected' : ''}>${c}</option>`).join('');
-        const subcatHtml = `<select data-subcat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onSubcatChange(this,${i})">${this._subcatOpts(t.category, t.subcategory)}</select>`;
-        catCells = `<td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span><select data-cat="${i}" class="select-input bank-cat-sel" onchange="BankImport._onCatChange(this,${i})">${opts}</select></td><td>${subcatHtml}</td>`;
+        const subcatHtml = Dropdown.render('bank-subcat-' + i, this._subcatOpts(t.category, t.subcategory), { small: true, onchange: `BankImport._onSubcatChange(this,${i})` });
+        const catHtml = Dropdown.render('bank-cat-' + i, opts, { small: true, onchange: `BankImport._onCatChange(this,${i})` });
+        catCells = `<td class="bank-cat-cell"><span class="cat-origin-wrap" data-origin="${i}">${this._catOriginBadge(t)}</span>${catHtml}</td><td>${subcatHtml}</td>`;
       }
       return `<tr${isDup ? ' class="row-dup"' : ''}>
         <td><input type="checkbox" data-idx="${i}"${isDup ? '' : ' checked'}></td>
@@ -9947,22 +10143,18 @@ const BankImport = {
   _confirmImport() {
     const transactions = window._bankTransactions || [];
     const checkboxes   = document.querySelectorAll('[data-idx]');
-    const catSelects   = document.querySelectorAll('[data-cat]');
-    const subcatSelects = document.querySelectorAll('[data-subcat]');
     const expenses     = Storage.getExpenses();
     const revenues     = Storage.getRevenues();
     let impExp = 0, impRev = 0;
 
-    const subcatByIdx = {};
-    subcatSelects.forEach(el => { subcatByIdx[el.dataset.subcat] = el.value; });
     const effByIdx = {};
     document.querySelectorAll('[data-eff]').forEach(el => { effByIdx[el.dataset.eff] = el.value; });
 
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
       const t      = transactions[i];
-      const cat    = catSelects[i]?.value || t.category;
-      const subcat = subcatByIdx[i] ?? t.subcategory ?? '';
+      const cat    = document.getElementById('bank-cat-' + i)?.value ?? t.category;
+      const subcat = document.getElementById('bank-subcat-' + i)?.value ?? t.subcategory ?? '';
       const eff    = (effByIdx[i] || t.effectiveDate || '').trim();
       if (cat !== t.category || subcat !== t.subcategory) {
         GeminiCat.learn(t.descriptionClean || t.description, cat, subcat);
@@ -10226,7 +10418,7 @@ const InvestImport = {
           <div style="font-weight:600;font-size:12px">${p.name}</div>
           ${p.isin ? `<div style="font-size:10px;color:var(--text-muted);font-family:monospace">${p.isin}</div>` : ''}
         </td>
-        <td><select data-inv-type="${i}" class="select-input" style="font-size:11px;padding:3px 5px">${typeOptions(p.type)}</select></td>
+        <td>${Dropdown.render('inv-type-' + i, typeOptions(p.type), { small: true })}</td>
         <td style="text-align:right;font-size:12px">${qtyFmt}</td>
         <td style="text-align:right;font-size:12px">${p.buyPrice !== p.currentPrice ? Utils.formatCurrency(p.buyPrice) : '—'}</td>
         <td style="text-align:right;font-size:12px">
@@ -10247,7 +10439,7 @@ const InvestImport = {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <label style="font-size:13px;font-weight:600;white-space:nowrap">Compte :</label>
-          <select id="invest-import-account" class="select-input" style="font-size:13px">${accountOptions}</select>
+          ${Dropdown.render('invest-import-account', accountOptions)}
         </div>
         <div style="margin-left:auto;font-size:13px;color:var(--text-muted)">
           Valorisation totale : <strong style="color:var(--text)">${Utils.formatCurrency(totalVal)}</strong>
@@ -10287,7 +10479,6 @@ const InvestImport = {
   _confirmImport() {
     const positions  = window._investPositions || [];
     const checkboxes = document.querySelectorAll('[data-inv-idx]');
-    const typeSelects = document.querySelectorAll('[data-inv-type]');
     const account    = document.getElementById('invest-import-account')?.value || 'autre';
     const existing   = Storage.getInvestments();
     let added = 0, updated = 0;
@@ -10295,7 +10486,7 @@ const InvestImport = {
     checkboxes.forEach((cb, i) => {
       if (!cb.checked) return;
       const p    = positions[i];
-      const type = typeSelects[i]?.value || p.type;
+      const type = document.getElementById('inv-type-' + i)?.value || p.type;
       const today = new Date().toISOString().split('T')[0];
 
       if (p.existingId) {
@@ -10465,10 +10656,10 @@ const Assistant = {
           <div class="form-grid">
             <div class="form-group">
               <label>Type</label>
-              <select name="type" id="asst-type" onchange="Assistant._onTypeChange()">
+              ${Dropdown.render('type', `
                 <option value="depense"${d.isRevenue ? '' : ' selected'}>Dépense</option>
                 <option value="revenu"${d.isRevenue ? ' selected' : ''}>Revenu</option>
-              </select>
+              `, { id: 'asst-type', onchange: 'Assistant._onTypeChange()' })}
             </div>
             <div class="form-group">
               <label>Montant (€) *</label>
@@ -10480,11 +10671,11 @@ const Assistant = {
             </div>
             <div class="form-group">
               <label>Catégorie *</label>
-              <select name="category" id="asst-cat" required onchange="Assistant._onCatChange()">${catOptions}</select>
+              ${Dropdown.render('category', catOptions, { id: 'asst-cat', required: true, onchange: 'Assistant._onCatChange()' })}
             </div>
             <div class="form-group">
               <label>Sous-catégorie</label>
-              <select name="subcategory" id="asst-subcat">${subOptions}</select>
+              ${Dropdown.render('subcategory', subOptions, { id: 'asst-subcat' })}
             </div>
             <div class="form-group">
               <label>Date *</label>
@@ -10501,16 +10692,14 @@ const Assistant = {
 
   _onCatChange() {
     const cat = document.getElementById('asst-cat')?.value;
-    const sub = document.getElementById('asst-subcat');
-    if (sub) sub.innerHTML = BankImport._subcatOpts(cat, '');
+    if (document.getElementById('asst-subcat')) Dropdown.setOptions('asst-subcat', BankImport._subcatOpts(cat, ''));
   },
 
   _onTypeChange() {
     const type = document.getElementById('asst-type')?.value;
-    const catSel = document.getElementById('asst-cat');
-    if (!catSel) return;
+    if (!document.getElementById('asst-cat')) return;
     // Un revenu va toujours dans la catégorie "Revenus" par défaut.
-    if (type === 'revenu') catSel.value = BankImport._revenueCat(Storage.getCategories()).name;
+    if (type === 'revenu') Dropdown.setValue('asst-cat', BankImport._revenueCat(Storage.getCategories()).name);
     this._onCatChange();
   },
 
@@ -10729,15 +10918,15 @@ const Assistant = {
       const subOptions = BankImport._subcatOpts(d.category, d.subcategory || '');
       return `<tr>
         <td style="text-align:center"><input type="checkbox" data-row="${i}" checked></td>
-        <td><select id="am-type-${i}" onchange="Assistant._onMultiType(${i})">
+        <td>${Dropdown.render('am-type-' + i, `
           <option value="depense"${d.isRevenue ? '' : ' selected'}>Dépense</option>
           <option value="revenu"${d.isRevenue ? ' selected' : ''}>Revenu</option>
-        </select></td>
+        `, { small: true, onchange: `Assistant._onMultiType(${i})` })}</td>
         <td><input id="am-date-${i}" type="date" value="${this._esc(d.date)}"></td>
         <td><input id="am-desc-${i}" value="${this._esc(d.description)}" placeholder="libellé"></td>
         <td><input id="am-amt-${i}" type="number" step="0.01" min="0" value="${d.amount != null ? d.amount : ''}"></td>
-        <td><select id="am-cat-${i}" onchange="Assistant._onMultiCat(${i})">${catOptions}</select></td>
-        <td><select id="am-sub-${i}">${subOptions}</select></td>
+        <td>${Dropdown.render('am-cat-' + i, catOptions, { small: true, onchange: `Assistant._onMultiCat(${i})` })}</td>
+        <td>${Dropdown.render('am-sub-' + i, subOptions, { small: true })}</td>
       </tr>`;
     }).join('');
     return `
@@ -10760,14 +10949,13 @@ const Assistant = {
 
   _onMultiCat(i) {
     const cat = document.getElementById(`am-cat-${i}`)?.value;
-    const sub = document.getElementById(`am-sub-${i}`);
-    if (sub) sub.innerHTML = BankImport._subcatOpts(cat, '');
+    if (document.getElementById(`am-sub-${i}`)) Dropdown.setOptions(`am-sub-${i}`, BankImport._subcatOpts(cat, ''));
   },
 
   _onMultiType(i) {
     const type = document.getElementById(`am-type-${i}`)?.value;
-    const catSel = document.getElementById(`am-cat-${i}`);
-    if (catSel && type === 'revenu') catSel.value = BankImport._revenueCat(Storage.getCategories()).name;
+    if (!document.getElementById(`am-cat-${i}`)) return;
+    if (type === 'revenu') Dropdown.setValue(`am-cat-${i}`, BankImport._revenueCat(Storage.getCategories()).name);
     this._onMultiCat(i);
   },
 
@@ -11686,6 +11874,7 @@ function navigateTo(sectionId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  Dropdown.init();
   PeriodFilter.renderUI();
   BankImport.init();
   InvestImport.init();
@@ -11696,15 +11885,42 @@ document.addEventListener('DOMContentLoaded', () => {
   DataEntry.init();
   Comparisons.init();
 
-  // Populate revenue category filter
-  const revCatFilter = document.getElementById('rev-filter-cat');
-  if (revCatFilter) {
-    Utils.REVENUE_CATEGORIES.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat; opt.textContent = cat;
-      revCatFilter.appendChild(opt);
-    });
-  }
+  // Dropdowns à options fixes (ne changent jamais après le chargement) : rendus une seule fois
+  // ici. Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt
+  // reconstruits par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter
+  // dans expenses.js/data-entry.js.
+  const renderSlot = (slotId, name, optsHtml, opts) => {
+    const slot = document.getElementById(slotId);
+    if (slot) slot.innerHTML = Dropdown.render(name, optsHtml, opts);
+  };
+  renderSlot('inv-evo-window-slot', 'inv-evo-window', `
+    <option value="3">3 derniers mois</option>
+    <option value="6">6 derniers mois</option>
+    <option value="12" selected>12 derniers mois</option>
+    <option value="24">24 derniers mois</option>
+    <option value="0">Tout</option>
+  `, { onchange: 'Investments.setEvoWindow(this.value)' });
+  renderSlot('pos-filter-type-slot', 'pos-filter-type', `
+    <option value="">Tous les types</option>
+    <option value="action">Actions</option>
+    <option value="etf">ETF</option>
+    <option value="crypto">Crypto</option>
+    <option value="immobilier">Immobilier</option>
+    <option value="obligations">Obligations</option>
+    <option value="autre">Autre</option>
+  `);
+  renderSlot('rev-filter-cat-slot', 'rev-filter-cat',
+    ['<option value="">Toutes catégories</option>'].concat(Utils.REVENUE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`)).join(''));
+  renderSlot('donnees-filter-type-slot', 'donnees-filter-type', `
+    <option value="">Dépenses + Revenus</option>
+    <option value="expense">Dépenses seulement</option>
+    <option value="revenue">Revenus seulement</option>
+  `, { className: 'dt-select' });
+  renderSlot('donnees-filter-reassign-slot', 'donnees-filter-reassign', `
+    <option value="">Toutes les lignes</option>
+    <option value="cat">🏷️ Catégorie réaffectée</option>
+    <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
+  `, { className: 'dt-select' });
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

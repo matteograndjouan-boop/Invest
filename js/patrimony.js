@@ -75,14 +75,14 @@ const Patrimony = {
           <div class="form-group form-full"><label>Nom *</label><input name="name" required value="${item?.name || ''}" placeholder="ex: Résidence principale"></div>
           <div class="form-group">
             <label>Type *</label>
-            <select name="type" required onchange="Patrimony._updateCats(this.value)">
+            ${Dropdown.render('type', `
               <option value="actif" ${type === 'actif' ? 'selected' : ''}>Actif</option>
               <option value="passif" ${type === 'passif' ? 'selected' : ''}>Passif</option>
-            </select>
+            `, { required: true, onchange: 'Patrimony._updateCats(this.value)' })}
           </div>
           <div class="form-group">
             <label>Catégorie *</label>
-            <select name="category" id="pat-cat-select" required>${catOptions(type)}</select>
+            ${Dropdown.render('category', catOptions(type), { id: 'pat-cat-select', required: true })}
           </div>
           <div class="form-group"><label>Valeur (€) *</label><input name="value" type="number" step="0.01" min="0" required value="${item?.value || ''}"></div>
           <div class="form-group form-full"><label>Notes</label><textarea name="notes" rows="2">${item?.notes || ''}</textarea></div>
@@ -95,10 +95,9 @@ const Patrimony = {
   },
 
   _updateCats(type) {
-    const sel = document.getElementById('pat-cat-select');
-    if (!sel) return;
-    sel.innerHTML = Utils.PATRIMONY_CATEGORIES[type]
-      .map(c => `<option value="${c}">${c}</option>`).join('');
+    if (!document.getElementById('pat-cat-select')) return;
+    const optsHtml = Utils.PATRIMONY_CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+    Dropdown.setOptions('pat-cat-select', optsHtml);
   },
 
   save(event, id) {
