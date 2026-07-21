@@ -416,20 +416,14 @@ function navigateTo(sectionId) {
 
 document.addEventListener('DOMContentLoaded', () => {
   Dropdown.init();
-  PeriodFilter.renderUI();
-  BankImport.init();
-  InvestImport.init();
-  Expenses.init();
-  Revenues.init();
-  Flux.init();
-  Budget.init();
-  DataEntry.init();
-  Comparisons.init();
 
   // Dropdowns à options fixes (ne changent jamais après le chargement) : rendus une seule fois
-  // ici. Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt
-  // reconstruits par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter
-  // dans expenses.js/data-entry.js.
+  // ici, AVANT tout .init() de module — plusieurs modules (DataEntry.init() notamment) cherchent
+  // ces éléments par id dès leur propre init() pour y attacher un listener 'change', ce qui échoue
+  // silencieusement (élément introuvable, encore un <div> de slot vide) si le rendu arrive après.
+  // Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt reconstruits
+  // par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter dans
+  // expenses.js/data-entry.js, qui ont la même contrainte d'ordre en interne.
   const renderSlot = (slotId, name, optsHtml, opts) => {
     const slot = document.getElementById(slotId);
     if (slot) slot.innerHTML = Dropdown.render(name, optsHtml, opts);
@@ -456,12 +450,22 @@ document.addEventListener('DOMContentLoaded', () => {
     <option value="">Dépenses + Revenus</option>
     <option value="expense">Dépenses seulement</option>
     <option value="revenue">Revenus seulement</option>
-  `, { className: 'dt-select' });
+  `);
   renderSlot('donnees-filter-reassign-slot', 'donnees-filter-reassign', `
     <option value="">Toutes les lignes</option>
     <option value="cat">🏷️ Catégorie réaffectée</option>
     <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
-  `, { className: 'dt-select' });
+  `);
+
+  PeriodFilter.renderUI();
+  BankImport.init();
+  InvestImport.init();
+  Expenses.init();
+  Revenues.init();
+  Flux.init();
+  Budget.init();
+  DataEntry.init();
+  Comparisons.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

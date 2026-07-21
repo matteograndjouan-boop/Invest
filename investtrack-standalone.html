@@ -568,7 +568,10 @@ input:focus:not(:focus-visible) { outline: none; }
   flex-wrap: wrap;
 }
 
-.search-input, .select-input {
+/* select.select-input (pas juste .select-input) : depuis les Dropdown custom (js/dropdown.js),
+   .select-input est aussi passé en classe sur des éléments non-<select> — un sélecteur non
+   scopé leur appliquerait ce fond/cette bordure en plus de leur propre style. */
+.search-input, select.select-input {
   padding: 7px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -579,7 +582,7 @@ input:focus:not(:focus-visible) { outline: none; }
   transition: border-color .15s;
 }
 .search-input { flex: 1; min-width: 160px; }
-.search-input:focus, .select-input:focus { border-color: var(--primary); }
+.search-input:focus, select.select-input:focus { border-color: var(--primary); }
 
 .table-wrapper { overflow-x: auto; }
 
@@ -1101,7 +1104,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
-.dt-select {
+/* Scopé à select.dt-select (élément réellement <select>) et non juste .dt-select : depuis le
+   passage aux Dropdown custom (js/dropdown.js), .dt-select est aussi passé en classe sur le
+   <div class="dd"> — un sélecteur non scopé lui appliquait ce fond/cette bordure/cette flèche
+   SVG en plus de sa propre pilule violette, d'où le cadre sombre parasite avec petite flèche
+   blanche. Ne reste utile que si un <select> natif porte encore cette classe (aucun cas actuel,
+   gardé pour compat si besoin futur). */
+select.dt-select {
   padding: 7px 30px 7px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1119,8 +1128,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   background-position: right 12px center;
   transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
-.dt-select:hover { border-color: var(--primary); color: var(--primary); background-color: var(--primary-light); }
-.dt-select:focus {
+select.dt-select:hover { border-color: var(--primary); color: var(--primary); background-color: var(--primary-light); }
+select.dt-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
@@ -1753,9 +1762,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .inv-evo-trend.positive { color: var(--success); }
 .inv-evo-trend.negative { color: var(--danger); }
 
-/* Pilule de sélection de fenêtre (Vue globale, "12 derniers mois ▾"). */
-.inv-period-select { border-radius: 999px; padding: 7px 14px; font-weight: 600; }
-
 /* Bouton d'ajout circulaire (+), header des pages Investissements. */
 .fab-add {
   width: 36px; height: 36px; flex-shrink: 0;
@@ -1962,7 +1968,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-primary { border-radius: 14px; box-shadow: 0 6px 16px rgba(109,118,232,.28); }
 .btn-primary:hover { box-shadow: 0 8px 22px rgba(109,118,232,.40); }
 .btn-secondary { border-radius: 14px; }
-.search-input, .select-input, .form-group input, .form-group select, .form-group textarea { border-radius: 12px; }
+.search-input, select.select-input, .form-group input, .form-group select, .form-group textarea { border-radius: 12px; }
 /* Titres un peu plus serrés, plus « dashboard » */
 .section-header h1 { letter-spacing: -0.5px; font-weight: 800; }
 .kpi-value { letter-spacing: -0.5px; }
@@ -2398,7 +2404,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           <h1>Vue globale</h1>
           <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
-            <div id="inv-evo-window-slot" class="inv-period-select"></div>
+            <div id="inv-evo-window-slot"></div>
             <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
         </div>
@@ -4960,7 +4966,7 @@ const Expenses = {
     const optsHtml = ['<option value="">Toutes catégories</option>']
       .concat(cats.map(c => `<option value="${c.name}"${c.name === currentVal ? ' selected' : ''}>${c.name}</option>`))
       .join('');
-    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml, { className: 'dt-select' });
+    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml);
   },
 
   render() {
@@ -6670,6 +6676,11 @@ const DataEntry = {
   _dragMode: 'select', // 'select' ou 'deselect' selon l'état de la 1ère ligne touchée
 
   init() {
+    // AVANT le reste : donnees-filter-cat n'existe pas encore tant que _populateCatFilter() ne
+    // l'a pas rendu une 1re fois (Dropdown.mount le crée à la volée) — l'appeler en premier pour
+    // que le getElementById juste en dessous le trouve bien et puisse y attacher son listener.
+    this._populateCatFilter();
+
     const search = document.getElementById('donnees-search');
     const typeFilter = document.getElementById('donnees-filter-type');
     const catFilter = document.getElementById('donnees-filter-cat');
@@ -6697,8 +6708,6 @@ const DataEntry = {
       tbody.addEventListener('touchmove',  (e) => this._onTouchMove(e),  { passive: false });
     }
     document.addEventListener('touchend', () => { this._isDragging = false; });
-
-    this._populateCatFilter();
   },
 
   _populateCatFilter() {
@@ -6706,7 +6715,7 @@ const DataEntry = {
     const optsHtml = ['<option value="">Toutes catégories</option>']
       .concat(Storage.getCategories().map(cat => `<option value="${cat.name}"${cat.name === currentVal ? ' selected' : ''}>${cat.name}</option>`))
       .join('');
-    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml, { className: 'dt-select' });
+    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml);
   },
 
   toggleSelectionMode() {
@@ -11875,20 +11884,14 @@ function navigateTo(sectionId) {
 
 document.addEventListener('DOMContentLoaded', () => {
   Dropdown.init();
-  PeriodFilter.renderUI();
-  BankImport.init();
-  InvestImport.init();
-  Expenses.init();
-  Revenues.init();
-  Flux.init();
-  Budget.init();
-  DataEntry.init();
-  Comparisons.init();
 
   // Dropdowns à options fixes (ne changent jamais après le chargement) : rendus une seule fois
-  // ici. Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt
-  // reconstruits par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter
-  // dans expenses.js/data-entry.js.
+  // ici, AVANT tout .init() de module — plusieurs modules (DataEntry.init() notamment) cherchent
+  // ces éléments par id dès leur propre init() pour y attacher un listener 'change', ce qui échoue
+  // silencieusement (élément introuvable, encore un <div> de slot vide) si le rendu arrive après.
+  // Les dropdowns à options dynamiques (catégories, qui peuvent changer) sont plutôt reconstruits
+  // par leur module à chaque render (Dropdown.setOptions) — voir _populateCatFilter dans
+  // expenses.js/data-entry.js, qui ont la même contrainte d'ordre en interne.
   const renderSlot = (slotId, name, optsHtml, opts) => {
     const slot = document.getElementById(slotId);
     if (slot) slot.innerHTML = Dropdown.render(name, optsHtml, opts);
@@ -11915,12 +11918,22 @@ document.addEventListener('DOMContentLoaded', () => {
     <option value="">Dépenses + Revenus</option>
     <option value="expense">Dépenses seulement</option>
     <option value="revenue">Revenus seulement</option>
-  `, { className: 'dt-select' });
+  `);
   renderSlot('donnees-filter-reassign-slot', 'donnees-filter-reassign', `
     <option value="">Toutes les lignes</option>
     <option value="cat">🏷️ Catégorie réaffectée</option>
     <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
-  `, { className: 'dt-select' });
+  `);
+
+  PeriodFilter.renderUI();
+  BankImport.init();
+  InvestImport.init();
+  Expenses.init();
+  Revenues.init();
+  Flux.init();
+  Budget.init();
+  DataEntry.init();
+  Comparisons.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

@@ -561,7 +561,10 @@ input:focus:not(:focus-visible) { outline: none; }
   flex-wrap: wrap;
 }
 
-.search-input, .select-input {
+/* select.select-input (pas juste .select-input) : depuis les Dropdown custom (js/dropdown.js),
+   .select-input est aussi passé en classe sur des éléments non-<select> — un sélecteur non
+   scopé leur appliquerait ce fond/cette bordure en plus de leur propre style. */
+.search-input, select.select-input {
   padding: 7px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -572,7 +575,7 @@ input:focus:not(:focus-visible) { outline: none; }
   transition: border-color .15s;
 }
 .search-input { flex: 1; min-width: 160px; }
-.search-input:focus, .select-input:focus { border-color: var(--primary); }
+.search-input:focus, select.select-input:focus { border-color: var(--primary); }
 
 .table-wrapper { overflow-x: auto; }
 
@@ -1094,7 +1097,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
-.dt-select {
+/* Scopé à select.dt-select (élément réellement <select>) et non juste .dt-select : depuis le
+   passage aux Dropdown custom (js/dropdown.js), .dt-select est aussi passé en classe sur le
+   <div class="dd"> — un sélecteur non scopé lui appliquait ce fond/cette bordure/cette flèche
+   SVG en plus de sa propre pilule violette, d'où le cadre sombre parasite avec petite flèche
+   blanche. Ne reste utile que si un <select> natif porte encore cette classe (aucun cas actuel,
+   gardé pour compat si besoin futur). */
+select.dt-select {
   padding: 7px 30px 7px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1112,8 +1121,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   background-position: right 12px center;
   transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s;
 }
-.dt-select:hover { border-color: var(--primary); color: var(--primary); background-color: var(--primary-light); }
-.dt-select:focus {
+select.dt-select:hover { border-color: var(--primary); color: var(--primary); background-color: var(--primary-light); }
+select.dt-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
 }
@@ -1746,9 +1755,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .inv-evo-trend.positive { color: var(--success); }
 .inv-evo-trend.negative { color: var(--danger); }
 
-/* Pilule de sélection de fenêtre (Vue globale, "12 derniers mois ▾"). */
-.inv-period-select { border-radius: 999px; padding: 7px 14px; font-weight: 600; }
-
 /* Bouton d'ajout circulaire (+), header des pages Investissements. */
 .fab-add {
   width: 36px; height: 36px; flex-shrink: 0;
@@ -1955,7 +1961,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-primary { border-radius: 14px; box-shadow: 0 6px 16px rgba(109,118,232,.28); }
 .btn-primary:hover { box-shadow: 0 8px 22px rgba(109,118,232,.40); }
 .btn-secondary { border-radius: 14px; }
-.search-input, .select-input, .form-group input, .form-group select, .form-group textarea { border-radius: 12px; }
+.search-input, select.select-input, .form-group input, .form-group select, .form-group textarea { border-radius: 12px; }
 /* Titres un peu plus serrés, plus « dashboard » */
 .section-header h1 { letter-spacing: -0.5px; font-weight: 800; }
 .kpi-value { letter-spacing: -0.5px; }

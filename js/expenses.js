@@ -17,7 +17,7 @@ const Expenses = {
     const optsHtml = ['<option value="">Toutes catégories</option>']
       .concat(cats.map(c => `<option value="${c.name}"${c.name === currentVal ? ' selected' : ''}>${c.name}</option>`))
       .join('');
-    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml, { className: 'dt-select' });
+    Dropdown.mount('exp-filter-cat-slot', 'exp-filter-cat', optsHtml);
   },
 
   render() {

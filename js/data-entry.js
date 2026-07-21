@@ -9,6 +9,11 @@ const DataEntry = {
   _dragMode: 'select', // 'select' ou 'deselect' selon l'état de la 1ère ligne touchée
 
   init() {
+    // AVANT le reste : donnees-filter-cat n'existe pas encore tant que _populateCatFilter() ne
+    // l'a pas rendu une 1re fois (Dropdown.mount le crée à la volée) — l'appeler en premier pour
+    // que le getElementById juste en dessous le trouve bien et puisse y attacher son listener.
+    this._populateCatFilter();
+
     const search = document.getElementById('donnees-search');
     const typeFilter = document.getElementById('donnees-filter-type');
     const catFilter = document.getElementById('donnees-filter-cat');
@@ -36,8 +41,6 @@ const DataEntry = {
       tbody.addEventListener('touchmove',  (e) => this._onTouchMove(e),  { passive: false });
     }
     document.addEventListener('touchend', () => { this._isDragging = false; });
-
-    this._populateCatFilter();
   },
 
   _populateCatFilter() {
@@ -45,7 +48,7 @@ const DataEntry = {
     const optsHtml = ['<option value="">Toutes catégories</option>']
       .concat(Storage.getCategories().map(cat => `<option value="${cat.name}"${cat.name === currentVal ? ' selected' : ''}>${cat.name}</option>`))
       .join('');
-    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml, { className: 'dt-select' });
+    Dropdown.mount('donnees-filter-cat-slot', 'donnees-filter-cat', optsHtml);
   },
 
   toggleSelectionMode() {
