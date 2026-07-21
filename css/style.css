@@ -1541,15 +1541,21 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-bar-card { display: flex; flex-direction: column; }
 .flux-bar-card .chart-container { flex: 1; height: auto; min-height: 180px; }
 .flux-bar-card .chart-container canvas { max-height: none; }
-/* Donut à gauche, légende à droite (plus de place pour les noms qu'en 2 colonnes en dessous). */
-.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; gap: 1rem; height: 100%; }
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 210px; }
+/* Donut à gauche, légende à droite. La paire est centrée (justify-content) plutôt que collée à
+   gauche : la légende est plafonnée (donut-legend ci-dessous) au lieu de s'étirer avec flex:1
+   sur tout l'espace restant de la carte, donc centrer évite qu'un grand vide reste coincé sur
+   le bord droit quand la carte est plus large que le contenu donut+légende. */
+.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.25rem; height: 100%; }
+.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 260px; }
 
 /* ---- Donut Custom Legend ---- */
-/* Juste pastille + nom + pourcentage, pas de barre/montant. Agrandie pour bien remplir l'espace
-   à côté du donut (au lieu de petites lignes perdues dans une grande carte) ; overflow-y en
-   sécurité si jamais 7 lignes (top 6 + Autres) à cette taille dépassaient la hauteur dispo. */
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
+/* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée à 240px (flex-basis, pas
+   flex:1) : sans ça, elle s'étirait pour occuper tout l'espace restant de la carte, laissant un
+   grand vide entre le nom et le pourcentage sur chaque ligne dès que la carte dépassait la
+   largeur du contenu réel — le camembert (chart-container ci-dessus, élargi à 260px) reste ainsi
+   l'élément dominant de la carte plutôt que la légende. overflow-y en sécurité si jamais 7
+   lignes (top 6 + Autres) dépassaient la hauteur dispo. */
+.donut-legend { flex: 0 1 240px; max-width: 240px; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
 
 .dl-item {
   display: flex; align-items: center; gap: 10px;
@@ -1568,8 +1574,14 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .dl-pct { font-size: 17px; font-weight: 800; color: var(--text); white-space: nowrap; flex-shrink: 0; }
 
 /* ---- Flux Dépenses par catégorie (cartes) ---- */
-.flux-cat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+/* Flexbox + wrap plutôt que Grid(auto-fill) : avec Grid, une dernière ligne incomplète (ex. 2
+   cartes sur une grille calculée pour 6 colonnes) garde les colonnes vides du tableau — les
+   cartes présentes restent à leur taille minimale et ne s'étirent pas, laissant un grand vide à
+   droite. En Flexbox, chaque ligne redistribue son propre espace restant entre SES cartes
+   (flex-grow), donc une ligne incomplète s'étire quand même pour occuper toute la largeur. */
+.flux-cat-cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .flux-cat-card {
+  flex: 1 1 140px;
   padding: 14px 14px 12px;
   border-radius: 12px;
   background: var(--surface-alt);
@@ -1589,6 +1601,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fcc-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
 
 /* ---- Flux Summary Table ---- */
+/* Table plafonnée en largeur plutôt qu'étirée sur toute la carte : à pleine largeur, la colonne
+   barre (~48% avant) laissait une immense piste grise à moitié vide dès que le montant n'était
+   pas le plus élevé — mieux vaut une table plus compacte, mieux proportionnée, qu'une table qui
+   remplit l'espace au prix d'espaces vides disproportionnés entre les colonnes. */
+.flux-summary-wrap { max-width: 760px; }
 #flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
 #flux-summary-tbody .srow:last-child td { border-bottom: none; }
 #flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
@@ -1596,7 +1613,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 #flux-summary-tbody .srow:hover { border-left-color: var(--rc, var(--primary)); }
 
 /* Label column */
-.srow-td-label { width: 28%; }
+.srow-td-label { width: 30%; }
 .srow-label-inner { display: flex; align-items: center; gap: 9px; }
 .srow-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
 .srow-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -1612,17 +1629,17 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .srow-expand-btn.open { transform: rotate(90deg); border-color: var(--rc, var(--primary)); color: var(--rc, var(--primary)); }
 
 /* Amount column */
-.srow-td-amount { text-align: right; font-size: 15px; font-weight: 700; color: #dc2626; white-space: nowrap; width: 16%; padding-right: 20px !important; }
+.srow-td-amount { text-align: right; font-size: 15px; font-weight: 700; color: #dc2626; white-space: nowrap; width: 18%; padding-right: 20px !important; }
 
 /* Bar column */
-.srow-td-bar { width: 48%; }
+.srow-td-bar { width: 40%; }
 .srow-bar-outer { display: flex; align-items: center; gap: 10px; }
 .srow-bar-track { flex: 1; height: 12px; border-radius: 6px; overflow: hidden; }
 .srow-bar-fill { height: 12px; border-radius: 6px; min-width: 3px; transition: width 0.4s ease; }
 .srow-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 44px; text-align: right; white-space: nowrap; flex-shrink: 0; }
 
 /* Count column */
-.srow-td-count { text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; width: 8%; }
+.srow-td-count { text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; width: 12%; }
 
 /* Sub-rows */
 #flux-summary-tbody .srow-sub { cursor: default; }
