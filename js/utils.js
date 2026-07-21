@@ -140,28 +140,28 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
-  // Palette des catégories : 8 teintes choisies pour rester bien distinguables entre elles à
-  // l'œil (pas juste des angles de teinte différents sur le papier) — bleu, orange, violet,
-  // jaune/or, émeraude, rose, cyan, indigo. Ordre entrelacé pensé pour que deux teintes
-  // consécutives (positions voisines parmi les catégories de même type, voir getCategoryColor)
-  // soient toujours nettement écartées sur le cercle chromatique, jamais deux froides ou deux
-  // chaudes à la suite.
-  // Contraintes : vert et rouge restent réservés aux revenus/dépenses/tendances
-  // (--success/--danger), jamais pour distinguer des catégories — l'émeraude est délibérément
-  // assombri (nuances 600-900 plutôt que 400-700) pour rester net du vert vif de --success ;
-  // le rose reste sur l'échelle "pink", plus doux que le fuchsia/magenta utilisé avant.
-  // Deux teintes décalées d'un cran par rapport à la recette standard (400-700) pour fuir des
-  // couleurs déjà utilisées ailleurs dans l'app, distance RGB euclidienne <30 sinon : l'or/jaune
-  // passe en 300-600 (plus clair) pour s'écarter du badge de réaffectation de l'onglet Données
-  // (#f59e0b) et de --warning (#d97706) ; l'indigo passe en 600-900 (plus foncé) pour s'écarter
-  // de --primary (#6c63ff). Même recette Tailwind par ailleurs (4 nuances par teinte) — la
-  // texture (dégradé/reflet/ombre du donut, Charts._donutGradientPlugin etc.) ne dépend que du
-  // hex de base, inchangée par ce choix.
+  // Palette des catégories : 8 teintes vives inspirées de la palette Excel standard — bleu,
+  // rouge, vert (olive/foncé), violet, orange, cyan/turquoise, rose, ambre/or — choisies pour
+  // rester bien lisibles sur fond sombre et immédiatement reconnaissables les unes des autres.
+  // Ordre entrelacé pensé pour que deux teintes consécutives (positions voisines parmi les
+  // catégories de même type, voir getCategoryColor) soient toujours nettement écartées sur le
+  // cercle chromatique, jamais deux froides ou deux chaudes à la suite.
+  // Trois teintes décalées par rapport à la recette standard (400-700) pour fuir des couleurs
+  // déjà utilisées ailleurs dans l'app (distance RGB euclidienne cible >60) : le vert passe sur
+  // l'échelle "lime" (olive) décalée en 500-800 pour rester net du vert vif de --success
+  // (revenus, #00b37e) ; le rouge passe en 600-900 pour s'écarter à la fois de --danger
+  // (#f56565) ET du rouge d'alerte « dépassement de budget » câblé en dur dans
+  // Charts.budgetHistory (#ef4444) — les deux se seraient sinon confondus avec l'identité de
+  // la catégorie sur le MÊME graphique ; l'or/ambre reste sur l'échelle "yellow" (pas "amber")
+  // décalée en 300-600 pour s'écarter du badge de réaffectation de l'onglet Données (#f59e0b)
+  // et de --warning (#d97706). Même recette Tailwind par ailleurs (4 nuances par teinte) — la
+  // texture (dégradé clair-vers-foncé du donut, reflet, ombre — Charts._donutGradientPlugin
+  // etc.) ne dépend que du hex de base, inchangée par ce choix.
   CATEGORY_COLORS: [
-    '#3b82f6', '#f97316', '#8b5cf6', '#facc15', '#047857', '#ec4899', '#06b6d4', '#4338ca', // bleu / orange / violet / or / émeraude / rose / cyan / indigo
-    '#60a5fa', '#fb923c', '#a78bfa', '#fde047', '#059669', '#f472b6', '#22d3ee', '#4f46e5', // …clairs
-    '#2563eb', '#ea580c', '#7c3aed', '#eab308', '#065f46', '#db2777', '#0891b2', '#3730a3', // …foncés
-    '#1d4ed8', '#c2410c', '#6d28d9', '#ca8a04', '#064e3b', '#be185d', '#0e7490', '#312e81', // …extrêmes
+    '#3b82f6', '#b91c1c', '#65a30d', '#8b5cf6', '#f97316', '#06b6d4', '#ec4899', '#facc15', // bleu / rouge / vert / violet / orange / cyan / rose / ambre-or
+    '#60a5fa', '#dc2626', '#84cc16', '#a78bfa', '#fb923c', '#22d3ee', '#f472b6', '#fde047', // …clairs
+    '#2563eb', '#991b1b', '#4d7c0f', '#7c3aed', '#ea580c', '#0891b2', '#db2777', '#eab308', // …foncés
+    '#1d4ed8', '#7f1d1d', '#3f6212', '#6d28d9', '#c2410c', '#0e7490', '#be185d', '#ca8a04', // …extrêmes
   ],
 
   CATEGORY_COLOR_OTHER: '#6b7280',
