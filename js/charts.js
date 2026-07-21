@@ -583,10 +583,9 @@ const Charts = {
     };
   },
 
-  // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant (Flux._renderDonut :
-  // dégradé monochrome par rang, pas Utils.getCategoryColor — deux catégories peuvent avoir des
-  // couleurs proches dans la palette, ce qui rendait le donut illisible ; ici la teinte encode le
-  // rang du segment, la légende à côté du donut suit donc aussi le rang, pas l'identité catégorie).
+  // `colors` : une couleur par label, dans le même ordre — fournie par l'appelant
+  // (Flux._renderDonut : Utils.getCategoryColor, l'identité couleur de chaque catégorie,
+  // partagée avec les cartes/pastilles/légende sous le donut).
   fluxDonut(labels, data, colors, activeLabels, onClickFn) {
     if (!labels.length) { this.destroy('chart-flux-donut'); return; }
     const hasFilter = activeLabels instanceof Set ? activeLabels.size > 0 : !!activeLabels;
