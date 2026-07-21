@@ -140,18 +140,23 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
-  // Palette des catégories : uniquement 4 teintes (+ nuances), le vert et le rouge sont
-  // réservés aux revenus/dépenses/tendances (voir --success/--danger) et ne doivent jamais
-  // servir à distinguer des catégories. Entrelacée par teinte (bleu/rose/violet/cyan) plutôt
-  // que groupée par nuance, pour que deux catégories consécutives (positions voisines dans
-  // Storage.getCategories()) ne partagent quasiment jamais la même famille de couleur. L'orange
-  // d'origine a été remplacé par un rose/fuchsia (même teinte que le KPI "Taux d'épargne", voir
-  // .fk-savings dans style.css) — plus aucune teinte jaune/orangée dans la palette.
+  // Palette des catégories : 7 teintes (+ nuances) couvrant tout le cercle chromatique — bleu,
+  // orange, rose/fuchsia, turquoise, violet, jaune, cyan — plutôt que les 4 teintes froides
+  // d'origine (bleu/rose/violet/cyan) qui, une fois assez de catégories pour boucler sur un
+  // même groupe de nuances, donnaient une impression de palette « tout en bleu ». Le vert et le
+  // rouge restent réservés aux revenus/dépenses/tendances (voir --success/--danger) et ne
+  // doivent jamais servir à distinguer des catégories ; le jaune/orange ajoutés ici restent
+  // distincts de --warning (#d97706) et du badge de réaffectation de l'onglet Données (#f59e0b).
+  // Entrelacée par teinte (pas groupée par nuance), pour que deux catégories consécutives
+  // (positions voisines dans Storage.getCategories()) ne partagent quasiment jamais la même
+  // famille de couleur. Même recette « 4 nuances Tailwind (400/500/600/700) » qu'avant par
+  // teinte, juste étendue à 7 teintes au lieu de 4 — la texture (dégradé/reflet/ombre du donut,
+  // Charts._donutGradientPlugin etc.) ne dépend que du hex de base, inchangée par ce choix.
   CATEGORY_COLORS: [
-    '#3b82f6', '#d946ef', '#8b5cf6', '#06b6d4', // bleu / rose / violet / cyan
-    '#60a5fa', '#e879f9', '#a78bfa', '#22d3ee', // …clairs
-    '#2563eb', '#c026d3', '#7c3aed', '#0891b2', // …foncés
-    '#1d4ed8', '#a21caf', '#6d28d9', '#0e7490', // …extrêmes
+    '#3b82f6', '#f97316', '#d946ef', '#14b8a6', '#8b5cf6', '#eab308', '#06b6d4', // bleu / orange / rose / turquoise / violet / jaune / cyan
+    '#60a5fa', '#fb923c', '#e879f9', '#2dd4bf', '#a78bfa', '#facc15', '#22d3ee', // …clairs
+    '#2563eb', '#ea580c', '#c026d3', '#0d9488', '#7c3aed', '#ca8a04', '#0891b2', // …foncés
+    '#1d4ed8', '#c2410c', '#a21caf', '#0f766e', '#6d28d9', '#a16207', '#0e7490', // …extrêmes
   ],
 
   CATEGORY_COLOR_OTHER: '#6b7280',
