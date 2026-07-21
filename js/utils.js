@@ -140,23 +140,27 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
-  // Palette des catégories : 7 teintes (+ nuances) couvrant tout le cercle chromatique — bleu,
-  // orange, rose/fuchsia, turquoise, violet, jaune, cyan — plutôt que les 4 teintes froides
-  // d'origine (bleu/rose/violet/cyan) qui, une fois assez de catégories pour boucler sur un
-  // même groupe de nuances, donnaient une impression de palette « tout en bleu ». Le vert et le
-  // rouge restent réservés aux revenus/dépenses/tendances (voir --success/--danger) et ne
-  // doivent jamais servir à distinguer des catégories ; le jaune/orange ajoutés ici restent
-  // distincts de --warning (#d97706) et du badge de réaffectation de l'onglet Données (#f59e0b).
-  // Entrelacée par teinte (pas groupée par nuance), pour que deux catégories consécutives
-  // (positions voisines dans Storage.getCategories()) ne partagent quasiment jamais la même
-  // famille de couleur. Même recette « 4 nuances Tailwind (400/500/600/700) » qu'avant par
-  // teinte, juste étendue à 7 teintes au lieu de 4 — la texture (dégradé/reflet/ombre du donut,
-  // Charts._donutGradientPlugin etc.) ne dépend que du hex de base, inchangée par ce choix.
+  // Palette des catégories : 8 teintes choisies pour rester bien distinguables entre elles à
+  // l'œil (pas juste des angles de teinte différents sur le papier) — bleu, orange, violet,
+  // jaune/or, émeraude, rose, cyan, indigo. Ordre entrelacé pensé pour que deux teintes
+  // consécutives (positions voisines dans Storage.getCategories()) soient toujours nettement
+  // écartées sur le cercle chromatique, jamais deux froides ou deux chaudes à la suite.
+  // Contraintes : vert et rouge restent réservés aux revenus/dépenses/tendances
+  // (--success/--danger), jamais pour distinguer des catégories — l'émeraude est délibérément
+  // assombri (nuances 600-900 plutôt que 400-700) pour rester net du vert vif de --success ;
+  // le rose reste sur l'échelle "pink", plus doux que le fuchsia/magenta utilisé avant.
+  // Deux teintes décalées d'un cran par rapport à la recette standard (400-700) pour fuir des
+  // couleurs déjà utilisées ailleurs dans l'app, distance RGB euclidienne <30 sinon : l'or/jaune
+  // passe en 300-600 (plus clair) pour s'écarter du badge de réaffectation de l'onglet Données
+  // (#f59e0b) et de --warning (#d97706) ; l'indigo passe en 600-900 (plus foncé) pour s'écarter
+  // de --primary (#6c63ff). Même recette Tailwind par ailleurs (4 nuances par teinte) — la
+  // texture (dégradé/reflet/ombre du donut, Charts._donutGradientPlugin etc.) ne dépend que du
+  // hex de base, inchangée par ce choix.
   CATEGORY_COLORS: [
-    '#3b82f6', '#f97316', '#d946ef', '#14b8a6', '#8b5cf6', '#eab308', '#06b6d4', // bleu / orange / rose / turquoise / violet / jaune / cyan
-    '#60a5fa', '#fb923c', '#e879f9', '#2dd4bf', '#a78bfa', '#facc15', '#22d3ee', // …clairs
-    '#2563eb', '#ea580c', '#c026d3', '#0d9488', '#7c3aed', '#ca8a04', '#0891b2', // …foncés
-    '#1d4ed8', '#c2410c', '#a21caf', '#0f766e', '#6d28d9', '#a16207', '#0e7490', // …extrêmes
+    '#3b82f6', '#f97316', '#8b5cf6', '#facc15', '#047857', '#ec4899', '#06b6d4', '#4338ca', // bleu / orange / violet / or / émeraude / rose / cyan / indigo
+    '#60a5fa', '#fb923c', '#a78bfa', '#fde047', '#059669', '#f472b6', '#22d3ee', '#4f46e5', // …clairs
+    '#2563eb', '#ea580c', '#7c3aed', '#eab308', '#065f46', '#db2777', '#0891b2', '#3730a3', // …foncés
+    '#1d4ed8', '#c2410c', '#6d28d9', '#ca8a04', '#064e3b', '#be185d', '#0e7490', '#312e81', // …extrêmes
   ],
 
   CATEGORY_COLOR_OTHER: '#6b7280',
