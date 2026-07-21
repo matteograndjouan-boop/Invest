@@ -143,8 +143,9 @@ const Utils = {
   // Palette des catégories : 8 teintes choisies pour rester bien distinguables entre elles à
   // l'œil (pas juste des angles de teinte différents sur le papier) — bleu, orange, violet,
   // jaune/or, émeraude, rose, cyan, indigo. Ordre entrelacé pensé pour que deux teintes
-  // consécutives (positions voisines dans Storage.getCategories()) soient toujours nettement
-  // écartées sur le cercle chromatique, jamais deux froides ou deux chaudes à la suite.
+  // consécutives (positions voisines parmi les catégories de même type, voir getCategoryColor)
+  // soient toujours nettement écartées sur le cercle chromatique, jamais deux froides ou deux
+  // chaudes à la suite.
   // Contraintes : vert et rouge restent réservés aux revenus/dépenses/tendances
   // (--success/--danger), jamais pour distinguer des catégories — l'émeraude est délibérément
   // assombri (nuances 600-900 plutôt que 400-700) pour rester net du vert vif de --success ;
@@ -174,16 +175,26 @@ const Utils = {
     '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
   ],
 
-  // Couleur stable par IDENTITÉ de catégorie (sa position fixe dans Storage.getCategories()),
-  // jamais par rang/montant/ordre d'apparition — sinon une même catégorie changerait de couleur
-  // d'une vue ou d'une période à l'autre. Seule source de vérité pour la couleur d'une catégorie,
-  // partagée par tout l'app (Flux, Catégories, Comparaisons, Dépenses/Revenus...).
-  // « Autres »/« Autre » (bucket agrégé de certains graphiques, n'existe pas comme vraie
-  // catégorie) reçoit un gris neutre dédié plutôt que de retomber arbitrairement sur la 1re.
+  // Couleur stable par IDENTITÉ de catégorie, indexée PARMI LES CATÉGORIES DE MÊME TYPE
+  // (Categories._catType) plutôt que dans Storage.getCategories() en entier : aucune vue de
+  // l'app n'affiche deux types côte à côte (donut Flux = dépenses seules, une section de
+  // l'onglet Catégories = un seul type, Comparaisons = dépenses seules...), donc un index
+  // global décalait les dépenses réelles au-delà d'Épargne/Revenus et faisait retomber les
+  // dernières catégories sur une simple NUANCE d'une teinte déjà utilisée plus tôt (ex.
+  // Shopping en bleu clair juste à côté d'Abonnements en bleu de base). Jamais par rang/
+  // montant/ordre d'apparition — sinon une même catégorie changerait de couleur d'une vue ou
+  // d'une période à l'autre. Seule source de vérité pour la couleur d'une catégorie, partagée
+  // par tout l'app (Flux, Catégories, Comparaisons, Budget, Dépenses/Revenus...). « Autres »
+  // (bucket agrégé de certains graphiques, n'existe pas comme vraie catégorie) reçoit un gris
+  // neutre dédié ; catégorie introuvable (supprimée) retombe sur la 1re teinte.
   getCategoryColor(catName) {
     if (catName === 'Autres') return this.CATEGORY_COLOR_OTHER;
-    const cats = Storage.getCategories().map(c => c.name);
-    const idx = cats.indexOf(catName);
+    const cats = Storage.getCategories();
+    const cat = cats.find(c => c.name === catName);
+    if (!cat) return this.CATEGORY_COLORS[0];
+    const type = Categories._catType(cat);
+    const sameType = cats.filter(c => Categories._catType(c) === type).map(c => c.name);
+    const idx = sameType.indexOf(catName);
     return this.CATEGORY_COLORS[(idx >= 0 ? idx : 0) % this.CATEGORY_COLORS.length];
   },
 };
