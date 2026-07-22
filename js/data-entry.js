@@ -521,7 +521,13 @@ const DataEntry = {
       const typeBadge = isExpense
         ? '<span class="badge badge-expense-type">Dépense</span>'
         : '<span class="badge badge-revenue-type">Revenu</span>';
-      const catBadge = `<span class="badge badge-category">${row.category || '—'}</span>`;
+      // Couleur de la catégorie (Utils.getCategoryColor, même source que la pastille active d'un
+      // filtre catégorie dans l'onglet Flux) plutôt que le violet générique de .badge-category —
+      // seulement si une catégorie existe, sinon getCategoryColor('') retomberait sur une couleur
+      // par défaut trompeuse pour un « — » qui n'en a pas.
+      const catBadge = row.category
+        ? `<span class="badge badge-category" style="background:${Utils.getCategoryColor(row.category)};color:#fff">${row.category}</span>`
+        : `<span class="badge badge-category">—</span>`;
       const subcatBadge = row.subcategory ? `<span class="badge badge-subcategory">${row.subcategory}</span>` : '<span class="text-muted">—</span>';
       // Badges de réaffectation (posés par _confirmReassign, effacés par undoReassign ou par
       // toute édition manuelle via save()) : catégorie et sous-catégorie sont DEUX niveaux
