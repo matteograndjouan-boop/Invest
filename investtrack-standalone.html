@@ -5690,7 +5690,10 @@ const Flux = {
     const entries = this._categoryTotals();
     if (!entries.length) { container.innerHTML = ''; return; }
 
-    const max = Math.max(...entries.map(([, v]) => v));
+    // % du TOTAL des dépenses de la période (même valeur que le donut/sa légende), pas % de la
+    // catégorie la plus dépensière — la jauge doit se lire "cette catégorie pèse X % de mes
+    // dépenses", pas "X % de ma plus grosse catégorie" (ce que donnait value/max).
+    const total = entries.reduce((s, [, v]) => s + v, 0);
     container.innerHTML = entries.map(([label, value]) => {
       const color = Utils.getCategoryColor(label);
       // Icône personnalisée de la catégorie si définie (Categories._setIcon), sinon repli sur
@@ -5698,7 +5701,7 @@ const Flux = {
       // dans l'onglet Catégories (toujours l'icône déduite du nom, jamais la valeur enregistrée).
       const cat  = Storage.getCategories().find(c => c.name === label);
       const icon = (cat && cat.icon) || Categories._meta(label).icon;
-      const barW = max > 0 ? (value / max * 100).toFixed(1) : 0;
+      const barW = total > 0 ? (value / total * 100).toFixed(1) : 0;
       const isActive = catFilters.size > 0 && catFilters.has(label);
       const isFiltered = catFilters.size > 0 && !catFilters.has(label);
       const safeName = label.replace(/'/g, "\\'");
