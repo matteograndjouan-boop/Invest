@@ -227,9 +227,15 @@ const Flux = {
     // mois (Trimestre, Semestre, Année...), toujours la même proportion 45 %, quel que soit le
     // nombre de mois affichés (pas de palier supplémentaire qui rétrécirait encore le donut
     // pour Semestre/Année par rapport à Trimestre).
-    const donutPct = months.length <= 1 ? 55 : 45;
+    const isShortPeriod = months.length <= 1;
+    const donutPct = isShortPeriod ? 55 : 45;
     const chartsRow = document.getElementById('flux-charts-row');
     if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
+    // Décale le donut+légende vers la gauche pour tout filtre > 1 mois (voir .flux-donut-wrap-
+    // shifted dans style.css) — uniquement l'intérieur de la carte, sans toucher à son cadre.
+    // Cohérent entre Trimestre/Semestre/Année puisqu'ils partagent tous la même largeur de carte
+    // (donutPct 45 % ci-dessus) ; seul "Mois" a une largeur différente et garde l'ancrage à droite.
+    document.querySelector('.flux-donut-wrap')?.classList.toggle('flux-donut-wrap-shifted', !isShortPeriod);
 
     const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const labels = months.map(m => {

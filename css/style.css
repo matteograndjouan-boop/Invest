@@ -1558,13 +1558,16 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    camembert — invisible sur un jeu de données vide en test, donc facile à manquer. */
 .flux-donut-card { display: flex; flex-direction: column; min-width: 0; }
 /* Donut à gauche, légende à droite. flex:1 (pas height:100%) comble tout l'espace restant sous le
-   titre, quelle que soit sa hauteur réelle. justify-content:flex-end (pas center) : la carte
-   donut change de largeur selon le filtre de période (donutPct dans flux.js — 55% en filtre
-   "Mois"/plage courte, 45% ou 35% sinon), donc un centrage plaçait la légende à un endroit
-   différent d'un filtre à l'autre. Collée au bord droit, sa position reste stable quel que soit
-   ce filtre — tout le vide variable se retrouve du côté gauche du donut plutôt que réparti des
-   deux côtés de la paire. */
+   titre, quelle que soit sa hauteur réelle. justify-content:flex-end par défaut (filtre "Mois"/
+   plage courte, donutPct 55 % dans flux.js) : la carte est alors la plus large, la légende reste
+   collée à son bord droit. Pour tout filtre > 1 mois (Trimestre/Semestre/Année, tous à 45 %
+   depuis flux.js — donc TOUJOURS la même largeur de carte entre eux), flux.js ajoute la classe
+   .flux-donut-wrap-shifted ci-dessous pour décaler la paire vers la gauche à la place — demandé
+   explicitement, sans toucher à la carte elle-même. Comme ces filtres partagent tous la même
+   largeur de carte, la position reste cohérente entre eux malgré le changement de justify-
+   content (ce n'est QUE "Mois" qui a une largeur de carte différente des autres). */
 .flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.25rem; flex: 1; min-height: 0; }
+.flux-donut-wrap.flux-donut-wrap-shifted { justify-content: center; }
 /* align-self: stretch (pas center comme la légende) : le camembert remplit toute la hauteur
    disponible du wrap plutôt que de rester à sa taille de contenu — c'est cette hauteur réelle qui
    pilote son diamètre (Chart.js/maintainAspectRatio:false cale le cercle sur le plus petit des
