@@ -1654,6 +1654,52 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    pas le plus élevé — mieux vaut une table plus compacte, mieux proportionnée, qu'une table qui
    remplit l'espace au prix d'espaces vides disproportionnés entre les colonnes. */
 .flux-summary-wrap { max-width: 760px; }
+
+/* Table à gauche (plafonnée par .flux-summary-wrap ci-dessus, ~760px) + graphique en barres
+   horizontales à droite (voir .flux-hbar-* plus bas) — comble l'espace vide qui restait à
+   droite de la table sur les écrans larges. flex:0 sur la carte table (pas de croissance au-delà
+   de son contenu, qui est déjà plafonné) + flex:1 sur la carte graphique (absorbe tout le reste). */
+.flux-summary-row { display: flex; gap: 1rem; align-items: flex-start; }
+.flux-summary-card { flex: 0 1 804px; min-width: 0; }
+.flux-hbar-card { flex: 1 1 320px; min-width: 280px; }
+
+/* ---- Flux Répartition — graphique en barres horizontales ---- */
+/* Barres HTML/CSS "faites main" (comme .srow-bar-fill/.fcc-bar-fill), pas Chart.js : chaque
+   barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
+   les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
+   modélisent pas bien. */
+.flux-hbar-chart { display: flex; flex-direction: column; gap: 11px; }
+.hbar-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 3px 6px; margin: 0 -6px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+.hbar-row.clickable { cursor: pointer; }
+.hbar-row.clickable:hover { border-left-color: var(--rc, var(--primary)); }
+.hbar-row.active { border-left-color: var(--rc, var(--primary)); }
+.hbar-row.dimmed { opacity: 0.4; }
+.hbar-row.dimmed:hover { opacity: 1; }
+.hbar-label {
+  flex: 0 0 108px; width: 108px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hbar-track { flex: 1; height: 22px; border-radius: 6px; background: var(--border); display: flex; align-items: center; overflow: visible; }
+/* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - 96px)) —
+   réserve fixe en px pour le montant affiché juste après la barre la plus longue, pas un simple
+   plafond en %, dont la marge finit par déborder sur une carte resserrée avec un montant à
+   plusieurs chiffres (mesuré : un plafond à 78% ne laissait plus que ~2px de marge dans ce cas). */
+.hbar-fillwrap { display: flex; align-items: center; height: 100%; gap: 8px; min-width: 4px; }
+.hbar-fill { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+/* transition sur background (pas width, qui ne change jamais pour un segment donné — voir
+   Flux._updateHBarSegmentColors) : au dépli/repli d'une catégorie dans le tableau, les mêmes
+   segments (mêmes largeurs, déjà proportionnelles aux sous-catégories) passent juste d'une teinte
+   unie à leurs nuances propres, ce qui anime proprement — recréer les barres à chaque fois (comme
+   le reste de l'app) empêcherait toute transition, un nœud DOM neuf n'ayant pas d'état "avant". */
+.hbar-seg { height: 100%; transition: background-color 0.4s ease; }
+.hbar-amount { font-size: 12.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 #flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
 #flux-summary-tbody .srow:last-child td { border-bottom: none; }
 #flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
@@ -1933,6 +1979,8 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .charts-grid { grid-template-columns: 1fr; }
   .flux-charts-row { grid-template-columns: 1fr; }
+  .flux-summary-row { flex-direction: column; }
+  .flux-summary-card { flex-basis: auto; width: 100%; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
   .dashboard-bottom-grid { grid-template-columns: 1fr; }

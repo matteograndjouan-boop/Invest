@@ -206,6 +206,7 @@ const Flux = {
     this._renderDonut(catFilters);
     this._renderCategoryCards(catFilters);
     this._renderSummaryTable(allExpenses, start, end, catFilters);
+    this._renderHBarChart(allExpenses, start, end, catFilters);
   },
 
   // Toujours Revenus vs Dépenses total, jamais filtré par catégorie (celle-ci pilote le donut,
@@ -432,12 +433,150 @@ const Flux = {
     else this._expandedCats.add(cat);
     const { start, end } = PeriodFilter.getDateRange();
     this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
+    this._updateHBarSegmentColors(cat);
   },
 
-  _renderSummaryTable(allExpenses, start, end, catFilters) {
+  // Regroupement partagé par _renderSummaryTable ET _renderHBarChart : même filtre catégorie,
+  // même clé de regroupement (catégorie, ou sous-catégorie si 1 seule catégorie filtrée), même
+  // tri par montant décroissant — garantit que l'ordre des barres du graphique correspond
+  // TOUJOURS à celui du tableau (demandé), sans risque de divergence entre deux implémentations
+  // séparées du même calcul.
+  _summaryGroups(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
 
+    const showSub = catFilters.size === 1;
+    const groups = {};
+    expenses.forEach(e => {
+      const key = showSub ? (e.subcategory || '—') : e.category;
+      if (!groups[key]) groups[key] = { amount: 0, count: 0, subs: {} };
+      groups[key].amount += e.amount;
+      groups[key].count++;
+      if (!showSub) {
+        const sub = e.subcategory || '—';
+        if (!groups[key].subs[sub]) groups[key].subs[sub] = { amount: 0, count: 0 };
+        groups[key].subs[sub].amount += e.amount;
+        groups[key].subs[sub].count++;
+      }
+    });
+
+    const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
+    return { showSub, sorted };
+  },
+
+  // idx=0 (plus gros montant) garde la couleur vive d'origine, les suivants s'éclaircissent
+  // progressivement (jusqu'à +60%) — sert à la fois aux segments d'une barre catégorie dépliée
+  // (plusieurs sous-catégories dans UNE barre) et aux barres sous-catégorie quand une seule
+  // catégorie est filtrée (plusieurs barres, une par sous-catégorie).
+  _shadeByIndex(baseColor, idx, count) {
+    if (idx <= 0 || count <= 1) return baseColor;
+    const pct = 0.15 + (idx / (count - 1)) * 0.45;
+    return Charts._shade(baseColor, pct);
+  },
+
+  // Barres HTML/CSS (pas Chart.js — voir commentaire CSS .flux-hbar-chart) reflétant exactement
+  // _summaryGroups : même ordre que le tableau. Échelle relative au MAX affiché (pas au total) —
+  // la plus grosse barre atteint 100% de la piste (moins la réserve fixe pour le montant, voir
+  // HBAR_LABEL_RESERVE_PX ci-dessous), les autres lui sont proportionnelles.
+  _renderHBarChart(allExpenses, start, end, catFilters) {
+    const container = document.getElementById('flux-hbar-chart');
+    const empty = document.getElementById('flux-hbar-empty');
+    if (!container) return;
+
+    const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
+    if (!sorted.length) {
+      container.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    // Réserve de place FIXE (px, via calc/min) pour le montant en bout de barre, pas un simple
+    // plafond en % : un plafond en % laisse une marge qui rétrécit avec la carte (responsive) ou
+    // avec un montant à plus de chiffres, jusqu'à déborder (mesuré : 1.8px de marge à peine avec
+    // un plafond à 78%, ça déborde carrément dès un montant à 5 chiffres sur une carte resserrée).
+    // Une réserve en px reste constante quelle que soit la largeur de piste — seule la barre au
+    // MAX peut l'atteindre (les autres, proportionnellement plus courtes, ont naturellement de la
+    // marge), perte de précision visuelle négligeable dans ce seul cas limite.
+    const HBAR_LABEL_RESERVE_PX = 96;
+    const maxAmount = Math.max(...sorted.map(([, g]) => g.amount));
+    const escAttr = (s) => String(s).replace(/"/g, '&quot;');
+    const filterColor = showSub ? Utils.getCategoryColor(this._catLabel()) : null;
+
+    const rows = sorted.map(([label, g], idx) => {
+      const rawPct = (maxAmount > 0 ? (g.amount / maxAmount * 100) : 0).toFixed(1);
+      const widthCss = `min(${rawPct}%, calc(100% - ${HBAR_LABEL_RESERVE_PX}px))`;
+      const amountStr = Utils.formatCurrency(g.amount);
+      const safeName = label.replace(/'/g, "\\'");
+
+      let segmentsHtml, dataCat = '', rowColor;
+      if (showSub) {
+        // Cas 2 (1 catégorie filtrée) : chaque barre = 1 sous-catégorie, teinte unie (nuance de
+        // la couleur de LA catégorie filtrée selon le rang), pas de segmentation interne.
+        rowColor = this._shadeByIndex(filterColor, idx, sorted.length);
+        segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
+      } else {
+        // Cas 1 (aucun filtre) / Cas 3 (plusieurs catégories filtrées) : chaque barre = 1
+        // catégorie. Segments TOUJOURS présents à leur vraie largeur (proportion de la
+        // sous-catégorie dans la catégorie) dès qu'il y a de vraies sous-catégories — seule leur
+        // COULEUR change selon le dépli (teintes distinctes) ou pas (une seule teinte = barre
+        // visuellement unie). Les mêmes nœuds DOM sont donc réutilisables tels quels par
+        // _updateHBarSegmentColors (dépli/repli déjà en cours), qui n'a alors qu'à changer une
+        // couleur pour que ça s'anime (voir .hbar-seg dans le CSS).
+        rowColor = Utils.getCategoryColor(label);
+        const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
+        const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
+        const isExpanded = this._expandedCats.has(label);
+        dataCat = ` data-cat="${escAttr(label)}"`;
+        if (hasSubs) {
+          segmentsHtml = subEntries.map(([sub, sg], i) => {
+            const segColor = isExpanded ? this._shadeByIndex(rowColor, i, subEntries.length) : rowColor;
+            const segPct = (g.amount > 0 ? (sg.amount / g.amount * 100) : 0).toFixed(1);
+            return `<div class="hbar-seg" style="width:${segPct}%;background:${segColor}" title="${escAttr(sub)}: ${Utils.formatCurrency(sg.amount)}"></div>`;
+          }).join('');
+        } else {
+          segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
+        }
+      }
+
+      const isActive = !showSub && catFilters.size > 0 && catFilters.has(label);
+      const isFiltered = !showSub && catFilters.size > 0 && !catFilters.has(label);
+      const cls = `hbar-row${showSub ? '' : ' clickable'}${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}`;
+      const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
+
+      return `<div class="${cls}" style="--rc:${rowColor}"${dataCat}${onClick}>
+        <div class="hbar-label" title="${escAttr(label)}">${label}</div>
+        <div class="hbar-track">
+          <div class="hbar-fillwrap" style="width:${widthCss}">
+            <div class="hbar-fill">${segmentsHtml}</div>
+            <span class="hbar-amount">${amountStr}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = rows;
+  },
+
+  // Ne recalcule/recompose PAS tout le graphique — trouve directement la barre déjà à l'écran
+  // (data-cat) et change juste la couleur de ses segments (déjà à la bonne largeur, voir
+  // _renderHBarChart) : ce sont les mêmes nœuds DOM avant/après, donc la transition CSS
+  // (.hbar-seg) joue vraiment, contrairement à un innerHTML complet qui recrée tout sans état
+  // "avant" pour animer depuis.
+  _updateHBarSegmentColors(cat) {
+    const row = document.querySelector(`#flux-hbar-chart .hbar-row[data-cat="${CSS.escape(cat)}"]`);
+    if (!row) {
+      const { start, end } = PeriodFilter.getDateRange();
+      this._renderHBarChart(this._realExpenses(), start, end, this._activeFilters);
+      return;
+    }
+    const baseColor = Utils.getCategoryColor(cat);
+    const isExpanded = this._expandedCats.has(cat);
+    const segs = row.querySelectorAll('.hbar-seg');
+    segs.forEach((seg, i) => { seg.style.background = isExpanded ? this._shadeByIndex(baseColor, i, segs.length) : baseColor; });
+  },
+
+  _renderSummaryTable(allExpenses, start, end, catFilters) {
     const tbody = document.getElementById('flux-summary-tbody');
     const empty = document.getElementById('flux-summary-empty');
     const title = document.getElementById('flux-summary-title');
@@ -445,7 +584,7 @@ const Flux = {
     if (!tbody) return;
 
     const catLabel = this._catLabel();
-    const showSub = catFilters.size === 1;
+    const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
 
     // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
     // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
@@ -464,29 +603,14 @@ const Flux = {
     }
     if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
-    if (!expenses.length) {
+    if (!sorted.length) {
       tbody.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
-    const groups = {};
-    expenses.forEach(e => {
-      const key = showSub ? (e.subcategory || '—') : e.category;
-      if (!groups[key]) groups[key] = { amount: 0, count: 0, subs: {} };
-      groups[key].amount += e.amount;
-      groups[key].count++;
-      if (!showSub) {
-        const sub = e.subcategory || '—';
-        if (!groups[key].subs[sub]) groups[key].subs[sub] = { amount: 0, count: 0 };
-        groups[key].subs[sub].amount += e.amount;
-        groups[key].subs[sub].count++;
-      }
-    });
-
-    const total = Object.values(groups).reduce((s, g) => s + g.amount, 0);
-    const sorted = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount);
+    const total = sorted.reduce((s, [, g]) => s + g.amount, 0);
 
     const rows = [];
     sorted.forEach(([label, g]) => {

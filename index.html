@@ -314,30 +314,37 @@
           <h3>Dépenses par catégorie</h3>
           <div id="flux-cat-cards" class="flux-cat-cards"></div>
         </div>
-        <div class="card mt-md">
-          <div class="card-header-row">
-            <h3 id="flux-summary-title">Répartition par catégorie</h3>
+        <div class="flux-summary-row mt-md">
+          <div class="card flux-summary-card">
+            <div class="card-header-row">
+              <h3 id="flux-summary-title">Répartition par catégorie</h3>
+            </div>
+            <div class="table-wrapper flux-summary-wrap">
+              <table class="data-table summary-table">
+                <colgroup>
+                  <col style="width:30%">
+                  <col style="width:18%">
+                  <col>
+                  <col style="width:12%">
+                </colgroup>
+                <thead id="flux-summary-thead">
+                  <tr>
+                    <th id="flux-summary-th-label">Catégorie</th>
+                    <th class="text-center">Dépenses</th>
+                    <th class="text-center">Répartition</th>
+                    <th class="text-right">Nb</th>
+                  </tr>
+                </thead>
+                <tbody id="flux-summary-tbody"></tbody>
+              </table>
+            </div>
+            <div id="flux-summary-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
           </div>
-          <div class="table-wrapper flux-summary-wrap">
-            <table class="data-table summary-table">
-              <colgroup>
-                <col style="width:30%">
-                <col style="width:18%">
-                <col>
-                <col style="width:12%">
-              </colgroup>
-              <thead id="flux-summary-thead">
-                <tr>
-                  <th id="flux-summary-th-label">Catégorie</th>
-                  <th class="text-center">Dépenses</th>
-                  <th class="text-center">Répartition</th>
-                  <th class="text-right">Nb</th>
-                </tr>
-              </thead>
-              <tbody id="flux-summary-tbody"></tbody>
-            </table>
+          <div class="chart-card flux-hbar-card">
+            <h3>Vue graphique</h3>
+            <div id="flux-hbar-chart" class="flux-hbar-chart"></div>
+            <div id="flux-hbar-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
           </div>
-          <div id="flux-summary-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
         </div>
       </section>
 
