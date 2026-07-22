@@ -216,86 +216,110 @@ const Flux = {
   // se ré-anime pas non plus inutilement à chaque clic de pastille.
   _renderBarChart(allExpenses, allRevenues) {
     const { start, end } = PeriodFilter.getDateRange();
+    const startD = new Date(start + 'T00:00:00');
+    const endD = new Date(end + 'T00:00:00');
+    const getLastDay = (y, mo1) => new Date(y, mo1, 0).getDate(); // mo1 = mois 1-indexé
 
-    const months = [];
-    let cur = new Date(start + 'T00:00:00');
-    const endDate = new Date(end + 'T00:00:00');
-    cur = new Date(cur.getFullYear(), cur.getMonth(), 1);
-    while (cur <= endDate) {
-      months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
-      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-    }
+    // "Courte" = 1 mois ou moins en DURÉE RÉELLE, pas en nombre de mois calendaires touchés :
+    // une plage à cheval comme 15 jan -> 15 fév dure 31 jours mais touche 2 étiquettes de mois
+    // (Jan/Fév). 31 = longueur du plus long mois, donc borne haute naturelle pour "<= 1 mois".
+    const diffDays = Math.round((endD - startD) / 86400000);
+    const isShortPeriod = diffDays <= 31;
 
-    // Même proportion bâton/donut (45 %) pour tous les filtres de période désormais — "Mois" (ou
-    // une plage plus courte) affiche maintenant un bâton par SEMAINE (ci-dessous) au lieu d'un
-    // bâton unique pour tout le mois, donc a autant besoin de largeur que les autres filtres
-    // (un bâton par mois) et n'a plus besoin d'un donut élargi à 55 % comme avant.
-    const isShortPeriod = months.length <= 1;
+    // Même proportion bâton/donut (45 %) pour tous les filtres de période, courts ou longs —
+    // "Mois" (ou une plage plus courte) affiche désormais un bâton par SEMAINE (ci-dessous) au
+    // lieu d'un bâton unique pour tout le mois, donc a autant besoin de largeur que les autres
+    // filtres (un bâton par mois) et n'a plus besoin d'un donut élargi à 55 % comme avant.
     const donutPct = 45;
     const chartsRow = document.getElementById('flux-charts-row');
     if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
 
+    const titleEl = document.getElementById('flux-bar-title');
+    if (titleEl) titleEl.textContent = isShortPeriod ? 'Dépenses par semaine' : 'Revenus vs Dépenses';
+
     let labels, revByPeriod, depByPeriod;
 
     if (isShortPeriod) {
-      // Découpage par semaine civile (lundi -> dimanche), pas un seul bâton pour tout le mois —
-      // beaucoup plus lisible pour suivre l'évolution sur une période courte. Chaque semaine est
-      // bornée à [start, end] : les jours avant/après la période affichée (semaine à cheval sur
-      // le mois précédent/suivant) ne comptent pas dans les totaux, même si son libellé (date du
-      // lundi) peut tomber hors de cette période.
-      const weeks = [];
-      const wStart = new Date(start + 'T00:00:00');
-      const dow = wStart.getDay() === 0 ? 7 : wStart.getDay(); // lundi=1 ... dimanche=7
-      wStart.setDate(wStart.getDate() - (dow - 1));
-      const rangeEnd = new Date(end + 'T00:00:00');
-      while (wStart <= rangeEnd) {
-        const wEnd = new Date(wStart);
-        wEnd.setDate(wStart.getDate() + 6);
-        weeks.push({ start: new Date(wStart), end: wEnd });
-        wStart.setDate(wStart.getDate() + 7);
+      const startYM = start.slice(0, 7);
+      const lastDayOfStartMonth = getLastDay(startD.getFullYear(), startD.getMonth() + 1);
+      // Vraiment "1 mois calendaire" seulement si [start, end] correspond exactement au 1er et
+      // au dernier jour du même mois (filtre "Mois", ou plage libre calée dessus) — PAS juste
+      // "diffDays <= 31", qui inclut aussi les plages à cheval ou partielles dans un mois.
+      const isExactMonth = start.slice(8, 10) === '01' && start.slice(0, 7) === end.slice(0, 7)
+        && end === `${startYM}-${String(lastDayOfStartMonth).padStart(2, '0')}`;
+
+      if (isExactMonth) {
+        // Mois calendaire complet : 4 semaines FIXES (1-7 / 8-14 / 15-21 / 22-fin), pas
+        // glissantes — repère stable "Semaine N" indépendant du jour de la semaine où tombe le
+        // 1er du mois. La dernière regroupe les jours restants (7 à 10 selon la longueur du mois).
+        const buckets = [[1, 7], [8, 14], [15, 21], [22, lastDayOfStartMonth]];
+        labels = ['Semaine 1', 'Semaine 2', 'Semaine 3', 'Semaine 4'];
+        depByPeriod = buckets.map(([d1, d2]) => {
+          const s = `${startYM}-${String(d1).padStart(2, '0')}`, e = `${startYM}-${String(d2).padStart(2, '0')}`;
+          return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
+        });
+      } else {
+        // Plage libre <= 1 mois, à cheval sur 2 mois ou partielle dans un mois : semaines
+        // glissantes ancrées sur le DÉBUT de la période choisie (pas le lundi précédent) — le
+        // 1er bâton correspond ainsi toujours au tout début de la plage, comme demandé.
+        const weeks = [];
+        let wStart = new Date(startD);
+        while (wStart <= endD) {
+          const wEnd = new Date(wStart);
+          wEnd.setDate(wStart.getDate() + 6);
+          weeks.push({ start: new Date(wStart), end: wEnd });
+          wStart = new Date(wStart);
+          wStart.setDate(wStart.getDate() + 7);
+        }
+
+        const toStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+        const fmt = (d) => `${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
+
+        // Comparaison en chaînes (YYYY-MM-DD s'ordonne lexicographiquement comme des dates) —
+        // PAS Math.max/min, qui coerceraient ces chaînes en NaN et casseraient tout l'écrêtage.
+        labels = weeks.map(w => fmt(w.start));
+        depByPeriod = weeks.map(w => {
+          const wStartStr = toStr(w.start), wEndStr = toStr(w.end);
+          const s = wStartStr < start ? start : wStartStr, e = wEndStr > end ? end : wEndStr;
+          return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
+        });
+      }
+    } else {
+      const months = [];
+      let cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+      while (cur <= endD) {
+        months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
       }
 
-      const toStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-      // Comparaison en chaînes (YYYY-MM-DD s'ordonne lexicographiquement comme des dates) — PAS
-      // Math.max/min, qui coerceraient ces chaînes en NaN et casseraient tout l'écrêtage.
-      labels = weeks.map(w => fmt(w.start));
-      revByPeriod = weeks.map(w => {
-        const wStartStr = toStr(w.start), wEndStr = toStr(w.end);
-        const s = wStartStr < start ? start : wStartStr, e = wEndStr > end ? end : wEndStr;
-        return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
-      });
-      depByPeriod = weeks.map(w => {
-        const wStartStr = toStr(w.start), wEndStr = toStr(w.end);
-        const s = wStartStr < start ? start : wStartStr, e = wEndStr > end ? end : wEndStr;
-        return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
-      });
-    } else {
       const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
       labels = months.map(m => {
         const [y, mo] = m.split('-').map(Number);
         return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
       });
 
-      const getLastDay = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
-
       revByPeriod = months.map(m => {
-        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+        const [y, mo] = m.split('-').map(Number);
+        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(y, mo)).padStart(2, '0')}`;
         const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
         return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
       });
 
       depByPeriod = months.map(m => {
-        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+        const [y, mo] = m.split('-').map(Number);
+        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(y, mo)).padStart(2, '0')}`;
         const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
         return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
       });
     }
 
-    const soldeByPeriod = revByPeriod.map((r, i) => r - depByPeriod[i]);
-
-    Charts.fluxBar(labels, revByPeriod, depByPeriod, soldeByPeriod);
+    if (isShortPeriod) {
+      Charts.fluxBar(labels, [], depByPeriod, [], 'chart-flux-bar', { expensesOnly: true });
+    } else {
+      const soldeByPeriod = revByPeriod.map((r, i) => r - depByPeriod[i]);
+      Charts.fluxBar(labels, revByPeriod, depByPeriod, soldeByPeriod);
+    }
   },
 
   // Dépenses de la période groupées par catégorie, triées par montant décroissant — brut,

@@ -442,18 +442,28 @@ const Charts = {
   // épaisse + aire dégradée (couleur → transparent) vers zéro. `canvasId` : ce même rendu sert
   // aussi à la mini-carte Flux du Dashboard (Dashboard._renderFluxChart, app.js), pour un rendu
   // strictement identique entre les deux — pas de duplication de code/style.
-  fluxBar(labels, revData, depData, soldeData, canvasId = 'chart-flux-bar') {
+  // `opts.expensesOnly` : vue "Dépenses par semaine" (Flux, périodes <= 1 mois) — un seul
+  // dataset rouge, pas de Revenus ni de ligne Solde net (ces séries n'existent pas à l'échelle
+  // hebdo dans ce mode, voir Flux._renderBarChart).
+  fluxBar(labels, revData, depData, soldeData, canvasId = 'chart-flux-bar', opts = {}) {
+    const expensesOnly = !!opts.expensesOnly;
+
     // Avec 1 seul mois (filtre "Mois" ou plage plus courte), Chart.js n'a qu'une seule catégorie
     // sur l'axe X : à ses barPercentage/categoryPercentage par défaut (0.9/0.8), les 2 barres
     // Revenus/Dépenses se partagent alors presque toute la largeur du graphique et ressortent en
     // gros pavés épais façon bâtons. Rétrécies explicitement dans ce cas (mais modérément — un
     // 1er essai à 0.5/0.35 rendait les barres trop fines) ; au-delà de 1 mois, plusieurs
-    // catégories se partagent déjà l'espace et les valeurs par défaut restent bien.
-    const thin = labels.length <= 1;
-    const barDatasets = [
-      { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
-      { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
-    ];
+    // catégories se partagent déjà l'espace et les valeurs par défaut restent bien. Ce cas ne se
+    // produit plus en pratique (Flux affiche désormais plusieurs bâtons hebdo dès qu'il y a 1
+    // seul mois), gardé pour la mini-carte Dashboard qui reste sur un vrai découpage mensuel.
+    const thin = !expensesOnly && labels.length <= 1;
+
+    const barDatasets = expensesOnly
+      ? [{ label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: 0.6, categoryPercentage: 0.5 }]
+      : [
+          { label: 'Revenus', data: revData, backgroundColor: '#00b37e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
+          { label: 'Dépenses', data: depData, backgroundColor: '#e53e3e', borderWidth: 0, borderRadius: 6, type: 'bar', barPercentage: thin ? 0.75 : 0.9, categoryPercentage: thin ? 0.55 : 0.8 },
+        ];
 
     const soldeDataset = {
       label: 'Solde net',
@@ -472,16 +482,16 @@ const Charts = {
 
     this.create(canvasId, {
       type: 'bar',
-      data: { labels, datasets: [...barDatasets, soldeDataset] },
+      data: { labels, datasets: expensesOnly ? barDatasets : [...barDatasets, soldeDataset] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: this._leg('top'),
+          legend: expensesOnly ? { display: false } : this._leg('top'),
           tooltip: { ...this._tip(), mode: 'index', callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } },
         },
         scales: { y: this._yAxis(this._dottedGrid()), x: this._xAxis() },
       },
-      plugins: [this._barShadowPlugin(), this._barGradientPlugin([['#00b37e', '#004d35'], ['#e53e3e', '#5a0f0f']])],
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin(expensesOnly ? [['#e53e3e', '#5a0f0f']] : [['#00b37e', '#004d35'], ['#e53e3e', '#5a0f0f']])],
     });
   },
 
