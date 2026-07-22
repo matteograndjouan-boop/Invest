@@ -1548,16 +1548,31 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-bar-card { display: flex; flex-direction: column; }
 .flux-bar-card .chart-container { flex: 1; height: auto; min-height: 180px; }
 .flux-bar-card .chart-container canvas { max-height: none; }
-/* Donut à gauche, légende à droite. La paire est centrée (justify-content) plutôt que collée à
-   gauche : la légende est plafonnée (donut-legend ci-dessous) au lieu de s'étirer avec flex:1
-   sur tout l'espace restant de la carte, donc centrer évite qu'un grand vide reste coincé sur
-   le bord droit quand la carte est plus large que le contenu donut+légende. */
-.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.25rem; height: 100%; }
-/* La hauteur du conteneur (index.html, style="height:280px") pilotait déjà le diamètre réel du
-   donut (Chart.js le cale sur la plus petite des deux dimensions) — élargir seulement le
-   max-width ne suffisait pas tant que la hauteur restait plafonnée bas ; les deux montent
-   ensemble ici pour un camembert vraiment plus grand, pas juste une légende resserrée. */
-.flux-donut-wrap .chart-container { flex-shrink: 0; width: 100%; max-width: 320px; }
+
+/* Carte donut : même principe flex-column que .flux-bar-card ci-dessus, pour que .flux-donut-wrap
+   puisse combler tout l'espace sous le <h3> plutôt qu'une hauteur fixe. Une 1re tentative avait
+   mis height:100% sur .flux-donut-wrap SANS ce display:flex sur la carte — en flux normal, ce
+   100% ignore la hauteur déjà prise par le <h3> et déborde/mécalcule, empêchant le camembert de
+   vraiment profiter de tout l'espace vertical disponible (peu importe le filtre de période, qui
+   fait varier cet espace via donutPct dans flux.js). */
+.flux-donut-card { display: flex; flex-direction: column; }
+/* Donut à gauche, légende à droite. flex:1 (pas height:100%) comble tout l'espace restant sous le
+   titre, quelle que soit sa hauteur réelle. La paire reste centrée horizontalement (justify-
+   content) : la légende est plafonnée (donut-legend ci-dessous) au lieu de s'étirer sur tout
+   l'espace restant de la carte, donc centrer évite qu'un vide reste coincé sur le bord droit
+   quand la carte est plus large que le contenu donut+légende. */
+.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.25rem; flex: 1; min-height: 0; }
+/* align-self: stretch (pas center comme la légende) : le camembert remplit toute la hauteur
+   disponible du wrap plutôt que de rester à sa taille de contenu — c'est cette hauteur réelle qui
+   pilote son diamètre (Chart.js/maintainAspectRatio:false cale le cercle sur le plus petit des
+   deux côtés), donc le vrai levier pour "le plus grand possible" est ici, pas la largeur seule.
+   max-width généreux : sert seulement de garde-fou sur un très large écran, la hauteur reste quasi
+   toujours la contrainte qui décide de la taille réelle du cercle. */
+/* height:auto + canvas max-height:none neutralisent la règle générique .chart-container
+   (height:240px fixe, pensée pour des cartes de chart "isolées" sans layout flex parent) qui
+   sinon gagnerait sur align-self:stretch — un height explicite prime toujours sur stretch. */
+.flux-donut-wrap .chart-container { align-self: stretch; flex-shrink: 0; width: 100%; max-width: 440px; height: auto; }
+.flux-donut-wrap .chart-container canvas { max-height: none; }
 
 /* ---- Donut Custom Legend ---- */
 /* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée à 220px (flex-basis, pas
@@ -2604,10 +2619,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             <h3 id="flux-bar-title">Revenus vs Dépenses</h3>
             <div class="chart-container"><canvas id="chart-flux-bar"></canvas></div>
           </div>
-          <div class="chart-card">
+          <div class="chart-card flux-donut-card">
             <h3>Répartition des dépenses</h3>
             <div class="flux-donut-wrap">
-              <div class="chart-container" style="height:280px"><canvas id="chart-flux-donut"></canvas></div>
+              <div class="chart-container"><canvas id="chart-flux-donut"></canvas></div>
               <div id="flux-donut-legend" class="donut-legend"></div>
             </div>
           </div>
