@@ -19,7 +19,17 @@ const Flux = {
   _renderCatPills() {
     const container = document.getElementById('flux-cat-pills');
     if (!container) return;
-    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense').map(c => c.name);
+    // Seulement les catégories ayant au moins une dépense sur la période active — pas toutes les
+    // catégories de type 'expense' existantes — pour éviter une rangée de pastilles vides sans
+    // rapport avec ce qui est affiché. Recalculé à chaque render() (changement de période,
+    // ajout/suppression de dépense...), pas qu'à l'ouverture de l'onglet.
+    const usedCats = new Set(this._categoryTotals().map(([name]) => name));
+    // Purge les filtres actifs devenus invalides (catégorie qui n'a plus aucune dépense sur la
+    // nouvelle période) : sans ça, une pastille active resterait invisible dans la liste — donc
+    // impossible à désactiver — tout en continuant à filtrer (sans effet réel, 0 dépense de
+    // toute façon, mais un état incohérent qu'il vaut mieux nettoyer).
+    [...this._activeFilters].forEach(f => { if (!usedCats.has(f)) this._activeFilters.delete(f); });
+    const cats = Storage.getCategories().filter(c => Categories._catType(c) === 'expense' && usedCats.has(c.name)).map(c => c.name);
     const active = this._activeFilters;
     const multi = this._multiMode;
 
@@ -39,18 +49,18 @@ const Flux = {
     container.innerHTML = multiBtn + allBtn + catBtns;
   },
 
+  // render(true) ci-dessous ré-appelle _renderCatPills() lui-même (voir en tête de render()),
+  // pas besoin de l'appeler ici en plus.
   _toggleMultiMode() {
     this._multiMode = !this._multiMode;
     if (!this._multiMode && this._activeFilters.size > 1) {
       this._activeFilters = new Set([[...this._activeFilters][0]]);
     }
-    this._renderCatPills();
     this.render(true);
   },
 
   _clearFilters() {
     this._activeFilters = new Set();
-    this._renderCatPills();
     this.render(true);
   },
 
@@ -61,7 +71,6 @@ const Flux = {
     } else {
       this._activeFilters = this._activeFilters.has(cat) ? new Set() : new Set([cat]);
     }
-    this._renderCatPills();
     this.render(true);
   },
 
@@ -98,7 +107,6 @@ const Flux = {
     }
     this._multiMode = true;
     this._activeFilters = new Set(others);
-    this._renderCatPills();
     this.render(true);
   },
 
@@ -149,6 +157,10 @@ const Flux = {
   // période ou le mode de date changent (PeriodFilter.onChange, ci-dessous) ou à l'ouverture
   // de l'onglet.
   render(skipBarChart = false) {
+    // En premier : peut purger des pastilles actives devenues invalides (catégorie qui n'a plus
+    // de dépense sur la nouvelle période) — le reste de render() doit lire _activeFilters
+    // déjà nettoyé, pas avant.
+    this._renderCatPills();
     const { start, end } = PeriodFilter.getDateRange();
     const catFilters = this._activeFilters;
 
