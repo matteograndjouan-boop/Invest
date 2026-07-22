@@ -1548,33 +1548,56 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    100% ignore la hauteur déjà prise par le <h3> et déborde/mécalcule, empêchant le camembert de
    vraiment profiter de tout l'espace vertical disponible (peu importe le filtre de période, qui
    fait varier cet espace via donutPct dans flux.js). */
-.flux-donut-card { display: flex; flex-direction: column; }
+/* min-width:0 est essentiel : .flux-donut-card est un ITEM de grille (.flux-charts-row), et
+   CSS Grid refuse par défaut de rétrécir un track fr en dessous de la "taille minimale
+   automatique" du CONTENU de son item (ici, la légende avec de vrais noms de catégorie et des
+   pourcentages non compressibles) — quel que soit le ratio fr demandé par donutPct dans flux.js.
+   Sans ce min-width:0, dès qu'il y a assez de catégories pour que ce plancher dépasse la largeur
+   donnée par le fr le plus petit (35% en filtre "Année"), TOUS les filtres se retrouvaient
+   figés à la même largeur (ce plancher), écrasant les proportions voulues entre le bâton et le
+   camembert — invisible sur un jeu de données vide en test, donc facile à manquer. */
+.flux-donut-card { display: flex; flex-direction: column; min-width: 0; }
 /* Donut à gauche, légende à droite. flex:1 (pas height:100%) comble tout l'espace restant sous le
-   titre, quelle que soit sa hauteur réelle. La paire reste centrée horizontalement (justify-
-   content) : la légende est plafonnée (donut-legend ci-dessous) au lieu de s'étirer sur tout
-   l'espace restant de la carte, donc centrer évite qu'un vide reste coincé sur le bord droit
-   quand la carte est plus large que le contenu donut+légende. */
-.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.25rem; flex: 1; min-height: 0; }
+   titre, quelle que soit sa hauteur réelle. justify-content:flex-end (pas center) : la carte
+   donut change de largeur selon le filtre de période (donutPct dans flux.js — 55% en filtre
+   "Mois"/plage courte, 45% ou 35% sinon), donc un centrage plaçait la légende à un endroit
+   différent d'un filtre à l'autre. Collée au bord droit, sa position reste stable quel que soit
+   ce filtre — tout le vide variable se retrouve du côté gauche du donut plutôt que réparti des
+   deux côtés de la paire. */
+.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.25rem; flex: 1; min-height: 0; }
 /* align-self: stretch (pas center comme la légende) : le camembert remplit toute la hauteur
    disponible du wrap plutôt que de rester à sa taille de contenu — c'est cette hauteur réelle qui
    pilote son diamètre (Chart.js/maintainAspectRatio:false cale le cercle sur le plus petit des
    deux côtés), donc le vrai levier pour "le plus grand possible" est ici, pas la largeur seule.
-   max-width généreux : sert seulement de garde-fou sur un très large écran, la hauteur reste quasi
-   toujours la contrainte qui décide de la taille réelle du cercle. */
+   PAS de flex-shrink:0 : la carte donut change de largeur selon le filtre de période (donutPct
+   dans flux.js, la grille .flux-charts-row doit garder EXACTEMENT ce ratio) — un flex-shrink:0
+   ici imposait une largeur minimale incompressible au donut qui forçait la grille à déborder de
+   son ratio prévu pour les filtres à donutPct réduit, écrasant du même coup les proportions
+   voulues entre le graphique en bâton et le camembert. max-width reste un plafond (jamais
+   atteint en filtre "Année" par ex., où la carte est plus étroite), pas un plancher. */
 /* height:auto + canvas max-height:none neutralisent la règle générique .chart-container
    (height:240px fixe, pensée pour des cartes de chart "isolées" sans layout flex parent) qui
    sinon gagnerait sur align-self:stretch — un height explicite prime toujours sur stretch. */
-.flux-donut-wrap .chart-container { align-self: stretch; flex-shrink: 0; width: 100%; max-width: 440px; height: auto; }
+.flux-donut-wrap .chart-container { align-self: stretch; min-width: 0; width: 100%; max-width: 350px; height: auto; }
 .flux-donut-wrap .chart-container canvas { max-height: none; }
 
 /* ---- Donut Custom Legend ---- */
-/* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée à 220px (flex-basis, pas
-   flex:1) : sans ça, elle s'étirait pour occuper tout l'espace restant de la carte, laissant un
-   grand vide entre le nom et le pourcentage sur chaque ligne dès que la carte dépassait la
-   largeur du contenu réel — le camembert (chart-container ci-dessus, agrandi à 320px) reste ainsi
-   nettement l'élément dominant de la carte, la légende un simple complément. overflow-y en
-   sécurité si jamais 7 lignes (top 6 + Autres) dépassaient la hauteur dispo. */
-.donut-legend { flex: 0 1 220px; max-width: 220px; display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-y: auto; }
+/* Juste pastille + nom + pourcentage, pas de barre/montant. Plafonnée (flex-basis, pas flex:1) :
+   sans ça, elle s'étirait pour occuper tout l'espace restant de la carte, laissant un grand vide
+   entre le nom et le pourcentage sur chaque ligne dès que la carte dépassait la largeur du
+   contenu réel — le camembert (chart-container ci-dessus) reste ainsi nettement l'élément
+   dominant de la carte, la légende un simple complément. 250px (plutôt que 220px) : un peu plus
+   d'air entre nom et pourcentage sur chaque ligne (dl-name en flex:1 dans .dl-item ci-dessous),
+   pris sur la largeur dispo pour le donut plutôt que sur celle de la carte (voir flex-end
+   ci-dessus) — n'a quasi aucun effet sur sa taille réelle, pilotée par la hauteur, pas la
+   largeur. min-width:150px (au lieu de 0) : sur les filtres à faible donutPct (Année, 35%), la
+   carte est nettement plus étroite — sans ce plancher, la légende rétrécissait au point de
+   tronquer les noms de catégorie en 1-2 lettres ("A…", "Al…"), illisible. Le camembert (lui
+   resté à min-width:0) absorbe seul le rétrécissement dans ce cas, quitte à devenir contraint
+   par la largeur plutôt que la hauteur sur ce filtre précis — préférable à une légende
+   illisible. overflow-y en sécurité si jamais 7 lignes (top 6 + Autres) dépassaient la hauteur
+   dispo. */
+.donut-legend { flex: 0 1 250px; max-width: 250px; min-width: 150px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
 
 .dl-item {
   display: flex; align-items: center; gap: 10px;
