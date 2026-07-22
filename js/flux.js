@@ -223,10 +223,11 @@ const Flux = {
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
 
-    // Plus la période affiche de mois, plus les barres ont besoin de largeur face au donut
-    // (1 mois = 2 barres ; 4+ mois commencent à être serrés) — le donut ne descend jamais
-    // sous 35 %.
-    const donutPct = months.length <= 1 ? 55 : months.length <= 3 ? 45 : 35;
+    // Seul le filtre "Mois" (ou une plage plus courte) élargit le donut à 55 % — au-delà d'1
+    // mois (Trimestre, Semestre, Année...), toujours la même proportion 45 %, quel que soit le
+    // nombre de mois affichés (pas de palier supplémentaire qui rétrécirait encore le donut
+    // pour Semestre/Année par rapport à Trimestre).
+    const donutPct = months.length <= 1 ? 55 : 45;
     const chartsRow = document.getElementById('flux-charts-row');
     if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
 
