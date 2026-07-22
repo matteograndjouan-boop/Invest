@@ -1558,23 +1558,19 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    camembert — invisible sur un jeu de données vide en test, donc facile à manquer. */
 .flux-donut-card { display: flex; flex-direction: column; min-width: 0; }
 /* Donut à gauche, légende à droite. flex:1 (pas height:100%) comble tout l'espace restant sous le
-   titre, quelle que soit sa hauteur réelle. justify-content:flex-end par défaut (filtre "Mois"/
-   plage courte, donutPct 55 % dans flux.js) : la carte est alors la plus large, la légende reste
-   collée à son bord droit. Pour tout filtre > 1 mois (Trimestre/Semestre/Année, tous à 45 %
-   depuis flux.js — donc TOUJOURS la même largeur de carte entre eux), flux.js ajoute la classe
-   .flux-donut-wrap-shifted ci-dessous pour décaler la paire vers la gauche à la place — demandé
-   explicitement, sans toucher à la carte elle-même. Comme ces filtres partagent tous la même
-   largeur de carte, la position reste cohérente entre eux malgré le changement de justify-
-   content (ce n'est QUE "Mois" qui a une largeur de carte différente des autres). */
-.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.25rem; flex: 1; min-height: 0; }
-/* justify-content:center seul seul ne suffit pas : ça centre les BOÎTES du donut et de la
-   légende, pas leur CONTENU visuel. Le camembert remplit son conteneur bord à bord, mais
-   .dl-item (voir plus bas) a son propre padding-right (12px) entre le bord de la boîte légende
-   et le texte du pourcentage — à boîtes centrées, l'espace visuel "bord droit -> fin des
-   pourcentages" ressort donc plus grand que "bord gauche -> début du camembert" (mesuré : 35px
-   contre 23px, l'écart correspond exactement à ce padding-right). translateX(+6px), la moitié
-   de l'écart, recale le tout pour que les deux espaces visuels soient réellement égaux. */
-.flux-donut-wrap.flux-donut-wrap-shifted { justify-content: center; transform: translateX(6px); }
+   titre, quelle que soit sa hauteur réelle. Tous les filtres de période partagent maintenant la
+   même proportion bâton/donut (45 %, voir donutPct dans flux.js — "Mois" affiche désormais un
+   bâton par semaine comme les autres filtres affichent un bâton par mois, donc n'a plus besoin
+   d'un traitement à part), donc TOUJOURS la même largeur de carte : justify-content:center est
+   donc toujours cohérent, plus besoin d'une variante flush-right conditionnelle.
+   justify-content:center seul ne suffit pas : ça centre les BOÎTES du donut et de la légende,
+   pas leur CONTENU visuel. Le camembert remplit son conteneur bord à bord, mais .dl-item (voir
+   plus bas) a son propre padding-right (12px) entre le bord de la boîte légende et le texte du
+   pourcentage — à boîtes centrées, l'espace visuel "bord droit -> fin des pourcentages" ressort
+   donc plus grand que "bord gauche -> début du camembert" (mesuré : 35px contre 23px, l'écart
+   correspond exactement à ce padding-right). translateX(+6px), la moitié de l'écart, recale le
+   tout pour que les deux espaces visuels soient réellement égaux. */
+.flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: center; transform: translateX(6px); gap: 1.25rem; flex: 1; min-height: 0; }
 /* align-self: stretch (pas center comme la légende) : le camembert remplit toute la hauteur
    disponible du wrap plutôt que de rester à sa taille de contenu — c'est cette hauteur réelle qui
    pilote son diamètre (Chart.js/maintainAspectRatio:false cale le cercle sur le plus petit des

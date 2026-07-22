@@ -226,43 +226,76 @@ const Flux = {
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
 
-    // Seul le filtre "Mois" (ou une plage plus courte) élargit le donut à 55 % — au-delà d'1
-    // mois (Trimestre, Semestre, Année...), toujours la même proportion 45 %, quel que soit le
-    // nombre de mois affichés (pas de palier supplémentaire qui rétrécirait encore le donut
-    // pour Semestre/Année par rapport à Trimestre).
+    // Même proportion bâton/donut (45 %) pour tous les filtres de période désormais — "Mois" (ou
+    // une plage plus courte) affiche maintenant un bâton par SEMAINE (ci-dessous) au lieu d'un
+    // bâton unique pour tout le mois, donc a autant besoin de largeur que les autres filtres
+    // (un bâton par mois) et n'a plus besoin d'un donut élargi à 55 % comme avant.
     const isShortPeriod = months.length <= 1;
-    const donutPct = isShortPeriod ? 55 : 45;
+    const donutPct = 45;
     const chartsRow = document.getElementById('flux-charts-row');
     if (chartsRow) chartsRow.style.gridTemplateColumns = `${100 - donutPct}fr ${donutPct}fr`;
-    // Décale le donut+légende vers la gauche pour tout filtre > 1 mois (voir .flux-donut-wrap-
-    // shifted dans style.css) — uniquement l'intérieur de la carte, sans toucher à son cadre.
-    // Cohérent entre Trimestre/Semestre/Année puisqu'ils partagent tous la même largeur de carte
-    // (donutPct 45 % ci-dessus) ; seul "Mois" a une largeur différente et garde l'ancrage à droite.
-    document.querySelector('.flux-donut-wrap')?.classList.toggle('flux-donut-wrap-shifted', !isShortPeriod);
 
-    const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const labels = months.map(m => {
-      const [y, mo] = m.split('-').map(Number);
-      return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
-    });
+    let labels, revByPeriod, depByPeriod;
 
-    const getLastDay = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
+    if (isShortPeriod) {
+      // Découpage par semaine civile (lundi -> dimanche), pas un seul bâton pour tout le mois —
+      // beaucoup plus lisible pour suivre l'évolution sur une période courte. Chaque semaine est
+      // bornée à [start, end] : les jours avant/après la période affichée (semaine à cheval sur
+      // le mois précédent/suivant) ne comptent pas dans les totaux, même si son libellé (date du
+      // lundi) peut tomber hors de cette période.
+      const weeks = [];
+      const wStart = new Date(start + 'T00:00:00');
+      const dow = wStart.getDay() === 0 ? 7 : wStart.getDay(); // lundi=1 ... dimanche=7
+      wStart.setDate(wStart.getDate() - (dow - 1));
+      const rangeEnd = new Date(end + 'T00:00:00');
+      while (wStart <= rangeEnd) {
+        const wEnd = new Date(wStart);
+        wEnd.setDate(wStart.getDate() + 6);
+        weeks.push({ start: new Date(wStart), end: wEnd });
+        wStart.setDate(wStart.getDate() + 7);
+      }
 
-    const revByMonth = months.map(m => {
-      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-      return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
-    });
+      const toStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-    const depByMonth = months.map(m => {
-      const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
-      const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
-      return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
-    });
+      // Comparaison en chaînes (YYYY-MM-DD s'ordonne lexicographiquement comme des dates) — PAS
+      // Math.max/min, qui coerceraient ces chaînes en NaN et casseraient tout l'écrêtage.
+      labels = weeks.map(w => fmt(w.start));
+      revByPeriod = weeks.map(w => {
+        const wStartStr = toStr(w.start), wEndStr = toStr(w.end);
+        const s = wStartStr < start ? start : wStartStr, e = wEndStr > end ? end : wEndStr;
+        return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
+      });
+      depByPeriod = weeks.map(w => {
+        const wStartStr = toStr(w.start), wEndStr = toStr(w.end);
+        const s = wStartStr < start ? start : wStartStr, e = wEndStr > end ? end : wEndStr;
+        return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
+      });
+    } else {
+      const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+      labels = months.map(m => {
+        const [y, mo] = m.split('-').map(Number);
+        return MONTHS_FR[mo - 1] + ' ' + String(y).slice(2);
+      });
 
-    const soldeByMonth = revByMonth.map((r, i) => r - depByMonth[i]);
+      const getLastDay = (m) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo, 0).getDate(); };
 
-    Charts.fluxBar(labels, revByMonth, depByMonth, soldeByMonth);
+      revByPeriod = months.map(m => {
+        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+        const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
+        return allRevenues.filter(r => Utils.getExpenseDate(r) >= s && Utils.getExpenseDate(r) <= e).reduce((sum, r) => sum + r.amount, 0);
+      });
+
+      depByPeriod = months.map(m => {
+        const mStart = `${m}-01`, mEnd = `${m}-${String(getLastDay(m)).padStart(2, '0')}`;
+        const s = mStart < start ? start : mStart, e = mEnd > end ? end : mEnd;
+        return allExpenses.filter(ex => Utils.getExpenseDate(ex) >= s && Utils.getExpenseDate(ex) <= e).reduce((sum, ex) => sum + ex.amount, 0);
+      });
+    }
+
+    const soldeByPeriod = revByPeriod.map((r, i) => r - depByPeriod[i]);
+
+    Charts.fluxBar(labels, revByPeriod, depByPeriod, soldeByPeriod);
   },
 
   // Dépenses de la période groupées par catégorie, triées par montant décroissant — brut,
