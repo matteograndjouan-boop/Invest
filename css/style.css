@@ -1567,7 +1567,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    largeur de carte, la position reste cohérente entre eux malgré le changement de justify-
    content (ce n'est QUE "Mois" qui a une largeur de carte différente des autres). */
 .flux-donut-wrap { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 1.25rem; flex: 1; min-height: 0; }
-.flux-donut-wrap.flux-donut-wrap-shifted { justify-content: center; }
+/* translateX en plus du center (pas juste flex-start) : un centrage strict laissait encore la
+   paire perçue comme "pas assez à gauche" — décalée d'un cran de plus par rapport au centre,
+   sans aller jusqu'à un flex-start complet (qui la collerait au bord gauche, aussi déséquilibré
+   dans l'autre sens). N'affecte que la position visuelle du contenu, jamais la carte elle-même. */
+.flux-donut-wrap.flux-donut-wrap-shifted { justify-content: center; transform: translateX(-16px); }
 /* align-self: stretch (pas center comme la légende) : le camembert remplit toute la hauteur
    disponible du wrap plutôt que de rester à sa taille de contenu — c'est cette hauteur réelle qui
    pilote son diamètre (Chart.js/maintainAspectRatio:false cale le cercle sur le plus petit des
