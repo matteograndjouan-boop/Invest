@@ -926,7 +926,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   cursor: pointer; transition: background .15s, border-color .15s, color .15s;
 }
 .period-trigger:hover, .period-trigger.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+/* min-width posé en JS (PeriodFilter._syncTriggerWidth, sur le libellé le plus long parmi TOUTES
+   les valeurs possibles du type courant — pas juste celle affichée) : empêche le bouton de
+   changer de largeur en naviguant avec les flèches voisines (ex. mois : "Mars 2026" est bien plus
+   court que "Septembre 2026"). display:inline-block + text-align:center nécessaires pour qu'un
+   <span> respecte min-width et centre un texte plus court que cette largeur réservée. */
 .period-trigger-ico { font-size: 0.85rem; }
+#period-trigger-label { display: inline-block; text-align: center; }
 .period-trigger-chev { font-size: 0.65rem; color: var(--text-muted); transition: transform .15s; }
 .period-trigger.active .period-trigger-chev { transform: rotate(180deg); color: var(--primary); }
 .period-panel {

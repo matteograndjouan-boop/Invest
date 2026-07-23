@@ -933,7 +933,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
   cursor: pointer; transition: background .15s, border-color .15s, color .15s;
 }
 .period-trigger:hover, .period-trigger.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+/* min-width posé en JS (PeriodFilter._syncTriggerWidth, sur le libellé le plus long parmi TOUTES
+   les valeurs possibles du type courant — pas juste celle affichée) : empêche le bouton de
+   changer de largeur en naviguant avec les flèches voisines (ex. mois : "Mars 2026" est bien plus
+   court que "Septembre 2026"). display:inline-block + text-align:center nécessaires pour qu'un
+   <span> respecte min-width et centre un texte plus court que cette largeur réservée. */
 .period-trigger-ico { font-size: 0.85rem; }
+#period-trigger-label { display: inline-block; text-align: center; }
 .period-trigger-chev { font-size: 0.65rem; color: var(--text-muted); transition: transform .15s; }
 .period-trigger.active .period-trigger-chev { transform: rotate(180deg); color: var(--primary); }
 .period-panel {
@@ -4739,6 +4745,45 @@ const PeriodFilter = {
   _refreshTrigger() {
     const el = document.getElementById('period-trigger-label');
     if (el) el.textContent = this._triggerLabel();
+    this._syncTriggerWidth();
+  },
+
+  // Libellés possibles pour un type de période donné — seulement les types où les flèches de
+  // navigation sont visibles (voir _updateArrows : mois/trimestre/semestre/année). "Plage libre"
+  // et "aucun filtre" n'ont pas de flèches, donc pas de risque de "saut" de taille en cliquant
+  // dessus, pas besoin de les couvrir ici.
+  _labelsForType(type, year) {
+    const MFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    switch (type) {
+      case 'month': return MFR.map(m => `${m} ${year}`);
+      case 'quarter': return [1,2,3,4].map(q => `T${q} ${year}`);
+      case 'semester': return [1,2].map(sem => `S${sem} ${year}`);
+      case 'year': return [`${year}`];
+      default: return null;
+    }
+  },
+
+  // Empêche le bouton du déclencheur de changer de largeur en naviguant avec les flèches voisines
+  // (ex. en mois, "Mars 2026" est bien plus court que "Septembre 2026") : calcule la largeur du
+  // libellé le plus long parmi TOUTES les valeurs possibles du type courant (pas seulement celle
+  // actuellement affichée), et la fixe en min-width — le bouton garde ainsi la même taille tout du
+  // long, y compris pour les mois les plus courts. Recalculé à chaque rafraîchissement plutôt que
+  // mis en cache : coût négligeable (quelques mesures de chaînes courtes), évite d'avoir à
+  // invalider un cache au changement de type.
+  _syncTriggerWidth() {
+    const labelEl = document.getElementById('period-trigger-label');
+    if (!labelEl) return;
+    const s = this.get();
+    const candidates = s.type ? this._labelsForType(s.type, s.year || new Date().getFullYear()) : null;
+    if (!candidates) { labelEl.style.minWidth = ''; return; }
+
+    const cs = getComputedStyle(labelEl);
+    const measureEl = document.createElement('span');
+    measureEl.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${cs.fontFamily};`;
+    document.body.appendChild(measureEl);
+    const maxWidth = Math.max(...candidates.map(c => { measureEl.textContent = c; return measureEl.getBoundingClientRect().width; }));
+    measureEl.remove();
+    labelEl.style.minWidth = `${Math.ceil(maxWidth)}px`;
   },
 
   _updateAll() {
