@@ -342,14 +342,17 @@ input:focus:not(:focus-visible) { outline: none; }
 .mode-tabs-row { display: flex; gap: 22px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .mode-tab {
   display: flex; align-items: center; gap: 6px;
-  padding: 0 0 9px; margin-bottom: -1px;
+  padding: 0 0 10px; margin-bottom: -1px;
   border: none; border-bottom: 2px solid transparent;
   background: transparent; color: var(--text-muted);
-  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-size: 15px; font-weight: 600; cursor: pointer;
   transition: color .15s, border-color .15s; white-space: nowrap;
 }
 .mode-tab:hover { color: var(--text); }
-.mode-tab.active { color: var(--text); border-bottom-color: var(--primary); }
+/* Même accent (violet #6c63ff = var(--primary)) que le mode actif dans la sidebar (.mode-btn.
+   active) : texte ET soulignement en accent, pas juste le soulignement — un texte blanc avec
+   un simple filet violet en dessous se remarquait à peine à côté des onglets inactifs. */
+.mode-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
 /* Utilitaire générique manquant jusqu'ici : seules des variantes composées existaient
    (.section.hidden, .modal-overlay.hidden, .period-panel.hidden, .period-dropdown.hidden),
@@ -476,7 +479,7 @@ input:focus:not(:focus-visible) { outline: none; }
    une couleur en inline (ex. Actifs/Passifs sur Patrimoine) garde sa couleur sémantique, seule la
    couleur est overridée par l'inline, taille/graisse restent héritées d'ici. */
 .chart-card h3, .card h3 {
-  font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
+  font-size: 14px; font-weight: 600; letter-spacing: -0.1px;
   color: var(--text); margin-bottom: 16px;
 }
 
@@ -1467,14 +1470,25 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fk-icon { display: block; width: 26px; height: 26px; margin-bottom: 28px; }
 .fk-icon svg { width: 100%; height: 100%; }
 
-.flux-kpi-card .kpi-label { color: rgba(255,255,255,.62); }
-.flux-kpi-card .kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -.5px; color: #fff; margin-top: 2px; }
+/* Repli neutre (blanc semi-transparent) si jamais une carte "fumée" n'a pas de teinte fk-*
+   dédiée — chacune en a une juste en dessous, qui l'emporte (même spécificité, déclarée après). */
+.flux-kpi-card .kpi-label { font-size: 16px; font-weight: 600; color: rgba(255,255,255,.62); }
+/* 800 (pas 700) + tracking plus négatif : le chiffre principal de ces cartes est LE truc que
+   l'oeil doit accrocher en premier, mérite plus de caractère qu'un simple montant de table. */
+.flux-kpi-card .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -.8px; color: #fff; margin-top: 2px; }
 .flux-kpi-card .kpi-trend { margin-top: 10px; font-size: 13px; font-weight: 600; }
 
+/* Label teinté (nuance CLAIRE de la couleur de la carte, ex. vert clair sur fond vert) plutôt que
+   le même blanc atténué pour toutes les cartes — renforce l'identité couleur de chaque carte et
+   rend le label nettement plus visible sur le dégradé "fumée" de fond. */
 .fk-revenue .fk-icon { color: #00b37e; }
+.fk-revenue .kpi-label { color: #6ee7b7; }
 .fk-expense .fk-icon { color: #e53e3e; }
+.fk-expense .kpi-label { color: #fca5a5; }
 .fk-balance .fk-icon { color: #3b82f6; }
+.fk-balance .kpi-label { color: #93c5fd; }
 .fk-savings .fk-icon { color: #d946ef; }
+.fk-savings .kpi-label { color: #f0abfc; }
 
 .fk-revenue .fk-smoke {
   background-color: #0d0f1f;
@@ -1516,6 +1530,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    corresponde, ajoutée pour Investissements (Rendement annuel/Performance). Même recette que
    les 4 ci-dessus, seule la teinte change. */
 .fk-return .fk-icon { color: #06b6d4; }
+.fk-return .kpi-label { color: #67e8f9; }
 .fk-return .fk-smoke {
   background-color: #0d0f1f;
   background-image:
@@ -1531,19 +1546,24 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.28rem 0.85rem;
+  min-height: 32px;
+  padding: 8px 16px;
   border-radius: 999px;
   border: 1.5px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
   white-space: nowrap;
 }
 .flux-pill:hover { border-color: var(--primary); color: var(--primary); }
-.flux-pill.active { color: #fff; }
+/* Fond accent par défaut (var(--primary), le même violet que le reste de la palette) : la
+   pastille "Toutes" n'a pas de couleur de catégorie propre (contrairement aux autres pastilles,
+   dont le style inline background/border-color — voir Flux._renderCatPills — l'emporte toujours
+   sur cette règle) et restait sans réel fond actif, juste un texte blanc sur fond inchangé. */
+.flux-pill.active { color: #fff; background: var(--primary); border-color: var(--primary); }
 .flux-pill-dot {
   width: 7px; height: 7px;
   border-radius: 50%;
@@ -1552,12 +1572,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   transition: background 0.15s;
 }
 .flux-multi-btn {
-  padding: 0.28rem 0.85rem;
+  display: inline-flex; align-items: center; min-height: 32px;
+  padding: 8px 16px;
   border-radius: 999px;
   border: 1.5px dashed var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
@@ -2705,13 +2726,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 
       <!-- FLUX -->
       <section class="section" id="section-flux">
-        <div class="section-header">
-          <h1>Flux</h1>
-          <div style="display:flex;gap:0.5rem">
-            <button class="btn-primary" id="add-expense-flux-btn">+ Dépense</button>
-            <button class="btn-secondary" id="add-revenue-flux-btn">+ Revenu</button>
-          </div>
-        </div>
         <div class="kpi-grid-4">
           <div class="flux-kpi-card fk-revenue">
             <div class="fk-smoke"></div>
@@ -12524,8 +12538,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-position-btn')?.addEventListener('click', () => Investments.openAddForm());
   document.getElementById('add-expense-btn')?.addEventListener('click', () => Expenses.openAddForm());
   document.getElementById('add-revenue-btn')?.addEventListener('click', () => Revenues.openAddForm());
-  document.getElementById('add-expense-flux-btn')?.addEventListener('click', () => Expenses.openAddForm());
-  document.getElementById('add-revenue-flux-btn')?.addEventListener('click', () => Revenues.openAddForm());
   document.getElementById('add-budget-btn').addEventListener('click', () => Budget.openAddForm());
   document.getElementById('add-patrimony-btn').addEventListener('click', () => Patrimony.openAddForm());
   document.getElementById('add-donnees-btn')?.addEventListener('click', () => DataEntry.openAddForm());
