@@ -140,11 +140,13 @@ const PeriodFilter = {
   _buildHTML() {
     return `
       <div class="period-compact">
+        <button class="period-arrow" id="period-trigger-prev" title="Période précédente">&#8592;</button>
         <button class="period-trigger" id="period-trigger">
           <span class="period-trigger-ico">📅</span>
           <span id="period-trigger-label"></span>
           <span class="period-trigger-chev">▾</span>
         </button>
+        <button class="period-arrow" id="period-trigger-next" title="Période suivante">&#8594;</button>
         <div class="period-panel hidden" id="period-panel">
           <div class="period-filter">
             <span class="period-filter-label">Période :</span>
@@ -199,6 +201,15 @@ const PeriodFilter = {
 
     document.getElementById('period-prev').addEventListener('click', () => { this._prev(); this._closeDropdown(); });
     document.getElementById('period-next').addEventListener('click', () => { this._next(); this._closeDropdown(); });
+
+    // Flèches à côté du déclencheur compact : mêmes _prev()/_next() que celles du panneau
+    // ci-dessus, mais accessibles SANS ouvrir le panneau — naviguer d'un mois (ou trimestre...)
+    // sur l'autre sans déplier tout le sélecteur. stopPropagation : ces flèches sont hors du
+    // panneau (donc pas couvertes par le e => e.stopPropagation() posé dessus un peu plus bas),
+    // sans ça le clic remonterait jusqu'au listener global qui referme panneau/dropdown — sans
+    // effet ici (déjà fermés) mais plus sûr d'arrêter la propagation explicitement.
+    document.getElementById('period-trigger-prev').addEventListener('click', (e) => { e.stopPropagation(); this._prev(); });
+    document.getElementById('period-trigger-next').addEventListener('click', (e) => { e.stopPropagation(); this._next(); });
 
     document.getElementById('period-label-btn').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -369,8 +380,12 @@ const PeriodFilter = {
     const s = this.get();
     const prev = document.getElementById('period-prev');
     const next = document.getElementById('period-next');
+    const triggerPrev = document.getElementById('period-trigger-prev');
+    const triggerNext = document.getElementById('period-trigger-next');
     const hide = s.type === 'range' || !s.type;
     if (prev) prev.style.visibility = hide ? 'hidden' : '';
     if (next) next.style.visibility = hide ? 'hidden' : '';
+    if (triggerPrev) triggerPrev.style.visibility = hide ? 'hidden' : '';
+    if (triggerNext) triggerNext.style.visibility = hide ? 'hidden' : '';
   },
 };

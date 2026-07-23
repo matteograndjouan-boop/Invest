@@ -921,7 +921,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 /* ---- Period Filter (déclencheur compact, sur la même ligne que les onglets de mode
    — .mode-tabs-and-filter ci-dessus) ---- */
 .global-period-bar { display: flex; justify-content: flex-end; flex-shrink: 0; }
-.period-compact { position: relative; }
+/* .period-panel reste positionné en absolute (donc hors flux, non affecté par ce flex) : le flex
+   ne sert ici qu'à aligner les 2 flèches de navigation de part et d'autre du déclencheur compact
+   (voir .period-arrow plus bas, réutilisé tel quel — même bouton que dans le panneau déplié). */
+.period-compact { position: relative; display: flex; align-items: center; gap: 6px; }
 .period-trigger {
   display: flex; align-items: center; gap: 7px;
   padding: 7px 14px; border-radius: 999px;
@@ -1408,10 +1411,13 @@ select.dt-select:focus {
 .date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-/* Sur Comparaisons, la barre ne sert qu'au toggle Date (les mois A/B ont leurs propres sélecteurs). */
+/* Sur Comparaisons, la barre ne sert qu'au toggle Date (les mois A/B ont leurs propres sélecteurs)
+   — les flèches à côté du déclencheur compact (.period-compact > .period-arrow) navigueraient
+   sur une période globale non affichée sur cet onglet, donc masquées comme le reste. */
 body[data-view="comparisons"] .period-filter-label,
 body[data-view="comparisons"] .period-type-btns,
-body[data-view="comparisons"] .period-nav { display: none; }
+body[data-view="comparisons"] .period-nav,
+body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 0; border-left: none; }
 
 /* ---- KPI Trends ---- */
@@ -4502,11 +4508,13 @@ const PeriodFilter = {
   _buildHTML() {
     return `
       <div class="period-compact">
+        <button class="period-arrow" id="period-trigger-prev" title="Période précédente">&#8592;</button>
         <button class="period-trigger" id="period-trigger">
           <span class="period-trigger-ico">📅</span>
           <span id="period-trigger-label"></span>
           <span class="period-trigger-chev">▾</span>
         </button>
+        <button class="period-arrow" id="period-trigger-next" title="Période suivante">&#8594;</button>
         <div class="period-panel hidden" id="period-panel">
           <div class="period-filter">
             <span class="period-filter-label">Période :</span>
@@ -4561,6 +4569,15 @@ const PeriodFilter = {
 
     document.getElementById('period-prev').addEventListener('click', () => { this._prev(); this._closeDropdown(); });
     document.getElementById('period-next').addEventListener('click', () => { this._next(); this._closeDropdown(); });
+
+    // Flèches à côté du déclencheur compact : mêmes _prev()/_next() que celles du panneau
+    // ci-dessus, mais accessibles SANS ouvrir le panneau — naviguer d'un mois (ou trimestre...)
+    // sur l'autre sans déplier tout le sélecteur. stopPropagation : ces flèches sont hors du
+    // panneau (donc pas couvertes par le e => e.stopPropagation() posé dessus un peu plus bas),
+    // sans ça le clic remonterait jusqu'au listener global qui referme panneau/dropdown — sans
+    // effet ici (déjà fermés) mais plus sûr d'arrêter la propagation explicitement.
+    document.getElementById('period-trigger-prev').addEventListener('click', (e) => { e.stopPropagation(); this._prev(); });
+    document.getElementById('period-trigger-next').addEventListener('click', (e) => { e.stopPropagation(); this._next(); });
 
     document.getElementById('period-label-btn').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -4731,9 +4748,13 @@ const PeriodFilter = {
     const s = this.get();
     const prev = document.getElementById('period-prev');
     const next = document.getElementById('period-next');
+    const triggerPrev = document.getElementById('period-trigger-prev');
+    const triggerNext = document.getElementById('period-trigger-next');
     const hide = s.type === 'range' || !s.type;
     if (prev) prev.style.visibility = hide ? 'hidden' : '';
     if (next) next.style.visibility = hide ? 'hidden' : '';
+    if (triggerPrev) triggerPrev.style.visibility = hide ? 'hidden' : '';
+    if (triggerNext) triggerNext.style.visibility = hide ? 'hidden' : '';
   },
 };
 
