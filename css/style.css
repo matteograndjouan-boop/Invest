@@ -37,7 +37,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -319,27 +319,23 @@ input:focus:not(:focus-visible) { outline: none; }
 
 /* ---- Onglets de mode (en haut du contenu, remplacent l'ancienne liste de nav-item par mode
    dans la barre latérale — voir renderModeTabs dans app.js) ---- */
-/* Onglets + filtre de période sur la même ligne (voir index.html) : le déclencheur du filtre
-   n'a qu'une ligne (~32px) contre 2 pour les onglets (fil d'ariane + rangée d'onglets, ~55px) —
-   flex-end aligne son bas sur celui de la rangée d'onglets, la seule des deux qui compte
-   visuellement (le fil d'ariane au-dessus n'a pas besoin d'être aligné avec quoi que ce soit).
-   min-width:0 laisse .mode-tabs-row (flex-wrap) se réduire plutôt que pousser le filtre hors
-   ligne sur les petits écrans ; le filtre lui-même ne doit jamais se comprimer (flex-shrink:0
-   plus bas, sur .global-period-bar). */
-.mode-tabs-and-filter { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+/* Onglets + filtre de période sur la même ligne (voir index.html) : plus de fil d'Ariane
+   au-dessus des onglets (texte redondant avec le titre de section juste en dessous, retiré) —
+   les deux côtés sont maintenant sur une seule ligne chacun, align-items:center aligne
+   naturellement leurs centres verticaux malgré leurs hauteurs légèrement différentes (bordure
+   du dessous des onglets vs. pilule pleine du filtre). min-width:0 laisse .mode-tabs-row
+   (flex-wrap) se réduire plutôt que pousser le filtre hors ligne sur les petits écrans ; le
+   filtre lui-même ne doit jamais se comprimer (flex-shrink:0 plus bas, sur .global-period-bar). */
+.mode-tabs-and-filter { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
 .mode-tabs-and-filter .mode-tabs { flex: 1; min-width: 0; }
 .mode-tabs { margin-bottom: 0; }
-.mode-tabs-crumb {
-  font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;
-}
-.mode-tabs-row { display: flex; gap: 26px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mode-tabs-row { display: flex; gap: 22px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .mode-tab {
-  display: flex; align-items: center; gap: 7px;
-  padding: 0 0 10px; margin-bottom: -1px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 0 9px; margin-bottom: -1px;
   border: none; border-bottom: 2px solid transparent;
   background: transparent; color: var(--text-muted);
-  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  font-size: 13px; font-weight: 600; cursor: pointer;
   transition: color .15s, border-color .15s; white-space: nowrap;
 }
 .mode-tab:hover { color: var(--text); }
@@ -366,9 +362,16 @@ input:focus:not(:focus-visible) { outline: none; }
   gap: 12px;
 }
 
-.section-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+.section-header h1 { font-size: 20px; font-weight: 600; color: var(--text); }
 
 .header-actions { display: flex; gap: 10px; align-items: center; }
+
+/* Boutons d'action du header de section ("+ Dépense", "+ Ajouter"...) plus compacts que le
+   défaut .btn-primary/.btn-secondary (utilisé aussi ailleurs — formulaires, modales — qui n'ont
+   pas besoin de rétrécir) : même recette que .btn-sm, appliquée à TOUT bouton primaire/secondaire
+   dans .section-header quel que soit son wrapper (.header-actions, ou un simple <div> comme sur
+   Flux/Budget) plutôt que scopée à .header-actions seul, qui ne couvre pas tous les cas. */
+.section-header .btn-primary, .section-header .btn-secondary { padding: 6px 14px; font-size: 12px; }
 
 .date-badge {
   font-size: 13px;
@@ -404,10 +407,10 @@ input:focus:not(:focus-visible) { outline: none; }
 .kpi-badge {
   position: absolute;
   top: 14px; right: 14px;
-  width: 36px; height: 36px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700;
+  font-size: 17px; font-weight: 700;
 }
 .kpi-card.primary .kpi-badge { background: rgba(99,102,241,0.14); color: var(--primary); }
 .kpi-card.success .kpi-badge { background: rgba(16,185,129,0.14); color: var(--success); }
@@ -418,8 +421,12 @@ input:focus:not(:focus-visible) { outline: none; }
   background: rgba(100,116,139,0.1); color: var(--text-muted);
 }
 
-.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); font-weight: 700; margin-bottom: 6px; }
-.kpi-value { font-size: 22px; font-weight: 700; color: var(--text); }
+/* Casse normale (pas d'uppercase) : le texte source est déjà correctement capitalisé
+   ("Revenus", "Taux d'épargne"...) — l'uppercase était purement visuel, une majuscule de
+   1re lettre suffit et se lit mieux. Graisse allégée en cohérence (600, pas 700 : un label
+   n'a pas besoin d'autant de poids qu'une valeur). */
+.kpi-label { font-size: 11px; letter-spacing: .2px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; }
+.kpi-value { font-size: 24px; font-weight: 700; color: var(--text); }
 .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
 /* ---- Charts ---- */
@@ -918,14 +925,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    ne sert ici qu'à aligner les 2 flèches de navigation de part et d'autre du déclencheur compact
    (voir .period-arrow plus bas, réutilisé tel quel — même bouton que dans le panneau déplié). */
 .period-compact { position: relative; display: flex; align-items: center; gap: 6px; }
+/* Même recette que .dd-trigger (js/dropdown.js) — pilule pleine en dégradé accent, texte blanc,
+   pas de bordure — pour que le filtre de période (composant à part, voir plus haut) se lise
+   comme la même famille de contrôle que les listes déroulantes plutôt qu'un style différent. */
 .period-trigger {
   display: flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); font-size: 0.8125rem; font-weight: 600;
-  cursor: pointer; transition: background .15s, border-color .15s, color .15s;
+  padding: 7px 14px; border-radius: 999px; border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff; font-size: 0.8125rem; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: box-shadow .15s, filter .15s;
 }
-.period-trigger:hover, .period-trigger.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.period-trigger:hover, .period-trigger.active { box-shadow: 0 4px 14px rgba(108,99,255,.4); filter: brightness(1.08); }
 /* min-width posé en JS (PeriodFilter._syncTriggerWidth, sur le libellé le plus long parmi TOUTES
    les valeurs possibles du type courant — pas juste celle affichée) : empêche le bouton de
    changer de largeur en naviguant avec les flèches voisines (ex. mois : "Mars 2026" est bien plus
@@ -933,8 +943,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    <span> respecte min-width et centre un texte plus court que cette largeur réservée. */
 .period-trigger-ico { font-size: 0.85rem; }
 #period-trigger-label { display: inline-block; text-align: center; }
-.period-trigger-chev { font-size: 0.65rem; color: var(--text-muted); transition: transform .15s; }
-.period-trigger.active .period-trigger-chev { transform: rotate(180deg); color: var(--primary); }
+/* Blanc (pas var(--text-muted)) : le fond est désormais un dégradé plein comme .dd-trigger-chev,
+   pas une pilule neutre où un chevron discret avait du sens. */
+.period-trigger-chev { font-size: 0.65rem; color: rgba(255,255,255,.85); transition: transform .15s; opacity: .9; }
+.period-trigger.active .period-trigger-chev { transform: rotate(180deg); }
 .period-panel {
   position: absolute; top: calc(100% + 8px); right: 0;
   max-width: min(480px, calc(100vw - 48px));
@@ -1442,11 +1454,11 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fk-smoke { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .flux-kpi-card > :not(.fk-smoke) { position: relative; z-index: 1; }
 
-.fk-icon { display: block; width: 22px; height: 22px; margin-bottom: 30px; }
+.fk-icon { display: block; width: 26px; height: 26px; margin-bottom: 28px; }
 .fk-icon svg { width: 100%; height: 100%; }
 
 .flux-kpi-card .kpi-label { color: rgba(255,255,255,.62); }
-.flux-kpi-card .kpi-value { font-size: 30px; font-weight: 800; letter-spacing: -.5px; color: #fff; margin-top: 2px; }
+.flux-kpi-card .kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -.5px; color: #fff; margin-top: 2px; }
 .flux-kpi-card .kpi-trend { margin-top: 10px; font-size: 13px; font-weight: 600; }
 
 .fk-revenue .fk-icon { color: #00b37e; }
@@ -1514,7 +1526,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   border: 1.5px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
@@ -1535,7 +1547,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   border: 1.5px dashed var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
@@ -1850,7 +1862,9 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .bdetail-kpis { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
 .bdetail-kpi { flex: 1; min-width: 80px; padding: 0 16px; text-align: center; }
 .bdetail-kpi-val { font-size: 22px; font-weight: 900; line-height: 1.1; }
-.bdetail-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+/* Casse normale + graisse allégée : même traitement que .kpi-label (label de KPI, juste une
+   classe dédiée pour ce contexte détail budget), pas de raison d'avoir un style différent ici. */
+.bdetail-kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.2px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .bdetail-kpi-sep { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
 .bdetail-edit-planned { background: none; border: none; cursor: pointer; font-size: 12px; padding: 0; opacity: 0.5; transition: opacity 0.15s; }
 .bdetail-edit-planned:hover { opacity: 1; }
@@ -2118,8 +2132,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .btn-primary:hover { box-shadow: 0 8px 22px rgba(109,118,232,.40); }
 .btn-secondary { border-radius: 14px; }
 .search-input, select.select-input, .form-group input, .form-group select, .form-group textarea { border-radius: 12px; }
-/* Titres un peu plus serrés, plus « dashboard » */
-.section-header h1 { letter-spacing: -0.5px; font-weight: 800; }
 .kpi-value { letter-spacing: -0.5px; }
 /* Modale plus douce */
 .modal { border: none; }

@@ -33,7 +33,7 @@ const Flux = {
     const active = this._activeFilters;
     const multi = this._multiMode;
 
-    const multiBtn = `<button class="flux-multi-btn${multi ? ' active' : ''}" onclick="Flux._toggleMultiMode()" title="Activer la sélection multiple">⊕ Multi</button>`;
+    const multiBtn = `<button class="flux-multi-btn${multi ? ' active' : ''}" onclick="Flux._toggleMultiMode()" title="Activer la sélection multiple">⊕ Plusieurs</button>`;
     const allActive = !active.size;
     const allBtn = `<button class="flux-pill${allActive ? ' active' : ''}" onclick="Flux._clearFilters()">
       <span class="flux-pill-dot" style="background:${allActive ? '#fff' : 'var(--text-muted)'}"></span>Toutes
@@ -95,13 +95,13 @@ const Flux = {
   },
 
   // Clic sur le segment/légende "Autres" du donut : sélectionne d'un coup TOUTES les catégories
-  // qui le composent, en mode multi (plusieurs catégories actives à la fois, comme ⊕ Multi). Un
-  // reclic sur "Autres" alors que cette sélection exacte est déjà active l'annule (même logique
-  // toggle que les autres catégories).
+  // qui le composent, en mode multi (plusieurs catégories actives à la fois, comme ⊕ Plusieurs).
+  // Un reclic sur "Autres" alors que cette sélection exacte est déjà active l'annule (même
+  // logique toggle que les autres catégories).
   // Sélectionne toutes les catégories groupées dans "Autres" SANS activer le mode multi — sinon
   // le clic suivant sur une autre catégorie s'ajoutait au filtre au lieu de le remplacer (mode
   // multi resté actif malgré lui). Le mode multi ne doit s'activer que par un clic explicite sur
-  // le bouton "⊕ Multi" (_toggleMultiMode) — jamais comme effet de bord d'un autre clic.
+  // le bouton "⊕ Plusieurs" (_toggleMultiMode) — jamais comme effet de bord d'un autre clic.
   _toggleAutres() {
     const others = this._autresCategories();
     if (!others.length) return;

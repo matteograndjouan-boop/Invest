@@ -314,9 +314,7 @@ function renderModeTabs(mode, activeSectionId) {
     <button class="mode-tab${s.id === activeSectionId ? ' active' : ''}" data-section="${s.id}">
       ${s.label}
     </button>`).join('');
-  container.innerHTML = `
-    <div class="mode-tabs-crumb">${cfg.label}</div>
-    <div class="mode-tabs-row">${tabs}</div>`;
+  container.innerHTML = `<div class="mode-tabs-row">${tabs}</div>`;
   container.querySelectorAll('.mode-tab').forEach(btn => {
     btn.addEventListener('click', () => navigateTo(btn.dataset.section));
   });

@@ -47,13 +47,18 @@ const Utils = {
     return m && y ? `${y}-${m}` : '';
   },
 
+  // 0 décimale pour un montant rond (ex. 2 500 €), toujours exactement 2 sinon (jamais 1) — un
+  // simple minimumFractionDigits:0/maximumFractionDigits:2 laisserait passer "450,5 €" pour un
+  // montant à 1 seule décimale significative, pas conforme aux conventions d'affichage monétaire.
   formatCurrency(amount) {
+    const value = amount || 0;
+    const isWhole = Math.round(value * 100) % 100 === 0;
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount || 0);
+      minimumFractionDigits: isWhole ? 0 : 2,
+      maximumFractionDigits: isWhole ? 0 : 2,
+    }).format(value);
   },
 
   formatPercent(value) {
