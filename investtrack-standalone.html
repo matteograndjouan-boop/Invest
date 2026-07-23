@@ -4763,19 +4763,21 @@ const PeriodFilter = {
     }
   },
 
-  // Empêche le bouton du déclencheur de changer de largeur en naviguant avec les flèches voisines
-  // (ex. en mois, "Mars 2026" est bien plus court que "Septembre 2026") : calcule la largeur du
-  // libellé le plus long parmi TOUTES les valeurs possibles du type courant (pas seulement celle
-  // actuellement affichée), et la fixe en min-width — le bouton garde ainsi la même taille tout du
-  // long, y compris pour les mois les plus courts. Recalculé à chaque rafraîchissement plutôt que
-  // mis en cache : coût négligeable (quelques mesures de chaînes courtes), évite d'avoir à
-  // invalider un cache au changement de type.
+  // Empêche le bouton du déclencheur de changer de largeur — que ce soit en naviguant avec les
+  // flèches voisines au sein d'un même type (ex. en mois, "Mars 2026" est bien plus court que
+  // "Septembre 2026") OU en changeant de type (Trimestre/Semestre/Année sont des libellés bien
+  // plus courts que certains mois) : calcule la largeur du libellé le plus long parmi TOUTES les
+  // valeurs possibles de TOUS les types à flèches réunis (pas seulement celles du type courant),
+  // et la fixe en min-width — un seul et même gabarit de largeur, quel que soit le type actif.
+  // Recalculé à chaque rafraîchissement plutôt que mis en cache : coût négligeable (une vingtaine
+  // de mesures de chaînes courtes), évite d'avoir à invalider un cache au changement de type/année.
   _syncTriggerWidth() {
     const labelEl = document.getElementById('period-trigger-label');
     if (!labelEl) return;
     const s = this.get();
-    const candidates = s.type ? this._labelsForType(s.type, s.year || new Date().getFullYear()) : null;
-    if (!candidates) { labelEl.style.minWidth = ''; return; }
+    if (!s.type || s.type === 'range') { labelEl.style.minWidth = ''; return; }
+    const year = s.year || new Date().getFullYear();
+    const candidates = ['month', 'quarter', 'semester', 'year'].flatMap(t => this._labelsForType(t, year));
 
     const cs = getComputedStyle(labelEl);
     const measureEl = document.createElement('span');
