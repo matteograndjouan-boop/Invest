@@ -491,17 +491,42 @@ const Flux = {
     }
     if (empty) empty.classList.add('hidden');
 
-    // Réserve de place FIXE (px, via calc/min) pour le montant en bout de barre, pas un simple
-    // plafond en % : un plafond en % laisse une marge qui rétrécit avec la carte (responsive) ou
-    // avec un montant à plus de chiffres, jusqu'à déborder (mesuré : 1.8px de marge à peine avec
-    // un plafond à 78%, ça déborde carrément dès un montant à 5 chiffres sur une carte resserrée).
-    // Une réserve en px reste constante quelle que soit la largeur de piste — seule la barre au
-    // MAX peut l'atteindre (les autres, proportionnellement plus courtes, ont naturellement de la
-    // marge), perte de précision visuelle négligeable dans ce seul cas limite.
-    const HBAR_LABEL_RESERVE_PX = 96;
+    // Réserve de place (px, via calc/min) pour le montant en bout de barre, pas un simple plafond
+    // en % : un plafond en % laisse une marge qui rétrécit avec la carte (responsive) ou avec un
+    // montant à plus de chiffres, jusqu'à déborder (mesuré : 1.8px de marge à peine avec un
+    // plafond à 78%, ça déborde carrément dès un montant à 5 chiffres sur une carte resserrée).
+    // MESURÉE (le texte réel le plus large parmi les montants affichés), pas une constante figée
+    // au pire cas : une constante assez large pour un montant à 5 chiffres réservait bien plus de
+    // place que nécessaire pour de petits montants, écrasant à tort les proportions entre barres
+    // (2 barres à ratio 2:1 rendues à la MÊME longueur, toutes deux plafonnées par une réserve
+    // surdimensionnée pour ces montants-là).
+    const amountStrs = sorted.map(([, g]) => Utils.formatCurrency(g.amount));
+    const measureEl = document.createElement('span');
+    measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:12.5px;font-weight:700;';
+    document.body.appendChild(measureEl);
+    const maxAmountTextWidth = Math.max(...amountStrs.map(s => { measureEl.textContent = s; return measureEl.getBoundingClientRect().width; }));
+    measureEl.remove();
+    const HBAR_LABEL_RESERVE_PX = Math.ceil(maxAmountTextWidth) + 16; // + gap (8px) + marge de sécurité
     const maxAmount = Math.max(...sorted.map(([, g]) => g.amount));
     const escAttr = (s) => String(s).replace(/"/g, '&quot;');
     const filterColor = showSub ? Utils.getCategoryColor(this._catLabel()) : null;
+
+    // Hauteur d'une ligne du tableau (mesurée, pas figée en CSS — même logique que le spacer
+    // d'en-tête ci-dessous) appliquée à chaque barre : sans ça, la 1re barre s'alignait bien sur
+    // la 1re ligne du tableau (grâce au spacer), mais l'écart entre le rythme des lignes du
+    // tableau (~47px, padding+bordure des <td>) et celui du graphique (gap flexbox ~39px)
+    // s'accumulait ligne après ligne — jusqu'à 37px de décalage sur la dernière ligne d'une liste
+    // de 6 catégories.
+    // Le delta top-à-top entre 2 lignes réelles (pas la height d'une seule ligne isolée) capture
+    // fidèlement le cycle vertical effectif du tableau, bordures collapsées comprises — measurer
+    // une seule ligne laissait un résidu de 0.5px/ligne qui s'accumulait encore, en plus petit,
+    // sur une longue liste. Repli sur la height d'une seule ligne s'il n'y en a qu'une (rien à
+    // soustraire).
+    const catRows = [...document.querySelectorAll('#flux-summary-tbody tr.srow:not(.srow-sub)')];
+    const rowH = catRows.length >= 2
+      ? catRows[1].getBoundingClientRect().top - catRows[0].getBoundingClientRect().top
+      : (catRows[0] ? catRows[0].getBoundingClientRect().height : 0);
+    const rowHStyle = rowH ? `height:${rowH}px;` : '';
 
     const rows = sorted.map(([label, g], idx) => {
       const rawPct = (maxAmount > 0 ? (g.amount / maxAmount * 100) : 0).toFixed(1);
@@ -543,9 +568,14 @@ const Flux = {
       const isFiltered = !showSub && catFilters.size > 0 && !catFilters.has(label);
       const cls = `hbar-row${showSub ? '' : ' clickable'}${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}`;
       const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
+      // Pastille de couleur devant le nom : seulement pour une barre CATÉGORIE (cas 1/3), jamais
+      // pour une barre sous-catégorie (cas 2) — même règle que .srow-dot dans le tableau (absent
+      // sur les lignes de sous-catégorie), pour que le "type" de ligne se reconnaisse pareil des
+      // deux côtés.
+      const dotHtml = showSub ? '' : `<span class="hbar-dot" style="background:${rowColor}"></span>`;
 
-      return `<div class="${cls}" style="--rc:${rowColor}"${dataCat}${onClick}>
-        <div class="hbar-label" title="${escAttr(label)}">${label}</div>
+      return `<div class="${cls}" style="--rc:${rowColor};${rowHStyle}"${dataCat}${onClick}>
+        <div class="hbar-label" title="${escAttr(label)}">${dotHtml}<span class="hbar-label-text">${label}</span></div>
         <div class="hbar-track">
           <div class="hbar-fillwrap" style="width:${widthCss}">
             <div class="hbar-fill">${segmentsHtml}</div>
@@ -555,7 +585,13 @@ const Flux = {
       </div>`;
     }).join('');
 
-    container.innerHTML = rows;
+    // Spacer de la hauteur du <thead> du tableau : sans lui, la 1re barre du graphique démarre
+    // plus haut que la 1re ligne du tableau (qui a un en-tête au-dessus, contrairement au
+    // graphique) — décalage vertical qui s'accumule visuellement ligne après ligne. Mesuré en
+    // JS (pas une valeur figée en CSS) pour rester juste si le style de l'en-tête change.
+    const thead = document.getElementById('flux-summary-thead');
+    const theadH = thead ? thead.getBoundingClientRect().height : 0;
+    container.innerHTML = `<div class="hbar-head-spacer" style="height:${theadH}px"></div>${rows}`;
   },
 
   // Ne recalcule/recompose PAS tout le graphique — trouve directement la barre déjà à l'écran

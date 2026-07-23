@@ -1668,12 +1668,20 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
    les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
    modélisent pas bien. */
-.flux-hbar-chart { display: flex; flex-direction: column; gap: 11px; }
+/* Pas de gap ici (contrairement à un simple empilement) : chaque .hbar-row porte sa propre
+   hauteur mesurée sur une VRAIE ligne du tableau voisin (Flux._renderHBarChart), pour que le
+   rythme vertical des deux colles exactement — un gap fixe en plus aurait désynchronisé les deux
+   listes ligne après ligne (mesuré : jusqu'à 37px d'écart cumulé sur 6 catégories sans ce fix). */
+.flux-hbar-chart { display: flex; flex-direction: column; }
+/* Comble la hauteur du <thead> du tableau voisin (valeur posée en JS par Flux._renderHBarChart,
+   pas figée ici) : sans lui la 1re barre démarre plus haut que la 1re ligne du tableau. */
+.hbar-head-spacer { flex-shrink: 0; }
 .hbar-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 3px 6px; margin: 0 -6px;
+  padding: 0 6px; margin: 0 -6px;
   border-radius: 8px;
   border-left: 3px solid transparent;
+  box-sizing: border-box;
   transition: border-color 0.15s, opacity 0.15s;
 }
 .hbar-row.clickable { cursor: pointer; }
@@ -1681,16 +1689,26 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .hbar-row.active { border-left-color: var(--rc, var(--primary)); }
 .hbar-row.dimmed { opacity: 0.4; }
 .hbar-row.dimmed:hover { opacity: 1; }
+/* Largeur alignée sur l'indentation réelle du nom dans la colonne Catégorie du tableau (pastille
+   + texte) — avant, 108px sans pastille donnait un nom de catégorie visuellement "décalé" par
+   rapport à sa ligne dans le tableau, l'ensemble ressortait comme deux composants disparates
+   plutôt qu'une paire tableau/graphique cohérente. */
 .hbar-label {
-  flex: 0 0 108px; width: 108px;
+  flex: 0 0 150px; width: 150px;
+  display: flex; align-items: center; gap: 7px;
+}
+.hbar-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.hbar-label-text {
   font-size: 13px; font-weight: 600; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .hbar-track { flex: 1; height: 22px; border-radius: 6px; background: var(--border); display: flex; align-items: center; overflow: visible; }
-/* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - 96px)) —
-   réserve fixe en px pour le montant affiché juste après la barre la plus longue, pas un simple
-   plafond en %, dont la marge finit par déborder sur une carte resserrée avec un montant à
-   plusieurs chiffres (mesuré : un plafond à 78% ne laissait plus que ~2px de marge dans ce cas). */
+/* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - Npx)) — N
+   mesuré sur le montant le plus large réellement affiché (pas une constante figée au pire cas,
+   qui écraserait les proportions entre barres pour de petits montants), réserve pour le montant
+   affiché juste après la barre la plus longue. Pas un simple plafond en %, dont la marge finit
+   par déborder sur une carte resserrée avec un montant à plusieurs chiffres (mesuré : un plafond
+   à 78% ne laissait plus que ~2px de marge dans ce cas). */
 .hbar-fillwrap { display: flex; align-items: center; height: 100%; gap: 8px; min-width: 4px; }
 .hbar-fill { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
 /* transition sur background (pas width, qui ne change jamais pour un segment donné — voir
