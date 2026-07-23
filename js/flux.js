@@ -405,10 +405,6 @@ const Flux = {
     const entries = this._categoryTotals();
     if (!entries.length) { container.innerHTML = ''; return; }
 
-    // % du TOTAL des dépenses de la période (même valeur que le donut/sa légende), pas % de la
-    // catégorie la plus dépensière — la jauge doit se lire "cette catégorie pèse X % de mes
-    // dépenses", pas "X % de ma plus grosse catégorie" (ce que donnait value/max).
-    const total = entries.reduce((s, [, v]) => s + v, 0);
     container.innerHTML = entries.map(([label, value]) => {
       const color = Utils.getCategoryColor(label);
       // Icône personnalisée de la catégorie si définie (Categories._setIcon), sinon repli sur
@@ -416,14 +412,18 @@ const Flux = {
       // dans l'onglet Catégories (toujours l'icône déduite du nom, jamais la valeur enregistrée).
       const cat  = Storage.getCategories().find(c => c.name === label);
       const icon = (cat && cat.icon) || Categories._meta(label).icon;
-      const barW = total > 0 ? (value / total * 100).toFixed(1) : 0;
       const isActive = catFilters.size > 0 && catFilters.has(label);
       const isFiltered = catFilters.size > 0 && !catFilters.has(label);
       const safeName = label.replace(/'/g, "\\'");
-      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+      // Bande du haut : dégradé couleur de la catégorie -> teinte claire de cette même couleur
+      // (Charts._shade, déjà utilisé ailleurs pour ce genre de dégradé) — en custom property
+      // plutôt qu'en style direct sur .flux-cat-card, pour que le ::before (voir CSS) qui porte
+      // réellement la bande puisse la lire (un style inline ne s'applique jamais à un pseudo-
+      // élément, seulement à l'élément qui le porte).
+      const band = `linear-gradient(90deg, ${color}, ${Charts._shade(color, 0.45)})`;
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band}" onclick="Flux.toggleFilter('${safeName}')">
         <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
         <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
-        <div class="fcc-bar-bg"><div class="fcc-bar-fill" style="width:${barW}%;background:${color}"></div></div>
       </div>`;
     }).join('');
   },

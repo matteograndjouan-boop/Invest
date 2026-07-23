@@ -1685,6 +1685,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    (flex-grow), donc une ligne incomplète s'étire quand même pour occuper toute la largeur. */
 .flux-cat-cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .flux-cat-card {
+  position: relative;
   flex: 1 1 140px;
   padding: 14px 14px 12px;
   border-radius: 12px;
@@ -1693,16 +1694,24 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s, opacity 0.14s;
 }
+/* Bande du haut (couleur de la catégorie -> teinte claire, posée en JS via --fcc-band —
+   Flux._renderCategoryCards) : remplace l'ancienne barre de progression du bas — plus de notion
+   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Même
+   arrondi que la carte (12px) sur les 2 coins hauts, sinon la bande carrée dépasserait visible-
+   ment des coins arrondis de la carte. */
+.flux-cat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  border-radius: 12px 12px 0 0;
+  background: var(--fcc-band, var(--primary));
+}
 .flux-cat-card:hover { border-color: var(--primary); }
 .flux-cat-card.active { border-color: var(--primary); background: var(--primary-light); }
 .flux-cat-card.dimmed { opacity: 0.4; }
 .flux-cat-card.dimmed:hover { opacity: 1; }
 .fcc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .fcc-ico { font-size: 18px; }
-.fcc-name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcc-name { font-size: 15px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
-.fcc-bar-bg { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
-.fcc-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
 
 /* ---- Flux Summary Table ---- */
 /* Table plafonnée en largeur plutôt qu'étirée sur toute la carte : à pleine largeur, la colonne
@@ -1720,7 +1729,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-hbar-card { flex: 1 1 320px; min-width: 280px; }
 
 /* ---- Flux Répartition — graphique en barres horizontales ---- */
-/* Barres HTML/CSS "faites main" (comme .srow-bar-fill/.fcc-bar-fill), pas Chart.js : chaque
+/* Barres HTML/CSS "faites main" (comme .srow-bar-fill), pas Chart.js : chaque
    barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
    les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
    modélisent pas bien. */
@@ -5960,10 +5969,6 @@ const Flux = {
     const entries = this._categoryTotals();
     if (!entries.length) { container.innerHTML = ''; return; }
 
-    // % du TOTAL des dépenses de la période (même valeur que le donut/sa légende), pas % de la
-    // catégorie la plus dépensière — la jauge doit se lire "cette catégorie pèse X % de mes
-    // dépenses", pas "X % de ma plus grosse catégorie" (ce que donnait value/max).
-    const total = entries.reduce((s, [, v]) => s + v, 0);
     container.innerHTML = entries.map(([label, value]) => {
       const color = Utils.getCategoryColor(label);
       // Icône personnalisée de la catégorie si définie (Categories._setIcon), sinon repli sur
@@ -5971,14 +5976,18 @@ const Flux = {
       // dans l'onglet Catégories (toujours l'icône déduite du nom, jamais la valeur enregistrée).
       const cat  = Storage.getCategories().find(c => c.name === label);
       const icon = (cat && cat.icon) || Categories._meta(label).icon;
-      const barW = total > 0 ? (value / total * 100).toFixed(1) : 0;
       const isActive = catFilters.size > 0 && catFilters.has(label);
       const isFiltered = catFilters.size > 0 && !catFilters.has(label);
       const safeName = label.replace(/'/g, "\\'");
-      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" onclick="Flux.toggleFilter('${safeName}')">
+      // Bande du haut : dégradé couleur de la catégorie -> teinte claire de cette même couleur
+      // (Charts._shade, déjà utilisé ailleurs pour ce genre de dégradé) — en custom property
+      // plutôt qu'en style direct sur .flux-cat-card, pour que le ::before (voir CSS) qui porte
+      // réellement la bande puisse la lire (un style inline ne s'applique jamais à un pseudo-
+      // élément, seulement à l'élément qui le porte).
+      const band = `linear-gradient(90deg, ${color}, ${Charts._shade(color, 0.45)})`;
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band}" onclick="Flux.toggleFilter('${safeName}')">
         <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
         <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
-        <div class="fcc-bar-bg"><div class="fcc-bar-fill" style="width:${barW}%;background:${color}"></div></div>
       </div>`;
     }).join('');
   },

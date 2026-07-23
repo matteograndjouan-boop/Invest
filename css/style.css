@@ -1675,6 +1675,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    (flex-grow), donc une ligne incomplète s'étire quand même pour occuper toute la largeur. */
 .flux-cat-cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .flux-cat-card {
+  position: relative;
   flex: 1 1 140px;
   padding: 14px 14px 12px;
   border-radius: 12px;
@@ -1683,16 +1684,24 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s, opacity 0.14s;
 }
+/* Bande du haut (couleur de la catégorie -> teinte claire, posée en JS via --fcc-band —
+   Flux._renderCategoryCards) : remplace l'ancienne barre de progression du bas — plus de notion
+   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Même
+   arrondi que la carte (12px) sur les 2 coins hauts, sinon la bande carrée dépasserait visible-
+   ment des coins arrondis de la carte. */
+.flux-cat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  border-radius: 12px 12px 0 0;
+  background: var(--fcc-band, var(--primary));
+}
 .flux-cat-card:hover { border-color: var(--primary); }
 .flux-cat-card.active { border-color: var(--primary); background: var(--primary-light); }
 .flux-cat-card.dimmed { opacity: 0.4; }
 .flux-cat-card.dimmed:hover { opacity: 1; }
 .fcc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .fcc-ico { font-size: 18px; }
-.fcc-name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcc-name { font-size: 15px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
-.fcc-bar-bg { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
-.fcc-bar-fill { height: 5px; border-radius: 3px; transition: width 0.4s ease; }
 
 /* ---- Flux Summary Table ---- */
 /* Table plafonnée en largeur plutôt qu'étirée sur toute la carte : à pleine largeur, la colonne
@@ -1710,7 +1719,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-hbar-card { flex: 1 1 320px; min-width: 280px; }
 
 /* ---- Flux Répartition — graphique en barres horizontales ---- */
-/* Barres HTML/CSS "faites main" (comme .srow-bar-fill/.fcc-bar-fill), pas Chart.js : chaque
+/* Barres HTML/CSS "faites main" (comme .srow-bar-fill), pas Chart.js : chaque
    barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
    les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
    modélisent pas bien. */
