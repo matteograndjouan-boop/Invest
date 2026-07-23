@@ -5886,6 +5886,10 @@ const Flux = {
     const { start, end } = PeriodFilter.getDateRange();
     this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
     this._updateHBarSegmentColors(cat);
+    // Le dépli/repli change la hauteur du tableau (lignes de sous-catégorie en plus/en moins)
+    // sans repasser par _renderHBarChart (_updateHBarSegmentColors ne touche qu'une couleur) —
+    // sans cet appel, la synchronisation de hauteur resterait sur l'état d'avant ce clic.
+    this._syncCardHeights();
   },
 
   // Regroupement partagé par _renderSummaryTable ET _renderHBarChart : même filtre catégorie,
@@ -5939,6 +5943,7 @@ const Flux = {
     if (!sorted.length) {
       container.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
+      this._syncCardHeights();
       return;
     }
     if (empty) empty.classList.add('hidden');
@@ -6044,6 +6049,25 @@ const Flux = {
     const thead = document.getElementById('flux-summary-thead');
     const theadH = thead ? thead.getBoundingClientRect().height : 0;
     container.innerHTML = `<div class="hbar-head-spacer" style="height:${theadH}px"></div>${rows}`;
+    this._syncCardHeights();
+  },
+
+  // Carte "Répartition visuelle" toujours EXACTEMENT de la même hauteur que la carte tableau —
+  // SAUF quand une catégorie est dépliée (sous-catégories affichées en lignes en plus), où le
+  // tableau grandit normalement et le graphique garde sa hauteur naturelle (plus petite, la
+  // segmentation d'une catégorie dépliée reste DANS sa même barre, pas de lignes en plus). Mesuré
+  // en JS (pas une hauteur CSS figée) : même en l'absence de tout dépli, marge de titre (.card-
+  // header-row vs <h3> nu) et bordures de lignes de table ne tombent pas pile identiques entre
+  // les deux cartes de quelques px — plus robuste que traquer chaque source de micro-écart une
+  // par une, et reste juste si l'un ou l'autre style change plus tard.
+  _syncCardHeights() {
+    const tableCard = document.querySelector('.flux-summary-card');
+    const chartCard = document.querySelector('.flux-hbar-card');
+    if (!tableCard || !chartCard) return;
+    chartCard.style.height = ''; // repart de la hauteur naturelle avant de (re)mesurer
+    if (this._expandedCats.size > 0) return;
+    const tableH = tableCard.getBoundingClientRect().height;
+    chartCard.style.height = `${tableH}px`;
   },
 
   // Ne recalcule/recompose PAS tout le graphique — trouve directement la barre déjà à l'écran
