@@ -945,7 +945,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .period-panel.hidden { display: none; }
 @keyframes dropInRight { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
 .period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.period-filter-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 .period-type-btns { display: flex; gap: 6px; }
 .period-type-btn {
   padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border);
@@ -954,7 +953,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 }
 .period-type-btn:hover { border-color: var(--primary); color: var(--primary); }
 .period-type-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-.period-nav { display: flex; align-items: center; gap: 6px; }
+/* flex:1 0 100% : force sa propre ligne pleine largeur dans .period-filter (display:flex +
+   flex-wrap:wrap plus haut) — sans ça, un simple justify-content:center serait sans effet, cet
+   élément ne prenant que la largeur de son propre contenu (flèches + bouton), pas celle du
+   panneau. Une fois pleine largeur, justify-content:center centre vraiment flèches + bouton. */
+.period-nav { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 0 100%; }
 .period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, border-color .15s, color .15s; }
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .period-label-wrap { position: relative; }
@@ -1406,14 +1409,12 @@ select.dt-select:focus {
 
 /* ---- Date Mode Toggle ---- */
 .date-mode-toggle { display: flex; align-items: center; gap: 0.3rem; margin-left: 0.75rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
-.date-mode-label { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 .date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 /* Sur Comparaisons, la barre ne sert qu'au toggle Date (les mois A/B ont leurs propres sélecteurs)
    — les flèches à côté du déclencheur compact (.period-compact > .period-arrow) navigueraient
    sur une période globale non affichée sur cet onglet, donc masquées comme le reste. */
-body[data-view="comparisons"] .period-filter-label,
 body[data-view="comparisons"] .period-type-btns,
 body[data-view="comparisons"] .period-nav,
 body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }

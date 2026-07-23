@@ -149,7 +149,6 @@ const PeriodFilter = {
         <button class="period-arrow" id="period-trigger-next" title="Période suivante">&#8594;</button>
         <div class="period-panel hidden" id="period-panel">
           <div class="period-filter">
-            <span class="period-filter-label">Période :</span>
             <div class="period-type-btns">
               <button class="period-type-btn" data-type="month">Mois</button>
               <button class="period-type-btn" data-type="quarter">Trimestre</button>
@@ -166,7 +165,6 @@ const PeriodFilter = {
               <button class="period-arrow" id="period-next">&#8594;</button>
             </div>
             <div class="date-mode-toggle">
-              <span class="date-mode-label">Date :</span>
               <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
               <button class="date-mode-btn" id="date-mode-effective" onclick="PeriodFilter._setDateMode('effective')">Effective</button>
             </div>
@@ -383,29 +381,52 @@ const PeriodFilter = {
     }
   },
 
-  // Empêche le bouton du déclencheur de changer de largeur — que ce soit en naviguant avec les
-  // flèches voisines au sein d'un même type (ex. en mois, "Mars 2026" est bien plus court que
-  // "Septembre 2026") OU en changeant de type (Trimestre/Semestre/Année sont des libellés bien
-  // plus courts que certains mois) : calcule la largeur du libellé le plus long parmi TOUTES les
-  // valeurs possibles de TOUS les types à flèches réunis (pas seulement celles du type courant),
-  // et la fixe en min-width — un seul et même gabarit de largeur, quel que soit le type actif.
-  // Recalculé à chaque rafraîchissement plutôt que mis en cache : coût négligeable (une vingtaine
-  // de mesures de chaînes courtes), évite d'avoir à invalider un cache au changement de type/année.
-  _syncTriggerWidth() {
-    const labelEl = document.getElementById('period-trigger-label');
-    if (!labelEl) return;
-    const s = this.get();
-    if (!s.type || s.type === 'range') { labelEl.style.minWidth = ''; return; }
-    const year = s.year || new Date().getFullYear();
-    const candidates = ['month', 'quarter', 'semester', 'year'].flatMap(t => this._labelsForType(t, year));
-
-    const cs = getComputedStyle(labelEl);
+  // Largeur nécessaire pour que TOUS les candidats tiennent dans la police déjà appliquée à `el`
+  // (mesurée via un élément hors-écran temporaire, avec CETTE police précise — le déclencheur
+  // compact et le bouton du panneau déplié n'ont pas la même taille/graisse de police, donc pas
+  // la même largeur cible pour un même texte).
+  _widestLabelWidth(el, candidates) {
+    const cs = getComputedStyle(el);
     const measureEl = document.createElement('span');
     measureEl.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${cs.fontFamily};`;
     document.body.appendChild(measureEl);
-    const maxWidth = Math.max(...candidates.map(c => { measureEl.textContent = c; return measureEl.getBoundingClientRect().width; }));
+    const maxTextWidth = Math.max(...candidates.map(c => { measureEl.textContent = c; return measureEl.getBoundingClientRect().width; }));
     measureEl.remove();
-    labelEl.style.minWidth = `${Math.ceil(maxWidth)}px`;
+    // min-width s'applique à la boîte de BORDURE en box-sizing:border-box — sans réintégrer le
+    // padding/bordure horizontaux de `el`, le texte le plus long déborde quand même du min-width
+    // posé (mesuré sur #period-label-btn, qui a son propre padding 16px+16px et bordure 2px+2px :
+    // min-width calculé sur le texte seul, "Septembre 2026 ▾" débordait de 36px malgré un
+    // min-width en apparence correct — #period-trigger-label, un <span> sans padding propre, n'a
+    // pas ce problème, extra vaut alors ~0).
+    const extra = cs.boxSizing === 'border-box'
+      ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth)
+      : 0;
+    return Math.ceil(maxTextWidth + extra);
+  },
+
+  // Empêche à la fois le bouton du déclencheur compact ET le bouton du panneau déplié de changer
+  // de largeur — que ce soit en naviguant avec les flèches voisines au sein d'un même type (ex.
+  // en mois, "Mars 2026" est bien plus court que "Septembre 2026") OU en changeant de type
+  // (Trimestre/Semestre/Année sont des libellés bien plus courts que certains mois) : calcule la
+  // largeur du libellé le plus long parmi TOUTES les valeurs possibles de TOUS les types à
+  // flèches réunis (pas seulement celles du type courant), et la fixe en min-width sur chacun des
+  // 2 boutons — un seul et même gabarit de largeur par bouton, quel que soit le type actif.
+  // Recalculé à chaque rafraîchissement plutôt que mis en cache : coût négligeable (une
+  // quarantaine de mesures de chaînes courtes au total), évite d'avoir à invalider un cache au
+  // changement de type/année.
+  _syncTriggerWidth() {
+    const triggerLabelEl = document.getElementById('period-trigger-label');
+    const panelLabelBtn = document.getElementById('period-label-btn');
+    const s = this.get();
+    const hasArrows = s.type && s.type !== 'range';
+    const base = hasArrows
+      ? ['month', 'quarter', 'semester', 'year'].flatMap(t => this._labelsForType(t, s.year || new Date().getFullYear()))
+      : null;
+
+    if (triggerLabelEl) triggerLabelEl.style.minWidth = base ? `${this._widestLabelWidth(triggerLabelEl, base)}px` : '';
+    // Le bouton du panneau affiche toujours un " ▾" à la suite (voir _updateLabel) : mesuré avec
+    // ce même suffixe pour que la largeur réservée corresponde exactement à ce qui est rendu.
+    if (panelLabelBtn) panelLabelBtn.style.minWidth = base ? `${this._widestLabelWidth(panelLabelBtn, base.map(c => c + ' ▾'))}px` : '';
   },
 
   _updateAll() {
