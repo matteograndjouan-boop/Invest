@@ -1715,7 +1715,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   font-size: 13px; font-weight: 600; color: var(--text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
-.hbar-track { flex: 1; height: 22px; border-radius: 6px; background: var(--border); display: flex; align-items: center; overflow: visible; }
+/* 65% de la hauteur de .hbar-row (elle-même fixée en JS sur la hauteur réelle d'une ligne du
+   tableau, voir Flux._renderHBarChart — reste intacte, cette règle ne change QUE l'intérieur de
+   la ligne) : un % (pas un px fixe) reste juste quelle que soit cette hauteur mesurée, sans
+   dépendre d'une 2e valeur à garder en phase. align-items:center sur .hbar-row centre le tiers
+   d'espace vide restant au-dessus/en dessous. Fond quasi invisible (0.04) plutôt que var(--border)
+   (0.06) : juste assez pour deviner l'étendue de la piste, sans la souligner visuellement. */
+.hbar-track { flex: 1; height: 65%; border-radius: 6px; background: rgba(255,255,255,0.04); display: flex; align-items: center; overflow: visible; }
 /* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - Npx)) — N
    mesuré sur le montant le plus large réellement affiché (pas une constante figée au pire cas,
    qui écraserait les proportions entre barres pour de petits montants), réserve pour le montant
@@ -2759,7 +2765,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
             <div id="flux-summary-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
           </div>
           <div class="chart-card flux-hbar-card">
-            <h3>Vue graphique</h3>
+            <h3>Répartition visuelle</h3>
             <div id="flux-hbar-chart" class="flux-hbar-chart"></div>
             <div id="flux-hbar-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
           </div>
