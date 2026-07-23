@@ -1053,11 +1053,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .card-header-row h3 { margin: 0; }
-/* Le titre "Répartition" du tableau Flux embarque la pastille .flux-pill.active de la
+/* Le titre "Répartition" de la carte Flux embarque la pastille .flux-pill.active de la
    catégorie filtrée (même recette que les pastilles au-dessus) — display:flex pour aligner
    correctement le texte du <h3> et la pastille, qui n'ont pas la même taille de police. */
-#flux-summary-title { display: flex; align-items: center; gap: 8px; }
-#flux-summary-title .flux-pill { font-size: 0.78rem; }
+#flux-repartition-title { display: flex; align-items: center; gap: 8px; }
+#flux-repartition-title .flux-pill { font-size: 0.78rem; }
 
 /* ---- Flux cross-filter badge ---- */
 .flux-active-filter-badge {
@@ -1713,133 +1713,47 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fcc-name { font-size: 15px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
 
-/* ---- Flux Summary Table ---- */
-/* Table plafonnée en largeur plutôt qu'étirée sur toute la carte : à pleine largeur, la colonne
-   barre (~48% avant) laissait une immense piste grise à moitié vide dès que le montant n'était
-   pas le plus élevé — mieux vaut une table plus compacte, mieux proportionnée, qu'une table qui
-   remplit l'espace au prix d'espaces vides disproportionnés entre les colonnes. */
-.flux-summary-wrap { max-width: 760px; }
-
-/* Table à gauche (plafonnée par .flux-summary-wrap ci-dessus, ~760px) + graphique en barres
-   horizontales à droite (voir .flux-hbar-* plus bas) — comble l'espace vide qui restait à
-   droite de la table sur les écrans larges. flex:0 sur la carte table (pas de croissance au-delà
-   de son contenu, qui est déjà plafonné) + flex:1 sur la carte graphique (absorbe tout le reste). */
-.flux-summary-row { display: flex; gap: 1rem; align-items: flex-start; }
-.flux-summary-card { flex: 0 1 804px; min-width: 0; }
-.flux-hbar-card { flex: 1 1 320px; min-width: 280px; }
-
-/* ---- Flux Répartition — graphique en barres horizontales ---- */
-/* Barres HTML/CSS "faites main" (comme .srow-bar-fill), pas Chart.js : chaque
-   barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
-   les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
-   modélisent pas bien. */
-/* Pas de gap ici (contrairement à un simple empilement) : chaque .hbar-row porte sa propre
-   hauteur mesurée sur une VRAIE ligne du tableau voisin (Flux._renderHBarChart), pour que le
-   rythme vertical des deux colles exactement — un gap fixe en plus aurait désynchronisé les deux
-   listes ligne après ligne (mesuré : jusqu'à 37px d'écart cumulé sur 6 catégories sans ce fix). */
-.flux-hbar-chart { display: flex; flex-direction: column; }
-/* Comble la hauteur du <thead> du tableau voisin (valeur posée en JS par Flux._renderHBarChart,
-   pas figée ici) : sans lui la 1re barre démarre plus haut que la 1re ligne du tableau. */
-.hbar-head-spacer { flex-shrink: 0; }
-.hbar-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 0 6px; margin: 0 -6px;
+/* ---- Flux Répartition par catégorie ---- */
+/* Barres HTML/CSS "faites main", pas Chart.js : chaque barre catégorie peut avoir un nombre de
+   segments sous-catégorie différent des autres, ce que les datasets "empilés" de Chart.js (mêmes
+   séries pour toutes les catégories de l'axe) ne modélisent pas bien. Liste pleine largeur (plus
+   de table à côté) : gap fixe entre lignes, chaque ligne autonome (en-tête + barre). */
+.flux-repartition-list { display: flex; flex-direction: column; gap: 18px; }
+.flux-repartition-row {
+  padding: 0 10px; margin: 0 -10px;
   border-radius: 8px;
   border-left: 3px solid transparent;
   box-sizing: border-box;
-  transition: border-color 0.15s, opacity 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.hbar-row.clickable { cursor: pointer; }
-.hbar-row.clickable:hover { border-left-color: var(--rc, var(--primary)); }
-.hbar-row.active { border-left-color: var(--rc, var(--primary)); }
-.hbar-row.dimmed { opacity: 0.4; }
-.hbar-row.dimmed:hover { opacity: 1; }
-/* Largeur alignée sur l'indentation réelle du nom dans la colonne Catégorie du tableau (pastille
-   + texte) — avant, 108px sans pastille donnait un nom de catégorie visuellement "décalé" par
-   rapport à sa ligne dans le tableau, l'ensemble ressortait comme deux composants disparates
-   plutôt qu'une paire tableau/graphique cohérente. */
-.hbar-label {
-  flex: 0 0 150px; width: 150px;
-  display: flex; align-items: center; gap: 7px;
+.flux-repartition-row.clickable { cursor: pointer; }
+.flux-repartition-row.clickable:hover { border-left-color: var(--rc, var(--primary)); background: rgba(255,255,255,0.03); }
+
+.frr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.frr-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.frr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.frr-name { font-size: 14px; font-weight: 700; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frr-pct { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.frr-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.frr-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.frr-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* Piste pleine largeur, coins très arrondis (rayon = moitié de la hauteur → bouts en demi-cercle).
+   overflow:hidden sur la piste (pas sur chaque segment) : les segments d'extrémité n'ont pas besoin
+   de leur propre rayon, la piste les découpe proprement — et ça donne à l'automatic minimum size
+   flexbox de chaque .frr-seg une valeur de 0 (au lieu de sa taille de contenu), donc les segments
+   peuvent bien descendre sous la largeur de leur texte pour respecter leur % exact. */
+.frr-bar { display: flex; width: 100%; height: 22px; border-radius: 11px; overflow: hidden; background: var(--border); }
+.frr-seg {
+  height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
 }
-.hbar-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-.hbar-label-text {
-  font-size: 13px; font-weight: 600; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-}
-/* 65% de la hauteur de .hbar-row (elle-même fixée en JS sur la hauteur réelle d'une ligne du
-   tableau, voir Flux._renderHBarChart — reste intacte, cette règle ne change QUE l'intérieur de
-   la ligne) : un % (pas un px fixe) reste juste quelle que soit cette hauteur mesurée, sans
-   dépendre d'une 2e valeur à garder en phase. align-items:center sur .hbar-row centre le tiers
-   d'espace vide restant au-dessus/en dessous. Fond quasi invisible (0.04) plutôt que var(--border)
-   (0.06) : juste assez pour deviner l'étendue de la piste, sans la souligner visuellement. */
-.hbar-track { flex: 1; height: 65%; border-radius: 6px; background: rgba(255,255,255,0.04); display: flex; align-items: center; overflow: visible; }
-/* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - Npx)) — N
-   mesuré sur le montant le plus large réellement affiché (pas une constante figée au pire cas,
-   qui écraserait les proportions entre barres pour de petits montants), réserve pour le montant
-   affiché juste après la barre la plus longue. Pas un simple plafond en %, dont la marge finit
-   par déborder sur une carte resserrée avec un montant à plusieurs chiffres (mesuré : un plafond
-   à 78% ne laissait plus que ~2px de marge dans ce cas). */
-.hbar-fillwrap { display: flex; align-items: center; height: 100%; gap: 8px; min-width: 4px; }
-.hbar-fill { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
-/* transition sur background (pas width, qui ne change jamais pour un segment donné — voir
-   Flux._updateHBarSegmentColors) : au dépli/repli d'une catégorie dans le tableau, les mêmes
-   segments (mêmes largeurs, déjà proportionnelles aux sous-catégories) passent juste d'une teinte
-   unie à leurs nuances propres, ce qui anime proprement — recréer les barres à chaque fois (comme
-   le reste de l'app) empêcherait toute transition, un nœud DOM neuf n'ayant pas d'état "avant". */
-.hbar-seg { height: 100%; transition: background-color 0.4s ease; }
-.hbar-amount { font-size: 12.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-#flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
-#flux-summary-tbody .srow:last-child td { border-bottom: none; }
-#flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
-#flux-summary-tbody .srow:hover td { background: rgba(255,255,255,0.03); }
-#flux-summary-tbody .srow:hover { border-left-color: var(--rc, var(--primary)); }
-
-/* Label column */
-.srow-td-label { width: 30%; }
-.srow-label-inner { display: flex; align-items: center; gap: 9px; }
-.srow-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-.srow-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.srow-expand-ph { width: 22px; flex-shrink: 0; }
-.srow-expand-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-muted);
-  font-size: 8px; cursor: pointer; flex-shrink: 0;
-  transition: transform 0.18s, background 0.15s, border-color 0.15s;
-}
-.srow-expand-btn:hover { background: var(--border); }
-.srow-expand-btn.open { transform: rotate(90deg); border-color: var(--rc, var(--primary)); color: var(--rc, var(--primary)); }
-
-/* Amount column : centré (pas aligné à droite avec un padding fixe) pour rester à équidistance
-   visuelle de la colonne Catégorie à gauche et de la colonne Répartition à droite, quelle que
-   soit la largeur du montant affiché. Un centrage strict retombait plus près de la barre que du
-   nom (la colonne Catégorie est plus large que le texte qu'elle contient, ce vide asymétrique
-   décale le vrai milieu visuel) — padding-right compense pour ramener le texte vers ce milieu.
-   Couleur normale du texte — le rouge suggérait une alerte sur CHAQUE ligne alors que ce ne sont
-   que des montants de dépense, pas des états "danger". */
-.srow-td-amount { text-align: center; font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; width: 18%; padding-right: 56px; }
-
-/* Bar column */
-.srow-td-bar { width: 40%; }
-.srow-bar-outer { display: flex; align-items: center; gap: 10px; }
-.srow-bar-track { flex: 1; height: 16px; border-radius: 8px; overflow: hidden; }
-.srow-bar-fill { height: 16px; border-radius: 8px; min-width: 3px; transition: width 0.4s ease; }
-.srow-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 44px; text-align: right; white-space: nowrap; flex-shrink: 0; }
-
-/* Count column */
-.srow-td-count { text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; width: 12%; }
-
-/* Sub-rows */
-#flux-summary-tbody .srow-sub { cursor: default; }
-#flux-summary-tbody .srow-sub td { padding: 9px 14px; background: var(--surface-alt); }
-#flux-summary-tbody .srow-sub:hover td { background: var(--surface-alt); }
-#flux-summary-tbody .srow-sub:last-child td { border-bottom: 2px solid var(--border); }
-.srow-sub-inner { display: flex; align-items: center; gap: 7px; padding-left: 31px; }
-.srow-sub-tree { color: var(--border); font-size: 14px; flex-shrink: 0; line-height: 1; }
-.srow-sub-name { font-size: 13px; color: var(--text-muted); }
-.srow-sub-amount { font-size: 13px !important; opacity: 0.75; }
-.srow-sub-count { opacity: 0.65; }
+/* Visibilité (pas display:none) pilotée par Flux._fitSegmentLabels : scrollWidth (largeur du
+   texte) vs clientWidth (largeur réelle du segment déjà rendu) — display:none casserait cette
+   mesure (un élément non affiché a un scrollWidth de 0). */
+.frr-seg-label { font-size: 10px; font-weight: 600; color: #fff; white-space: nowrap; padding: 0 6px; pointer-events: none; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
@@ -2070,8 +1984,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .charts-grid { grid-template-columns: 1fr; }
   .flux-charts-row { grid-template-columns: 1fr; }
-  .flux-summary-row { flex-direction: column; }
-  .flux-summary-card { flex-basis: auto; width: 100%; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
   .dashboard-bottom-grid { grid-template-columns: 1fr; }
@@ -2783,37 +2695,12 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
           <h3>Dépenses par catégorie</h3>
           <div id="flux-cat-cards" class="flux-cat-cards"></div>
         </div>
-        <div class="flux-summary-row mt-md">
-          <div class="card flux-summary-card">
-            <div class="card-header-row">
-              <h3 id="flux-summary-title">Répartition par catégorie</h3>
-            </div>
-            <div class="table-wrapper flux-summary-wrap">
-              <table class="data-table summary-table">
-                <colgroup>
-                  <col style="width:30%">
-                  <col style="width:18%">
-                  <col>
-                  <col style="width:12%">
-                </colgroup>
-                <thead id="flux-summary-thead">
-                  <tr>
-                    <th id="flux-summary-th-label">Catégorie</th>
-                    <th class="text-center">Dépenses</th>
-                    <th class="text-center">Répartition</th>
-                    <th class="text-right">Nb</th>
-                  </tr>
-                </thead>
-                <tbody id="flux-summary-tbody"></tbody>
-              </table>
-            </div>
-            <div id="flux-summary-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
+        <div class="card mt-md">
+          <div class="card-header-row">
+            <h3 id="flux-repartition-title">Répartition par catégorie</h3>
           </div>
-          <div class="chart-card flux-hbar-card">
-            <h3>Répartition visuelle</h3>
-            <div id="flux-hbar-chart" class="flux-hbar-chart"></div>
-            <div id="flux-hbar-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
-          </div>
+          <div id="flux-repartition-list" class="flux-repartition-list"></div>
+          <div id="flux-repartition-empty" class="empty-state hidden"><p>Aucune dépense sur cette période.</p></div>
         </div>
       </section>
 
@@ -5565,7 +5452,6 @@ const Revenues = {
 const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
-  _expandedCats: new Set(),
 
   init() {
     PeriodFilter.onChange(() => {
@@ -5769,8 +5655,7 @@ const Flux = {
     if (!skipBarChart) this._renderBarChart(allExpenses, allRevenues);
     this._renderDonut(catFilters);
     this._renderCategoryCards(catFilters);
-    this._renderSummaryTable(allExpenses, start, end, catFilters);
-    this._renderHBarChart(allExpenses, start, end, catFilters);
+    this._renderRepartition(allExpenses, start, end, catFilters);
   },
 
   // Toujours Revenus vs Dépenses total, jamais filtré par catégorie (celle-ci pilote le donut,
@@ -5992,23 +5877,9 @@ const Flux = {
     }).join('');
   },
 
-  toggleCatExpand(cat) {
-    if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
-    else this._expandedCats.add(cat);
-    const { start, end } = PeriodFilter.getDateRange();
-    this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
-    this._updateHBarSegmentColors(cat);
-    // Le dépli/repli change la hauteur du tableau (lignes de sous-catégorie en plus/en moins)
-    // sans repasser par _renderHBarChart (_updateHBarSegmentColors ne touche qu'une couleur) —
-    // sans cet appel, la synchronisation de hauteur resterait sur l'état d'avant ce clic.
-    this._syncCardHeights();
-  },
-
-  // Regroupement partagé par _renderSummaryTable ET _renderHBarChart : même filtre catégorie,
-  // même clé de regroupement (catégorie, ou sous-catégorie si 1 seule catégorie filtrée), même
-  // tri par montant décroissant — garantit que l'ordre des barres du graphique correspond
-  // TOUJOURS à celui du tableau (demandé), sans risque de divergence entre deux implémentations
-  // séparées du même calcul.
+  // Regroupement partagé par _renderRepartition : même filtre catégorie, même clé de
+  // regroupement (catégorie, ou sous-catégorie si 1 seule catégorie filtrée), même tri par
+  // montant décroissant.
   _summaryGroups(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
@@ -6042,180 +5913,23 @@ const Flux = {
     return Charts._shade(baseColor, pct);
   },
 
-  // Barres HTML/CSS (pas Chart.js — voir commentaire CSS .flux-hbar-chart) reflétant exactement
-  // _summaryGroups : même ordre que le tableau. Échelle relative au MAX affiché (pas au total) —
-  // la plus grosse barre atteint 100% de la piste (moins la réserve fixe pour le montant, voir
-  // HBAR_LABEL_RESERVE_PX ci-dessous), les autres lui sont proportionnelles.
-  _renderHBarChart(allExpenses, start, end, catFilters) {
-    const container = document.getElementById('flux-hbar-chart');
-    const empty = document.getElementById('flux-hbar-empty');
+  // Barres HTML/CSS "faites main" reflétant exactement _summaryGroups : même ordre, même clé de
+  // regroupement. Chaque ligne = 1 barre pleine largeur segmentée par sous-catégorie (nuances de
+  // la couleur de la catégorie via _shadeByIndex, la plus grosse en teinte vive). Cas showSub (1
+  // seule catégorie filtrée) : une barre par sous-catégorie, non segmentée (pas de niveau
+  // en-dessous) — même nuance que l'ancien graphique horizontal pour ce cas.
+  _renderRepartition(allExpenses, start, end, catFilters) {
+    const container = document.getElementById('flux-repartition-list');
+    const empty = document.getElementById('flux-repartition-empty');
+    const title = document.getElementById('flux-repartition-title');
     if (!container) return;
-
-    const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
-    if (!sorted.length) {
-      container.innerHTML = '';
-      if (empty) empty.classList.remove('hidden');
-      this._syncCardHeights();
-      return;
-    }
-    if (empty) empty.classList.add('hidden');
-
-    // Réserve de place (px, via calc/min) pour le montant en bout de barre, pas un simple plafond
-    // en % : un plafond en % laisse une marge qui rétrécit avec la carte (responsive) ou avec un
-    // montant à plus de chiffres, jusqu'à déborder (mesuré : 1.8px de marge à peine avec un
-    // plafond à 78%, ça déborde carrément dès un montant à 5 chiffres sur une carte resserrée).
-    // MESURÉE (le texte réel le plus large parmi les montants affichés), pas une constante figée
-    // au pire cas : une constante assez large pour un montant à 5 chiffres réservait bien plus de
-    // place que nécessaire pour de petits montants, écrasant à tort les proportions entre barres
-    // (2 barres à ratio 2:1 rendues à la MÊME longueur, toutes deux plafonnées par une réserve
-    // surdimensionnée pour ces montants-là).
-    const amountStrs = sorted.map(([, g]) => Utils.formatCurrency(g.amount));
-    const measureEl = document.createElement('span');
-    measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:12.5px;font-weight:700;';
-    document.body.appendChild(measureEl);
-    const maxAmountTextWidth = Math.max(...amountStrs.map(s => { measureEl.textContent = s; return measureEl.getBoundingClientRect().width; }));
-    measureEl.remove();
-    const HBAR_LABEL_RESERVE_PX = Math.ceil(maxAmountTextWidth) + 16; // + gap (8px) + marge de sécurité
-    const maxAmount = Math.max(...sorted.map(([, g]) => g.amount));
-    const escAttr = (s) => String(s).replace(/"/g, '&quot;');
-    const filterColor = showSub ? Utils.getCategoryColor(this._catLabel()) : null;
-
-    // Hauteur d'une ligne du tableau (mesurée, pas figée en CSS — même logique que le spacer
-    // d'en-tête ci-dessous) appliquée à chaque barre : sans ça, la 1re barre s'alignait bien sur
-    // la 1re ligne du tableau (grâce au spacer), mais l'écart entre le rythme des lignes du
-    // tableau (~47px, padding+bordure des <td>) et celui du graphique (gap flexbox ~39px)
-    // s'accumulait ligne après ligne — jusqu'à 37px de décalage sur la dernière ligne d'une liste
-    // de 6 catégories.
-    // Le delta top-à-top entre 2 lignes réelles (pas la height d'une seule ligne isolée) capture
-    // fidèlement le cycle vertical effectif du tableau, bordures collapsées comprises — measurer
-    // une seule ligne laissait un résidu de 0.5px/ligne qui s'accumulait encore, en plus petit,
-    // sur une longue liste. Repli sur la height d'une seule ligne s'il n'y en a qu'une (rien à
-    // soustraire).
-    const catRows = [...document.querySelectorAll('#flux-summary-tbody tr.srow:not(.srow-sub)')];
-    const rowH = catRows.length >= 2
-      ? catRows[1].getBoundingClientRect().top - catRows[0].getBoundingClientRect().top
-      : (catRows[0] ? catRows[0].getBoundingClientRect().height : 0);
-    const rowHStyle = rowH ? `height:${rowH}px;` : '';
-
-    const rows = sorted.map(([label, g], idx) => {
-      const rawPct = (maxAmount > 0 ? (g.amount / maxAmount * 100) : 0).toFixed(1);
-      const widthCss = `min(${rawPct}%, calc(100% - ${HBAR_LABEL_RESERVE_PX}px))`;
-      const amountStr = Utils.formatCurrency(g.amount);
-      const safeName = label.replace(/'/g, "\\'");
-
-      let segmentsHtml, dataCat = '', rowColor;
-      if (showSub) {
-        // Cas 2 (1 catégorie filtrée) : chaque barre = 1 sous-catégorie, teinte unie (nuance de
-        // la couleur de LA catégorie filtrée selon le rang), pas de segmentation interne.
-        rowColor = this._shadeByIndex(filterColor, idx, sorted.length);
-        segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
-      } else {
-        // Cas 1 (aucun filtre) / Cas 3 (plusieurs catégories filtrées) : chaque barre = 1
-        // catégorie. Segments TOUJOURS présents à leur vraie largeur (proportion de la
-        // sous-catégorie dans la catégorie) dès qu'il y a de vraies sous-catégories — seule leur
-        // COULEUR change selon le dépli (teintes distinctes) ou pas (une seule teinte = barre
-        // visuellement unie). Les mêmes nœuds DOM sont donc réutilisables tels quels par
-        // _updateHBarSegmentColors (dépli/repli déjà en cours), qui n'a alors qu'à changer une
-        // couleur pour que ça s'anime (voir .hbar-seg dans le CSS).
-        rowColor = Utils.getCategoryColor(label);
-        const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
-        const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
-        const isExpanded = this._expandedCats.has(label);
-        dataCat = ` data-cat="${escAttr(label)}"`;
-        if (hasSubs) {
-          segmentsHtml = subEntries.map(([sub, sg], i) => {
-            const segColor = isExpanded ? this._shadeByIndex(rowColor, i, subEntries.length) : rowColor;
-            const segPct = (g.amount > 0 ? (sg.amount / g.amount * 100) : 0).toFixed(1);
-            return `<div class="hbar-seg" style="width:${segPct}%;background:${segColor}" title="${escAttr(sub)}: ${Utils.formatCurrency(sg.amount)}"></div>`;
-          }).join('');
-        } else {
-          segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
-        }
-      }
-
-      const isActive = !showSub && catFilters.size > 0 && catFilters.has(label);
-      const isFiltered = !showSub && catFilters.size > 0 && !catFilters.has(label);
-      const cls = `hbar-row${showSub ? '' : ' clickable'}${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}`;
-      const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
-      // Pastille de couleur devant le nom : seulement pour une barre CATÉGORIE (cas 1/3), jamais
-      // pour une barre sous-catégorie (cas 2) — même règle que .srow-dot dans le tableau (absent
-      // sur les lignes de sous-catégorie), pour que le "type" de ligne se reconnaisse pareil des
-      // deux côtés.
-      const dotHtml = showSub ? '' : `<span class="hbar-dot" style="background:${rowColor}"></span>`;
-
-      return `<div class="${cls}" style="--rc:${rowColor};${rowHStyle}"${dataCat}${onClick}>
-        <div class="hbar-label" title="${escAttr(label)}">${dotHtml}<span class="hbar-label-text">${label}</span></div>
-        <div class="hbar-track">
-          <div class="hbar-fillwrap" style="width:${widthCss}">
-            <div class="hbar-fill">${segmentsHtml}</div>
-            <span class="hbar-amount">${amountStr}</span>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Spacer de la hauteur du <thead> du tableau : sans lui, la 1re barre du graphique démarre
-    // plus haut que la 1re ligne du tableau (qui a un en-tête au-dessus, contrairement au
-    // graphique) — décalage vertical qui s'accumule visuellement ligne après ligne. Mesuré en
-    // JS (pas une valeur figée en CSS) pour rester juste si le style de l'en-tête change.
-    const thead = document.getElementById('flux-summary-thead');
-    const theadH = thead ? thead.getBoundingClientRect().height : 0;
-    container.innerHTML = `<div class="hbar-head-spacer" style="height:${theadH}px"></div>${rows}`;
-    this._syncCardHeights();
-  },
-
-  // Carte "Répartition visuelle" toujours EXACTEMENT de la même hauteur que la carte tableau —
-  // SAUF quand une catégorie est dépliée (sous-catégories affichées en lignes en plus), où le
-  // tableau grandit normalement et le graphique garde sa hauteur naturelle (plus petite, la
-  // segmentation d'une catégorie dépliée reste DANS sa même barre, pas de lignes en plus). Mesuré
-  // en JS (pas une hauteur CSS figée) : même en l'absence de tout dépli, marge de titre (.card-
-  // header-row vs <h3> nu) et bordures de lignes de table ne tombent pas pile identiques entre
-  // les deux cartes de quelques px — plus robuste que traquer chaque source de micro-écart une
-  // par une, et reste juste si l'un ou l'autre style change plus tard.
-  _syncCardHeights() {
-    const tableCard = document.querySelector('.flux-summary-card');
-    const chartCard = document.querySelector('.flux-hbar-card');
-    if (!tableCard || !chartCard) return;
-    chartCard.style.height = ''; // repart de la hauteur naturelle avant de (re)mesurer
-    if (this._expandedCats.size > 0) return;
-    const tableH = tableCard.getBoundingClientRect().height;
-    chartCard.style.height = `${tableH}px`;
-  },
-
-  // Ne recalcule/recompose PAS tout le graphique — trouve directement la barre déjà à l'écran
-  // (data-cat) et change juste la couleur de ses segments (déjà à la bonne largeur, voir
-  // _renderHBarChart) : ce sont les mêmes nœuds DOM avant/après, donc la transition CSS
-  // (.hbar-seg) joue vraiment, contrairement à un innerHTML complet qui recrée tout sans état
-  // "avant" pour animer depuis.
-  _updateHBarSegmentColors(cat) {
-    const row = document.querySelector(`#flux-hbar-chart .hbar-row[data-cat="${CSS.escape(cat)}"]`);
-    if (!row) {
-      const { start, end } = PeriodFilter.getDateRange();
-      this._renderHBarChart(this._realExpenses(), start, end, this._activeFilters);
-      return;
-    }
-    const baseColor = Utils.getCategoryColor(cat);
-    const isExpanded = this._expandedCats.has(cat);
-    const segs = row.querySelectorAll('.hbar-seg');
-    segs.forEach((seg, i) => { seg.style.background = isExpanded ? this._shadeByIndex(baseColor, i, segs.length) : baseColor; });
-  },
-
-  _renderSummaryTable(allExpenses, start, end, catFilters) {
-    const tbody = document.getElementById('flux-summary-tbody');
-    const empty = document.getElementById('flux-summary-empty');
-    const title = document.getElementById('flux-summary-title');
-    const thLabel = document.getElementById('flux-summary-th-label');
-    if (!tbody) return;
 
     const catLabel = this._catLabel();
     const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
 
-    // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
-    // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
-    // filtrée) — le titre affiche donc la catégorie active sous forme de pastille (même
-    // recette que .flux-pill.active dans _renderCatPills : couleur de la catégorie, pas une
-    // couleur générique), seul endroit cliquable pour l'annuler, comme sur le camembert/les
-    // pastilles au-dessus.
+    // Filtre sur 1 seule catégorie : le titre affiche la catégorie active sous forme de pastille
+    // (même recette que .flux-pill.active dans _renderCatPills), seul endroit cliquable pour
+    // l'annuler, comme sur le camembert/les pastilles au-dessus.
     if (title) {
       if (showSub) {
         const color = Utils.getCategoryColor(catLabel);
@@ -6225,85 +5939,74 @@ const Flux = {
         title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
       }
     }
-    if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
     if (!sorted.length) {
-      tbody.innerHTML = '';
+      container.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
     const total = sorted.reduce((s, [, g]) => s + g.amount, 0);
+    const escAttr = (s) => String(s).replace(/"/g, '&quot;');
+    const filterColor = showSub ? Utils.getCategoryColor(catLabel) : null;
 
-    const rows = [];
-    sorted.forEach(([label, g]) => {
-      const pct    = total > 0 ? (g.amount / total * 100) : 0;
-      const pctStr = pct.toFixed(1);
-      const barW   = Math.min(100, pct).toFixed(1);
-      const color  = !showSub ? Utils.getCategoryColor(label) : '#6366f1';
-      const hex22  = color + '22';
+    container.innerHTML = sorted.map(([label, g], idx) => {
+      const pct = total > 0 ? (g.amount / total * 100) : 0;
+      const safeName = label.replace(/'/g, "\\'");
+      const rowColor = showSub ? this._shadeByIndex(filterColor, idx, sorted.length) : Utils.getCategoryColor(label);
 
-      if (!showSub) {
+      let segmentsHtml;
+      if (showSub) {
+        segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
+      } else {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
-        const isExpanded = this._expandedCats.has(label);
-        const expandBtn = hasSubs
-          ? `<button class="srow-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
-          : `<span class="srow-expand-ph"></span>`;
-
-        rows.push(`<tr class="srow" style="--rc:${color}" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
-          <td class="srow-td-label">
-            <div class="srow-label-inner">${expandBtn}<span class="srow-dot" style="background:${color}"></span><span class="srow-name">${label}</span></div>
-          </td>
-          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
-          <td class="srow-td-bar">
-            <div class="srow-bar-outer">
-              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-              <span class="srow-pct">${pctStr}%</span>
-            </div>
-          </td>
-          <td class="srow-td-count">${g.count}</td>
-        </tr>`);
-
-        if (isExpanded && hasSubs) {
-          subEntries.forEach(([sub, sg]) => {
-            const sPct  = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
-            const sPctS = sPct.toFixed(1);
-            const sBarW = Math.min(100, sPct).toFixed(1);
-            rows.push(`<tr class="srow srow-sub" style="--rc:${color}">
-              <td class="srow-td-label">
-                <div class="srow-sub-inner"><span class="srow-sub-tree">└</span><span class="srow-sub-name">${sub}</span></div>
-              </td>
-              <td class="srow-td-amount srow-sub-amount">${Utils.formatCurrency(sg.amount)}</td>
-              <td class="srow-td-bar">
-                <div class="srow-bar-outer">
-                  <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${sBarW}%;background:${color}88"></div></div>
-                  <span class="srow-pct">${sPctS}%</span>
-                </div>
-              </td>
-              <td class="srow-td-count srow-sub-count">${sg.count}</td>
-            </tr>`);
-          });
+        if (hasSubs) {
+          segmentsHtml = subEntries.map(([sub, sg], i) => {
+            const segColor = this._shadeByIndex(rowColor, i, subEntries.length);
+            const segPct = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
+            return `<div class="frr-seg" style="width:${segPct.toFixed(1)}%;background:${segColor}" title="${escAttr(sub)} : ${Utils.formatCurrency(sg.amount)} (${segPct.toFixed(1)}%)"><span class="frr-seg-label">${escAttr(sub)}</span></div>`;
+          }).join('');
+        } else {
+          segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
         }
-      } else {
-        rows.push(`<tr class="srow" style="--rc:${color}">
-          <td class="srow-td-label">
-            <div class="srow-label-inner"><span class="srow-expand-ph"></span><span class="srow-name">${label}</span></div>
-          </td>
-          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
-          <td class="srow-td-bar">
-            <div class="srow-bar-outer">
-              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-              <span class="srow-pct">${pctStr}%</span>
-            </div>
-          </td>
-          <td class="srow-td-count">${g.count}</td>
-        </tr>`);
       }
-    });
 
-    tbody.innerHTML = rows.join('');
+      const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
+      const cls = `flux-repartition-row${showSub ? '' : ' clickable'}`;
+      const countLabel = `${g.count} opération${g.count > 1 ? 's' : ''}`;
+
+      return `<div class="${cls}" style="--rc:${rowColor}"${onClick}>
+        <div class="frr-head">
+          <div class="frr-left">
+            <span class="frr-dot" style="background:${rowColor}"></span>
+            <span class="frr-name">${label}</span>
+            <span class="frr-pct">${pct.toFixed(1)}%</span>
+          </div>
+          <div class="frr-right">
+            <span class="frr-count">${countLabel}</span>
+            <span class="frr-amount">${Utils.formatCurrency(g.amount)}</span>
+          </div>
+        </div>
+        <div class="frr-bar">${segmentsHtml}</div>
+      </div>`;
+    }).join('');
+
+    this._fitSegmentLabels();
+  },
+
+  // Cache le nom d'une sous-catégorie si le segment qui le porte est trop étroit pour l'afficher
+  // sans le couper — scrollWidth (largeur intrinsèque du texte) vs clientWidth (largeur réellement
+  // rendue du segment, contrainte par son overflow:hidden) mesurés directement sur le DOM déjà
+  // rendu : pas besoin d'un clone hors-écran comme pour le gabarit du filtre de période, la barre
+  // est déjà à sa taille finale à cet instant.
+  _fitSegmentLabels() {
+    document.querySelectorAll('#flux-repartition-list .frr-seg').forEach(seg => {
+      const label = seg.querySelector('.frr-seg-label');
+      if (!label) return;
+      label.style.visibility = label.scrollWidth > seg.clientWidth ? 'hidden' : '';
+    });
   },
 };
 

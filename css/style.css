@@ -1043,11 +1043,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .budget-inline-input { width: 90px; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.875rem; }
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .card-header-row h3 { margin: 0; }
-/* Le titre "Répartition" du tableau Flux embarque la pastille .flux-pill.active de la
+/* Le titre "Répartition" de la carte Flux embarque la pastille .flux-pill.active de la
    catégorie filtrée (même recette que les pastilles au-dessus) — display:flex pour aligner
    correctement le texte du <h3> et la pastille, qui n'ont pas la même taille de police. */
-#flux-summary-title { display: flex; align-items: center; gap: 8px; }
-#flux-summary-title .flux-pill { font-size: 0.78rem; }
+#flux-repartition-title { display: flex; align-items: center; gap: 8px; }
+#flux-repartition-title .flux-pill { font-size: 0.78rem; }
 
 /* ---- Flux cross-filter badge ---- */
 .flux-active-filter-badge {
@@ -1703,133 +1703,47 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .fcc-name { font-size: 15px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
 
-/* ---- Flux Summary Table ---- */
-/* Table plafonnée en largeur plutôt qu'étirée sur toute la carte : à pleine largeur, la colonne
-   barre (~48% avant) laissait une immense piste grise à moitié vide dès que le montant n'était
-   pas le plus élevé — mieux vaut une table plus compacte, mieux proportionnée, qu'une table qui
-   remplit l'espace au prix d'espaces vides disproportionnés entre les colonnes. */
-.flux-summary-wrap { max-width: 760px; }
-
-/* Table à gauche (plafonnée par .flux-summary-wrap ci-dessus, ~760px) + graphique en barres
-   horizontales à droite (voir .flux-hbar-* plus bas) — comble l'espace vide qui restait à
-   droite de la table sur les écrans larges. flex:0 sur la carte table (pas de croissance au-delà
-   de son contenu, qui est déjà plafonné) + flex:1 sur la carte graphique (absorbe tout le reste). */
-.flux-summary-row { display: flex; gap: 1rem; align-items: flex-start; }
-.flux-summary-card { flex: 0 1 804px; min-width: 0; }
-.flux-hbar-card { flex: 1 1 320px; min-width: 280px; }
-
-/* ---- Flux Répartition — graphique en barres horizontales ---- */
-/* Barres HTML/CSS "faites main" (comme .srow-bar-fill), pas Chart.js : chaque
-   barre catégorie peut avoir un nombre de segments sous-catégorie différent des autres, ce que
-   les datasets "empilés" de Chart.js (mêmes séries pour toutes les catégories de l'axe) ne
-   modélisent pas bien. */
-/* Pas de gap ici (contrairement à un simple empilement) : chaque .hbar-row porte sa propre
-   hauteur mesurée sur une VRAIE ligne du tableau voisin (Flux._renderHBarChart), pour que le
-   rythme vertical des deux colles exactement — un gap fixe en plus aurait désynchronisé les deux
-   listes ligne après ligne (mesuré : jusqu'à 37px d'écart cumulé sur 6 catégories sans ce fix). */
-.flux-hbar-chart { display: flex; flex-direction: column; }
-/* Comble la hauteur du <thead> du tableau voisin (valeur posée en JS par Flux._renderHBarChart,
-   pas figée ici) : sans lui la 1re barre démarre plus haut que la 1re ligne du tableau. */
-.hbar-head-spacer { flex-shrink: 0; }
-.hbar-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 0 6px; margin: 0 -6px;
+/* ---- Flux Répartition par catégorie ---- */
+/* Barres HTML/CSS "faites main", pas Chart.js : chaque barre catégorie peut avoir un nombre de
+   segments sous-catégorie différent des autres, ce que les datasets "empilés" de Chart.js (mêmes
+   séries pour toutes les catégories de l'axe) ne modélisent pas bien. Liste pleine largeur (plus
+   de table à côté) : gap fixe entre lignes, chaque ligne autonome (en-tête + barre). */
+.flux-repartition-list { display: flex; flex-direction: column; gap: 18px; }
+.flux-repartition-row {
+  padding: 0 10px; margin: 0 -10px;
   border-radius: 8px;
   border-left: 3px solid transparent;
   box-sizing: border-box;
-  transition: border-color 0.15s, opacity 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.hbar-row.clickable { cursor: pointer; }
-.hbar-row.clickable:hover { border-left-color: var(--rc, var(--primary)); }
-.hbar-row.active { border-left-color: var(--rc, var(--primary)); }
-.hbar-row.dimmed { opacity: 0.4; }
-.hbar-row.dimmed:hover { opacity: 1; }
-/* Largeur alignée sur l'indentation réelle du nom dans la colonne Catégorie du tableau (pastille
-   + texte) — avant, 108px sans pastille donnait un nom de catégorie visuellement "décalé" par
-   rapport à sa ligne dans le tableau, l'ensemble ressortait comme deux composants disparates
-   plutôt qu'une paire tableau/graphique cohérente. */
-.hbar-label {
-  flex: 0 0 150px; width: 150px;
-  display: flex; align-items: center; gap: 7px;
+.flux-repartition-row.clickable { cursor: pointer; }
+.flux-repartition-row.clickable:hover { border-left-color: var(--rc, var(--primary)); background: rgba(255,255,255,0.03); }
+
+.frr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.frr-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.frr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.frr-name { font-size: 14px; font-weight: 700; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frr-pct { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.frr-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.frr-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.frr-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* Piste pleine largeur, coins très arrondis (rayon = moitié de la hauteur → bouts en demi-cercle).
+   overflow:hidden sur la piste (pas sur chaque segment) : les segments d'extrémité n'ont pas besoin
+   de leur propre rayon, la piste les découpe proprement — et ça donne à l'automatic minimum size
+   flexbox de chaque .frr-seg une valeur de 0 (au lieu de sa taille de contenu), donc les segments
+   peuvent bien descendre sous la largeur de leur texte pour respecter leur % exact. */
+.frr-bar { display: flex; width: 100%; height: 22px; border-radius: 11px; overflow: hidden; background: var(--border); }
+.frr-seg {
+  height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
 }
-.hbar-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-.hbar-label-text {
-  font-size: 13px; font-weight: 600; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-}
-/* 65% de la hauteur de .hbar-row (elle-même fixée en JS sur la hauteur réelle d'une ligne du
-   tableau, voir Flux._renderHBarChart — reste intacte, cette règle ne change QUE l'intérieur de
-   la ligne) : un % (pas un px fixe) reste juste quelle que soit cette hauteur mesurée, sans
-   dépendre d'une 2e valeur à garder en phase. align-items:center sur .hbar-row centre le tiers
-   d'espace vide restant au-dessus/en dessous. Fond quasi invisible (0.04) plutôt que var(--border)
-   (0.06) : juste assez pour deviner l'étendue de la piste, sans la souligner visuellement. */
-.hbar-track { flex: 1; height: 65%; border-radius: 6px; background: rgba(255,255,255,0.04); display: flex; align-items: center; overflow: visible; }
-/* La largeur réelle (inline, voir Flux._renderHBarChart) est un min(X%, calc(100% - Npx)) — N
-   mesuré sur le montant le plus large réellement affiché (pas une constante figée au pire cas,
-   qui écraserait les proportions entre barres pour de petits montants), réserve pour le montant
-   affiché juste après la barre la plus longue. Pas un simple plafond en %, dont la marge finit
-   par déborder sur une carte resserrée avec un montant à plusieurs chiffres (mesuré : un plafond
-   à 78% ne laissait plus que ~2px de marge dans ce cas). */
-.hbar-fillwrap { display: flex; align-items: center; height: 100%; gap: 8px; min-width: 4px; }
-.hbar-fill { display: flex; height: 100%; width: 100%; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
-/* transition sur background (pas width, qui ne change jamais pour un segment donné — voir
-   Flux._updateHBarSegmentColors) : au dépli/repli d'une catégorie dans le tableau, les mêmes
-   segments (mêmes largeurs, déjà proportionnelles aux sous-catégories) passent juste d'une teinte
-   unie à leurs nuances propres, ce qui anime proprement — recréer les barres à chaque fois (comme
-   le reste de l'app) empêcherait toute transition, un nœud DOM neuf n'ayant pas d'état "avant". */
-.hbar-seg { height: 100%; transition: background-color 0.4s ease; }
-.hbar-amount { font-size: 12.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-#flux-summary-tbody .srow td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.12s; }
-#flux-summary-tbody .srow:last-child td { border-bottom: none; }
-#flux-summary-tbody .srow { border-left: 3px solid transparent; transition: border-color 0.15s; cursor: pointer; }
-#flux-summary-tbody .srow:hover td { background: rgba(255,255,255,0.03); }
-#flux-summary-tbody .srow:hover { border-left-color: var(--rc, var(--primary)); }
-
-/* Label column */
-.srow-td-label { width: 30%; }
-.srow-label-inner { display: flex; align-items: center; gap: 9px; }
-.srow-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
-.srow-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.srow-expand-ph { width: 22px; flex-shrink: 0; }
-.srow-expand-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-muted);
-  font-size: 8px; cursor: pointer; flex-shrink: 0;
-  transition: transform 0.18s, background 0.15s, border-color 0.15s;
-}
-.srow-expand-btn:hover { background: var(--border); }
-.srow-expand-btn.open { transform: rotate(90deg); border-color: var(--rc, var(--primary)); color: var(--rc, var(--primary)); }
-
-/* Amount column : centré (pas aligné à droite avec un padding fixe) pour rester à équidistance
-   visuelle de la colonne Catégorie à gauche et de la colonne Répartition à droite, quelle que
-   soit la largeur du montant affiché. Un centrage strict retombait plus près de la barre que du
-   nom (la colonne Catégorie est plus large que le texte qu'elle contient, ce vide asymétrique
-   décale le vrai milieu visuel) — padding-right compense pour ramener le texte vers ce milieu.
-   Couleur normale du texte — le rouge suggérait une alerte sur CHAQUE ligne alors que ce ne sont
-   que des montants de dépense, pas des états "danger". */
-.srow-td-amount { text-align: center; font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; width: 18%; padding-right: 56px; }
-
-/* Bar column */
-.srow-td-bar { width: 40%; }
-.srow-bar-outer { display: flex; align-items: center; gap: 10px; }
-.srow-bar-track { flex: 1; height: 16px; border-radius: 8px; overflow: hidden; }
-.srow-bar-fill { height: 16px; border-radius: 8px; min-width: 3px; transition: width 0.4s ease; }
-.srow-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 44px; text-align: right; white-space: nowrap; flex-shrink: 0; }
-
-/* Count column */
-.srow-td-count { text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; width: 12%; }
-
-/* Sub-rows */
-#flux-summary-tbody .srow-sub { cursor: default; }
-#flux-summary-tbody .srow-sub td { padding: 9px 14px; background: var(--surface-alt); }
-#flux-summary-tbody .srow-sub:hover td { background: var(--surface-alt); }
-#flux-summary-tbody .srow-sub:last-child td { border-bottom: 2px solid var(--border); }
-.srow-sub-inner { display: flex; align-items: center; gap: 7px; padding-left: 31px; }
-.srow-sub-tree { color: var(--border); font-size: 14px; flex-shrink: 0; line-height: 1; }
-.srow-sub-name { font-size: 13px; color: var(--text-muted); }
-.srow-sub-amount { font-size: 13px !important; opacity: 0.75; }
-.srow-sub-count { opacity: 0.65; }
+/* Visibilité (pas display:none) pilotée par Flux._fitSegmentLabels : scrollWidth (largeur du
+   texte) vs clientWidth (largeur réelle du segment déjà rendu) — display:none casserait cette
+   mesure (un élément non affiché a un scrollWidth de 0). */
+.frr-seg-label { font-size: 10px; font-weight: 600; color: #fff; white-space: nowrap; padding: 0 6px; pointer-events: none; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
@@ -2060,8 +1974,6 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .charts-grid { grid-template-columns: 1fr; }
   .flux-charts-row { grid-template-columns: 1fr; }
-  .flux-summary-row { flex-direction: column; }
-  .flux-summary-card { flex-basis: auto; width: 100%; }
   .recent-grid { grid-template-columns: 1fr; }
   .patrimony-grid { grid-template-columns: 1fr; }
   .dashboard-bottom-grid { grid-template-columns: 1fr; }

@@ -1,7 +1,6 @@
 const Flux = {
   _activeFilters: new Set(),
   _multiMode: false,
-  _expandedCats: new Set(),
 
   init() {
     PeriodFilter.onChange(() => {
@@ -205,8 +204,7 @@ const Flux = {
     if (!skipBarChart) this._renderBarChart(allExpenses, allRevenues);
     this._renderDonut(catFilters);
     this._renderCategoryCards(catFilters);
-    this._renderSummaryTable(allExpenses, start, end, catFilters);
-    this._renderHBarChart(allExpenses, start, end, catFilters);
+    this._renderRepartition(allExpenses, start, end, catFilters);
   },
 
   // Toujours Revenus vs Dépenses total, jamais filtré par catégorie (celle-ci pilote le donut,
@@ -428,23 +426,9 @@ const Flux = {
     }).join('');
   },
 
-  toggleCatExpand(cat) {
-    if (this._expandedCats.has(cat)) this._expandedCats.delete(cat);
-    else this._expandedCats.add(cat);
-    const { start, end } = PeriodFilter.getDateRange();
-    this._renderSummaryTable(this._realExpenses(), start, end, this._activeFilters);
-    this._updateHBarSegmentColors(cat);
-    // Le dépli/repli change la hauteur du tableau (lignes de sous-catégorie en plus/en moins)
-    // sans repasser par _renderHBarChart (_updateHBarSegmentColors ne touche qu'une couleur) —
-    // sans cet appel, la synchronisation de hauteur resterait sur l'état d'avant ce clic.
-    this._syncCardHeights();
-  },
-
-  // Regroupement partagé par _renderSummaryTable ET _renderHBarChart : même filtre catégorie,
-  // même clé de regroupement (catégorie, ou sous-catégorie si 1 seule catégorie filtrée), même
-  // tri par montant décroissant — garantit que l'ordre des barres du graphique correspond
-  // TOUJOURS à celui du tableau (demandé), sans risque de divergence entre deux implémentations
-  // séparées du même calcul.
+  // Regroupement partagé par _renderRepartition : même filtre catégorie, même clé de
+  // regroupement (catégorie, ou sous-catégorie si 1 seule catégorie filtrée), même tri par
+  // montant décroissant.
   _summaryGroups(allExpenses, start, end, catFilters) {
     let expenses = allExpenses.filter(e => Utils.getExpenseDate(e) >= start && Utils.getExpenseDate(e) <= end);
     if (catFilters.size) expenses = expenses.filter(e => catFilters.has(e.category));
@@ -478,180 +462,23 @@ const Flux = {
     return Charts._shade(baseColor, pct);
   },
 
-  // Barres HTML/CSS (pas Chart.js — voir commentaire CSS .flux-hbar-chart) reflétant exactement
-  // _summaryGroups : même ordre que le tableau. Échelle relative au MAX affiché (pas au total) —
-  // la plus grosse barre atteint 100% de la piste (moins la réserve fixe pour le montant, voir
-  // HBAR_LABEL_RESERVE_PX ci-dessous), les autres lui sont proportionnelles.
-  _renderHBarChart(allExpenses, start, end, catFilters) {
-    const container = document.getElementById('flux-hbar-chart');
-    const empty = document.getElementById('flux-hbar-empty');
+  // Barres HTML/CSS "faites main" reflétant exactement _summaryGroups : même ordre, même clé de
+  // regroupement. Chaque ligne = 1 barre pleine largeur segmentée par sous-catégorie (nuances de
+  // la couleur de la catégorie via _shadeByIndex, la plus grosse en teinte vive). Cas showSub (1
+  // seule catégorie filtrée) : une barre par sous-catégorie, non segmentée (pas de niveau
+  // en-dessous) — même nuance que l'ancien graphique horizontal pour ce cas.
+  _renderRepartition(allExpenses, start, end, catFilters) {
+    const container = document.getElementById('flux-repartition-list');
+    const empty = document.getElementById('flux-repartition-empty');
+    const title = document.getElementById('flux-repartition-title');
     if (!container) return;
-
-    const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
-    if (!sorted.length) {
-      container.innerHTML = '';
-      if (empty) empty.classList.remove('hidden');
-      this._syncCardHeights();
-      return;
-    }
-    if (empty) empty.classList.add('hidden');
-
-    // Réserve de place (px, via calc/min) pour le montant en bout de barre, pas un simple plafond
-    // en % : un plafond en % laisse une marge qui rétrécit avec la carte (responsive) ou avec un
-    // montant à plus de chiffres, jusqu'à déborder (mesuré : 1.8px de marge à peine avec un
-    // plafond à 78%, ça déborde carrément dès un montant à 5 chiffres sur une carte resserrée).
-    // MESURÉE (le texte réel le plus large parmi les montants affichés), pas une constante figée
-    // au pire cas : une constante assez large pour un montant à 5 chiffres réservait bien plus de
-    // place que nécessaire pour de petits montants, écrasant à tort les proportions entre barres
-    // (2 barres à ratio 2:1 rendues à la MÊME longueur, toutes deux plafonnées par une réserve
-    // surdimensionnée pour ces montants-là).
-    const amountStrs = sorted.map(([, g]) => Utils.formatCurrency(g.amount));
-    const measureEl = document.createElement('span');
-    measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:12.5px;font-weight:700;';
-    document.body.appendChild(measureEl);
-    const maxAmountTextWidth = Math.max(...amountStrs.map(s => { measureEl.textContent = s; return measureEl.getBoundingClientRect().width; }));
-    measureEl.remove();
-    const HBAR_LABEL_RESERVE_PX = Math.ceil(maxAmountTextWidth) + 16; // + gap (8px) + marge de sécurité
-    const maxAmount = Math.max(...sorted.map(([, g]) => g.amount));
-    const escAttr = (s) => String(s).replace(/"/g, '&quot;');
-    const filterColor = showSub ? Utils.getCategoryColor(this._catLabel()) : null;
-
-    // Hauteur d'une ligne du tableau (mesurée, pas figée en CSS — même logique que le spacer
-    // d'en-tête ci-dessous) appliquée à chaque barre : sans ça, la 1re barre s'alignait bien sur
-    // la 1re ligne du tableau (grâce au spacer), mais l'écart entre le rythme des lignes du
-    // tableau (~47px, padding+bordure des <td>) et celui du graphique (gap flexbox ~39px)
-    // s'accumulait ligne après ligne — jusqu'à 37px de décalage sur la dernière ligne d'une liste
-    // de 6 catégories.
-    // Le delta top-à-top entre 2 lignes réelles (pas la height d'une seule ligne isolée) capture
-    // fidèlement le cycle vertical effectif du tableau, bordures collapsées comprises — measurer
-    // une seule ligne laissait un résidu de 0.5px/ligne qui s'accumulait encore, en plus petit,
-    // sur une longue liste. Repli sur la height d'une seule ligne s'il n'y en a qu'une (rien à
-    // soustraire).
-    const catRows = [...document.querySelectorAll('#flux-summary-tbody tr.srow:not(.srow-sub)')];
-    const rowH = catRows.length >= 2
-      ? catRows[1].getBoundingClientRect().top - catRows[0].getBoundingClientRect().top
-      : (catRows[0] ? catRows[0].getBoundingClientRect().height : 0);
-    const rowHStyle = rowH ? `height:${rowH}px;` : '';
-
-    const rows = sorted.map(([label, g], idx) => {
-      const rawPct = (maxAmount > 0 ? (g.amount / maxAmount * 100) : 0).toFixed(1);
-      const widthCss = `min(${rawPct}%, calc(100% - ${HBAR_LABEL_RESERVE_PX}px))`;
-      const amountStr = Utils.formatCurrency(g.amount);
-      const safeName = label.replace(/'/g, "\\'");
-
-      let segmentsHtml, dataCat = '', rowColor;
-      if (showSub) {
-        // Cas 2 (1 catégorie filtrée) : chaque barre = 1 sous-catégorie, teinte unie (nuance de
-        // la couleur de LA catégorie filtrée selon le rang), pas de segmentation interne.
-        rowColor = this._shadeByIndex(filterColor, idx, sorted.length);
-        segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
-      } else {
-        // Cas 1 (aucun filtre) / Cas 3 (plusieurs catégories filtrées) : chaque barre = 1
-        // catégorie. Segments TOUJOURS présents à leur vraie largeur (proportion de la
-        // sous-catégorie dans la catégorie) dès qu'il y a de vraies sous-catégories — seule leur
-        // COULEUR change selon le dépli (teintes distinctes) ou pas (une seule teinte = barre
-        // visuellement unie). Les mêmes nœuds DOM sont donc réutilisables tels quels par
-        // _updateHBarSegmentColors (dépli/repli déjà en cours), qui n'a alors qu'à changer une
-        // couleur pour que ça s'anime (voir .hbar-seg dans le CSS).
-        rowColor = Utils.getCategoryColor(label);
-        const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
-        const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
-        const isExpanded = this._expandedCats.has(label);
-        dataCat = ` data-cat="${escAttr(label)}"`;
-        if (hasSubs) {
-          segmentsHtml = subEntries.map(([sub, sg], i) => {
-            const segColor = isExpanded ? this._shadeByIndex(rowColor, i, subEntries.length) : rowColor;
-            const segPct = (g.amount > 0 ? (sg.amount / g.amount * 100) : 0).toFixed(1);
-            return `<div class="hbar-seg" style="width:${segPct}%;background:${segColor}" title="${escAttr(sub)}: ${Utils.formatCurrency(sg.amount)}"></div>`;
-          }).join('');
-        } else {
-          segmentsHtml = `<div class="hbar-seg" style="width:100%;background:${rowColor}"></div>`;
-        }
-      }
-
-      const isActive = !showSub && catFilters.size > 0 && catFilters.has(label);
-      const isFiltered = !showSub && catFilters.size > 0 && !catFilters.has(label);
-      const cls = `hbar-row${showSub ? '' : ' clickable'}${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}`;
-      const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
-      // Pastille de couleur devant le nom : seulement pour une barre CATÉGORIE (cas 1/3), jamais
-      // pour une barre sous-catégorie (cas 2) — même règle que .srow-dot dans le tableau (absent
-      // sur les lignes de sous-catégorie), pour que le "type" de ligne se reconnaisse pareil des
-      // deux côtés.
-      const dotHtml = showSub ? '' : `<span class="hbar-dot" style="background:${rowColor}"></span>`;
-
-      return `<div class="${cls}" style="--rc:${rowColor};${rowHStyle}"${dataCat}${onClick}>
-        <div class="hbar-label" title="${escAttr(label)}">${dotHtml}<span class="hbar-label-text">${label}</span></div>
-        <div class="hbar-track">
-          <div class="hbar-fillwrap" style="width:${widthCss}">
-            <div class="hbar-fill">${segmentsHtml}</div>
-            <span class="hbar-amount">${amountStr}</span>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Spacer de la hauteur du <thead> du tableau : sans lui, la 1re barre du graphique démarre
-    // plus haut que la 1re ligne du tableau (qui a un en-tête au-dessus, contrairement au
-    // graphique) — décalage vertical qui s'accumule visuellement ligne après ligne. Mesuré en
-    // JS (pas une valeur figée en CSS) pour rester juste si le style de l'en-tête change.
-    const thead = document.getElementById('flux-summary-thead');
-    const theadH = thead ? thead.getBoundingClientRect().height : 0;
-    container.innerHTML = `<div class="hbar-head-spacer" style="height:${theadH}px"></div>${rows}`;
-    this._syncCardHeights();
-  },
-
-  // Carte "Répartition visuelle" toujours EXACTEMENT de la même hauteur que la carte tableau —
-  // SAUF quand une catégorie est dépliée (sous-catégories affichées en lignes en plus), où le
-  // tableau grandit normalement et le graphique garde sa hauteur naturelle (plus petite, la
-  // segmentation d'une catégorie dépliée reste DANS sa même barre, pas de lignes en plus). Mesuré
-  // en JS (pas une hauteur CSS figée) : même en l'absence de tout dépli, marge de titre (.card-
-  // header-row vs <h3> nu) et bordures de lignes de table ne tombent pas pile identiques entre
-  // les deux cartes de quelques px — plus robuste que traquer chaque source de micro-écart une
-  // par une, et reste juste si l'un ou l'autre style change plus tard.
-  _syncCardHeights() {
-    const tableCard = document.querySelector('.flux-summary-card');
-    const chartCard = document.querySelector('.flux-hbar-card');
-    if (!tableCard || !chartCard) return;
-    chartCard.style.height = ''; // repart de la hauteur naturelle avant de (re)mesurer
-    if (this._expandedCats.size > 0) return;
-    const tableH = tableCard.getBoundingClientRect().height;
-    chartCard.style.height = `${tableH}px`;
-  },
-
-  // Ne recalcule/recompose PAS tout le graphique — trouve directement la barre déjà à l'écran
-  // (data-cat) et change juste la couleur de ses segments (déjà à la bonne largeur, voir
-  // _renderHBarChart) : ce sont les mêmes nœuds DOM avant/après, donc la transition CSS
-  // (.hbar-seg) joue vraiment, contrairement à un innerHTML complet qui recrée tout sans état
-  // "avant" pour animer depuis.
-  _updateHBarSegmentColors(cat) {
-    const row = document.querySelector(`#flux-hbar-chart .hbar-row[data-cat="${CSS.escape(cat)}"]`);
-    if (!row) {
-      const { start, end } = PeriodFilter.getDateRange();
-      this._renderHBarChart(this._realExpenses(), start, end, this._activeFilters);
-      return;
-    }
-    const baseColor = Utils.getCategoryColor(cat);
-    const isExpanded = this._expandedCats.has(cat);
-    const segs = row.querySelectorAll('.hbar-seg');
-    segs.forEach((seg, i) => { seg.style.background = isExpanded ? this._shadeByIndex(baseColor, i, segs.length) : baseColor; });
-  },
-
-  _renderSummaryTable(allExpenses, start, end, catFilters) {
-    const tbody = document.getElementById('flux-summary-tbody');
-    const empty = document.getElementById('flux-summary-empty');
-    const title = document.getElementById('flux-summary-title');
-    const thLabel = document.getElementById('flux-summary-th-label');
-    if (!tbody) return;
 
     const catLabel = this._catLabel();
     const { showSub, sorted } = this._summaryGroups(allExpenses, start, end, catFilters);
 
-    // Filtre sur 1 seule catégorie : le tableau bascule sur ses sous-catégories (showSub),
-    // dont les lignes n'ont pas de handler de clic (elles ne représentent plus la catégorie
-    // filtrée) — le titre affiche donc la catégorie active sous forme de pastille (même
-    // recette que .flux-pill.active dans _renderCatPills : couleur de la catégorie, pas une
-    // couleur générique), seul endroit cliquable pour l'annuler, comme sur le camembert/les
-    // pastilles au-dessus.
+    // Filtre sur 1 seule catégorie : le titre affiche la catégorie active sous forme de pastille
+    // (même recette que .flux-pill.active dans _renderCatPills), seul endroit cliquable pour
+    // l'annuler, comme sur le camembert/les pastilles au-dessus.
     if (title) {
       if (showSub) {
         const color = Utils.getCategoryColor(catLabel);
@@ -661,84 +488,73 @@ const Flux = {
         title.textContent = catFilters.size ? `Répartition — ${catLabel}` : 'Répartition par catégorie';
       }
     }
-    if (thLabel) thLabel.textContent = showSub ? 'Sous-catégorie' : 'Catégorie';
 
     if (!sorted.length) {
-      tbody.innerHTML = '';
+      container.innerHTML = '';
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
     const total = sorted.reduce((s, [, g]) => s + g.amount, 0);
+    const escAttr = (s) => String(s).replace(/"/g, '&quot;');
+    const filterColor = showSub ? Utils.getCategoryColor(catLabel) : null;
 
-    const rows = [];
-    sorted.forEach(([label, g]) => {
-      const pct    = total > 0 ? (g.amount / total * 100) : 0;
-      const pctStr = pct.toFixed(1);
-      const barW   = Math.min(100, pct).toFixed(1);
-      const color  = !showSub ? Utils.getCategoryColor(label) : '#6366f1';
-      const hex22  = color + '22';
+    container.innerHTML = sorted.map(([label, g], idx) => {
+      const pct = total > 0 ? (g.amount / total * 100) : 0;
+      const safeName = label.replace(/'/g, "\\'");
+      const rowColor = showSub ? this._shadeByIndex(filterColor, idx, sorted.length) : Utils.getCategoryColor(label);
 
-      if (!showSub) {
+      let segmentsHtml;
+      if (showSub) {
+        segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
+      } else {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
-        const isExpanded = this._expandedCats.has(label);
-        const expandBtn = hasSubs
-          ? `<button class="srow-expand-btn${isExpanded ? ' open' : ''}" onclick="event.stopPropagation();Flux.toggleCatExpand('${label.replace(/'/g, "\\'")}')" title="${isExpanded ? 'Réduire' : 'Détailler'}">▶</button>`
-          : `<span class="srow-expand-ph"></span>`;
-
-        rows.push(`<tr class="srow" style="--rc:${color}" onclick="Flux._togglePill('${label.replace(/'/g, "\\'")}')">
-          <td class="srow-td-label">
-            <div class="srow-label-inner">${expandBtn}<span class="srow-dot" style="background:${color}"></span><span class="srow-name">${label}</span></div>
-          </td>
-          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
-          <td class="srow-td-bar">
-            <div class="srow-bar-outer">
-              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-              <span class="srow-pct">${pctStr}%</span>
-            </div>
-          </td>
-          <td class="srow-td-count">${g.count}</td>
-        </tr>`);
-
-        if (isExpanded && hasSubs) {
-          subEntries.forEach(([sub, sg]) => {
-            const sPct  = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
-            const sPctS = sPct.toFixed(1);
-            const sBarW = Math.min(100, sPct).toFixed(1);
-            rows.push(`<tr class="srow srow-sub" style="--rc:${color}">
-              <td class="srow-td-label">
-                <div class="srow-sub-inner"><span class="srow-sub-tree">└</span><span class="srow-sub-name">${sub}</span></div>
-              </td>
-              <td class="srow-td-amount srow-sub-amount">${Utils.formatCurrency(sg.amount)}</td>
-              <td class="srow-td-bar">
-                <div class="srow-bar-outer">
-                  <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${sBarW}%;background:${color}88"></div></div>
-                  <span class="srow-pct">${sPctS}%</span>
-                </div>
-              </td>
-              <td class="srow-td-count srow-sub-count">${sg.count}</td>
-            </tr>`);
-          });
+        if (hasSubs) {
+          segmentsHtml = subEntries.map(([sub, sg], i) => {
+            const segColor = this._shadeByIndex(rowColor, i, subEntries.length);
+            const segPct = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
+            return `<div class="frr-seg" style="width:${segPct.toFixed(1)}%;background:${segColor}" title="${escAttr(sub)} : ${Utils.formatCurrency(sg.amount)} (${segPct.toFixed(1)}%)"><span class="frr-seg-label">${escAttr(sub)}</span></div>`;
+          }).join('');
+        } else {
+          segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
         }
-      } else {
-        rows.push(`<tr class="srow" style="--rc:${color}">
-          <td class="srow-td-label">
-            <div class="srow-label-inner"><span class="srow-expand-ph"></span><span class="srow-name">${label}</span></div>
-          </td>
-          <td class="srow-td-amount">${Utils.formatCurrency(g.amount)}</td>
-          <td class="srow-td-bar">
-            <div class="srow-bar-outer">
-              <div class="srow-bar-track" style="background:${hex22}"><div class="srow-bar-fill" style="width:${barW}%;background:${color}"></div></div>
-              <span class="srow-pct">${pctStr}%</span>
-            </div>
-          </td>
-          <td class="srow-td-count">${g.count}</td>
-        </tr>`);
       }
-    });
 
-    tbody.innerHTML = rows.join('');
+      const onClick = showSub ? '' : ` onclick="Flux._togglePill('${safeName}')"`;
+      const cls = `flux-repartition-row${showSub ? '' : ' clickable'}`;
+      const countLabel = `${g.count} opération${g.count > 1 ? 's' : ''}`;
+
+      return `<div class="${cls}" style="--rc:${rowColor}"${onClick}>
+        <div class="frr-head">
+          <div class="frr-left">
+            <span class="frr-dot" style="background:${rowColor}"></span>
+            <span class="frr-name">${label}</span>
+            <span class="frr-pct">${pct.toFixed(1)}%</span>
+          </div>
+          <div class="frr-right">
+            <span class="frr-count">${countLabel}</span>
+            <span class="frr-amount">${Utils.formatCurrency(g.amount)}</span>
+          </div>
+        </div>
+        <div class="frr-bar">${segmentsHtml}</div>
+      </div>`;
+    }).join('');
+
+    this._fitSegmentLabels();
+  },
+
+  // Cache le nom d'une sous-catégorie si le segment qui le porte est trop étroit pour l'afficher
+  // sans le couper — scrollWidth (largeur intrinsèque du texte) vs clientWidth (largeur réellement
+  // rendue du segment, contrainte par son overflow:hidden) mesurés directement sur le DOM déjà
+  // rendu : pas besoin d'un clone hors-écran comme pour le gabarit du filtre de période, la barre
+  // est déjà à sa taille finale à cet instant.
+  _fitSegmentLabels() {
+    document.querySelectorAll('#flux-repartition-list .frr-seg').forEach(seg => {
+      const label = seg.querySelector('.frr-seg-label');
+      if (!label) return;
+      label.style.visibility = label.scrollWidth > seg.clientWidth ? 'hidden' : '';
+    });
   },
 };
