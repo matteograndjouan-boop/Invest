@@ -1708,7 +1708,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    segments sous-catégorie différent des autres, ce que les datasets "empilés" de Chart.js (mêmes
    séries pour toutes les catégories de l'axe) ne modélisent pas bien. Liste pleine largeur (plus
    de table à côté) : gap fixe entre lignes, chaque ligne autonome (en-tête + barre). */
-.flux-repartition-list { display: flex; flex-direction: column; gap: 18px; }
+.flux-repartition-list { display: flex; flex-direction: column; gap: 10px; }
 .flux-repartition-row {
   padding: 0 10px; margin: 0 -10px;
   border-radius: 8px;
@@ -1743,7 +1743,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 /* Visibilité (pas display:none) pilotée par Flux._fitSegmentLabels : scrollWidth (largeur du
    texte) vs clientWidth (largeur réelle du segment déjà rendu) — display:none casserait cette
    mesure (un élément non affiché a un scrollWidth de 0). */
-.frr-seg-label { font-size: 10px; font-weight: 600; color: #fff; white-space: nowrap; padding: 0 6px; pointer-events: none; }
+.frr-seg-label { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; padding: 0 6px; pointer-events: none; }
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
