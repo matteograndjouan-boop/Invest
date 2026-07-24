@@ -419,7 +419,7 @@ const Flux = {
       // réellement la bande puisse la lire (un style inline ne s'applique jamais à un pseudo-
       // élément, seulement à l'élément qui le porte).
       const band = `linear-gradient(90deg, ${color}, ${Charts._shade(color, 0.45)})`;
-      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band}" onclick="Flux.toggleFilter('${safeName}')">
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band};--rc:${color}" onclick="Flux.toggleFilter('${safeName}')">
         <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
         <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
       </div>`;

@@ -1687,7 +1687,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-cat-card {
   position: relative;
   flex: 1 1 140px;
-  padding: 14px 14px 12px;
+  padding: 14px;
   border-radius: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
@@ -1696,22 +1696,30 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 /* Bande du haut (couleur de la catégorie -> teinte claire, posée en JS via --fcc-band —
    Flux._renderCategoryCards) : remplace l'ancienne barre de progression du bas — plus de notion
-   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Même
-   arrondi que la carte (12px) sur les 2 coins hauts, sinon la bande carrée dépasserait visible-
-   ment des coins arrondis de la carte. */
+   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Rayon à
+   11px (pas 12px comme la carte) : la bande est positionnée au ras du bord intérieur de la bordure
+   1px (voir .flux-cat-card position:relative + ::before top/left/right:0, résolus contre la boîte
+   de padding, donc décalés de 1px vers l'intérieur) — un même rayon que la carte aurait laissé un
+   liseré visible au coin entre la courbe de la bordure et celle de la bande.
+   */
 .flux-cat-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  border-radius: 12px 12px 0 0;
+  border-radius: 11px 11px 0 0;
   background: var(--fcc-band, var(--primary));
 }
-.flux-cat-card:hover { border-color: var(--primary); }
-.flux-cat-card.active { border-color: var(--primary); background: var(--primary-light); }
+/* --rc (couleur unie de la catégorie, posée en JS à côté de --fcc-band) plutôt que --primary fixe :
+   la bordure au survol/filtre touche directement la bande en haut (contrairement à l'ancienne barre
+   du bas, loin de la bordure) — un violet générique y créait un raccord de deux couleurs différentes
+   à l'œil, bien visible sur les catégories non violettes (ex. Alimentation en rouge). Même recette
+   que --rc sur .hbar-row/.flux-repartition-row. */
+.flux-cat-card:hover { border-color: var(--rc, var(--primary)); }
+.flux-cat-card.active { border-color: var(--rc, var(--primary)); background: var(--primary-light); }
 .flux-cat-card.dimmed { opacity: 0.4; }
 .flux-cat-card.dimmed:hover { opacity: 1; }
 .fcc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .fcc-ico { font-size: 18px; }
 .fcc-name { font-size: 15px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.fcc-amount { font-size: 17px; font-weight: 800; color: var(--text); }
 
 /* ---- Flux Répartition par catégorie ---- */
 /* Barres HTML/CSS "faites main", pas Chart.js : chaque barre catégorie peut avoir un nombre de
@@ -1753,7 +1761,13 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 /* Visibilité (pas display:none) pilotée par Flux._fitSegmentLabels : scrollWidth (largeur du
    texte) vs clientWidth (largeur réelle du segment déjà rendu) — display:none casserait cette
    mesure (un élément non affiché a un scrollWidth de 0). */
-.frr-seg-label { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; padding: 0 6px; pointer-events: none; }
+.frr-seg-label {
+  font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap;
+  padding: 2px 6px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 4px;
+  pointer-events: none;
+}
 
 /* ---- Type Badges ---- */
 .type-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.01em; }
@@ -5870,7 +5884,7 @@ const Flux = {
       // réellement la bande puisse la lire (un style inline ne s'applique jamais à un pseudo-
       // élément, seulement à l'élément qui le porte).
       const band = `linear-gradient(90deg, ${color}, ${Charts._shade(color, 0.45)})`;
-      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band}" onclick="Flux.toggleFilter('${safeName}')">
+      return `<div class="flux-cat-card${isActive ? ' active' : ''}${isFiltered ? ' dimmed' : ''}" style="--fcc-band:${band};--rc:${color}" onclick="Flux.toggleFilter('${safeName}')">
         <div class="fcc-top"><span class="fcc-ico">${icon}</span><span class="fcc-name">${label}</span></div>
         <div class="fcc-amount">${Utils.formatCurrency(value)}</div>
       </div>`;
