@@ -233,11 +233,15 @@ const PeriodFilter = {
   // à droite de la topbar (voir .global-period-bar), avec une largeur minimale posée par
   // _syncTriggerWidth pour ne jamais varier ; l'espace à sa droite (jusqu'au bord de .main-content)
   // est donc structurellement plus étroit que la moitié du panneau (jusqu'à 480px), quelle que soit
-  // la largeur de fenêtre — un centrage pur déborderait systématiquement à droite. Bornes sur
-  // .main-content (pas window.innerWidth) : reflète la zone de contenu réellement visible (gouttière
-  // de scrollbar comprise), pas la largeur théorique du viewport. Mesuré en JS (comme
-  // _syncTriggerWidth) plutôt qu'en CSS pur : position du déclencheur et largeur du panneau ne sont
-  // connues qu'à l'exécution.
+  // la largeur de fenêtre — un centrage pur déborderait systématiquement à droite. Borne droite sur
+  // clientWidth (pas getBoundingClientRect().right, la boîte de BORDURE) : .main-content a
+  // scrollbar-gutter:stable, qui réserve une gouttière de scrollbar verticale même sans besoin de
+  // scroller — cette gouttière fait partie de la boîte de bordure mais PAS de clientWidth. S'y fier
+  // (comme la 1ère version de ce calcul) laissait le panneau déborder de quelques px dans cette
+  // gouttière, suffisant pour déclencher le scroll horizontal de .main-content (overflow-y:auto
+  // sans overflow-x explicite → l'axe non précisé devient 'auto' lui aussi, pas 'visible').
+  // Mesuré en JS (comme _syncTriggerWidth) plutôt qu'en CSS pur : position du déclencheur et
+  // largeur du panneau ne sont connues qu'à l'exécution.
   _positionPanel() {
     const trigger = document.getElementById('period-trigger');
     const compact = trigger?.closest('.period-compact');
@@ -248,9 +252,10 @@ const PeriodFilter = {
     const triggerRect = trigger.getBoundingClientRect();
     const compactRect = compact.getBoundingClientRect();
     const boundsRect = bounds.getBoundingClientRect();
+    const boundsRight = boundsRect.left + bounds.clientWidth;
     const panelWidth = panel.getBoundingClientRect().width;
     const idealLeft = triggerRect.left + triggerRect.width / 2 - panelWidth / 2;
-    const clampedLeft = Math.min(Math.max(idealLeft, boundsRect.left + MARGIN), boundsRect.right - panelWidth - MARGIN);
+    const clampedLeft = Math.min(Math.max(idealLeft, boundsRect.left + MARGIN), boundsRight - panelWidth - MARGIN);
     panel.style.left = `${clampedLeft - compactRect.left}px`;
     panel.style.transform = 'none';
   },

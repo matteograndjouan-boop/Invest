@@ -988,7 +988,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    élément ne prenant que la largeur de son propre contenu (flèches + bouton), pas celle du
    panneau. Une fois pleine largeur, justify-content:center centre vraiment flèches + bouton. */
 .period-nav { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 0 100%; }
-.period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, border-color .15s, color .15s; }
+/* Fond var(--surface-alt) (pas var(--bg), identique au fond de page) + bordure doublée (2px) et
+   glyphe en gras : au repos, un fond confondu avec la page + une bordure à rgba(255,255,255,0.06)
+   (var(--border), quasi invisible) laissait ces flèches se fondre dans le fond plutôt que se lire
+   comme un vrai bouton, à côté de la pilule pleine en dégradé du déclencheur. */
+.period-arrow {
+  background: var(--surface-alt); border: 2px solid var(--border); color: var(--text);
+  border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 0.95rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background .15s, border-color .15s, color .15s;
+}
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .period-label-wrap { position: relative; }
 .period-label-btn {
@@ -4588,11 +4597,15 @@ const PeriodFilter = {
   // à droite de la topbar (voir .global-period-bar), avec une largeur minimale posée par
   // _syncTriggerWidth pour ne jamais varier ; l'espace à sa droite (jusqu'au bord de .main-content)
   // est donc structurellement plus étroit que la moitié du panneau (jusqu'à 480px), quelle que soit
-  // la largeur de fenêtre — un centrage pur déborderait systématiquement à droite. Bornes sur
-  // .main-content (pas window.innerWidth) : reflète la zone de contenu réellement visible (gouttière
-  // de scrollbar comprise), pas la largeur théorique du viewport. Mesuré en JS (comme
-  // _syncTriggerWidth) plutôt qu'en CSS pur : position du déclencheur et largeur du panneau ne sont
-  // connues qu'à l'exécution.
+  // la largeur de fenêtre — un centrage pur déborderait systématiquement à droite. Borne droite sur
+  // clientWidth (pas getBoundingClientRect().right, la boîte de BORDURE) : .main-content a
+  // scrollbar-gutter:stable, qui réserve une gouttière de scrollbar verticale même sans besoin de
+  // scroller — cette gouttière fait partie de la boîte de bordure mais PAS de clientWidth. S'y fier
+  // (comme la 1ère version de ce calcul) laissait le panneau déborder de quelques px dans cette
+  // gouttière, suffisant pour déclencher le scroll horizontal de .main-content (overflow-y:auto
+  // sans overflow-x explicite → l'axe non précisé devient 'auto' lui aussi, pas 'visible').
+  // Mesuré en JS (comme _syncTriggerWidth) plutôt qu'en CSS pur : position du déclencheur et
+  // largeur du panneau ne sont connues qu'à l'exécution.
   _positionPanel() {
     const trigger = document.getElementById('period-trigger');
     const compact = trigger?.closest('.period-compact');
@@ -4603,9 +4616,10 @@ const PeriodFilter = {
     const triggerRect = trigger.getBoundingClientRect();
     const compactRect = compact.getBoundingClientRect();
     const boundsRect = bounds.getBoundingClientRect();
+    const boundsRight = boundsRect.left + bounds.clientWidth;
     const panelWidth = panel.getBoundingClientRect().width;
     const idealLeft = triggerRect.left + triggerRect.width / 2 - panelWidth / 2;
-    const clampedLeft = Math.min(Math.max(idealLeft, boundsRect.left + MARGIN), boundsRect.right - panelWidth - MARGIN);
+    const clampedLeft = Math.min(Math.max(idealLeft, boundsRect.left + MARGIN), boundsRight - panelWidth - MARGIN);
     panel.style.left = `${clampedLeft - compactRect.left}px`;
     panel.style.transform = 'none';
   },

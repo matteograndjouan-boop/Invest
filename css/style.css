@@ -978,7 +978,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    élément ne prenant que la largeur de son propre contenu (flèches + bouton), pas celle du
    panneau. Une fois pleine largeur, justify-content:center centre vraiment flèches + bouton. */
 .period-nav { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 0 100%; }
-.period-arrow { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, border-color .15s, color .15s; }
+/* Fond var(--surface-alt) (pas var(--bg), identique au fond de page) + bordure doublée (2px) et
+   glyphe en gras : au repos, un fond confondu avec la page + une bordure à rgba(255,255,255,0.06)
+   (var(--border), quasi invisible) laissait ces flèches se fondre dans le fond plutôt que se lire
+   comme un vrai bouton, à côté de la pilule pleine en dégradé du déclencheur. */
+.period-arrow {
+  background: var(--surface-alt); border: 2px solid var(--border); color: var(--text);
+  border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 0.95rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background .15s, border-color .15s, color .15s;
+}
 .period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 .period-label-wrap { position: relative; }
 .period-label-btn {
