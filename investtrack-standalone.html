@@ -1686,6 +1686,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-cat-cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .flux-cat-card {
   position: relative;
+  overflow: hidden;
   flex: 1 1 140px;
   padding: 14px;
   border-radius: 12px;
@@ -1696,15 +1697,14 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 }
 /* Bande du haut (couleur de la catégorie -> teinte claire, posée en JS via --fcc-band —
    Flux._renderCategoryCards) : remplace l'ancienne barre de progression du bas — plus de notion
-   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Rayon à
-   11px (pas 12px comme la carte) : la bande est positionnée au ras du bord intérieur de la bordure
-   1px (voir .flux-cat-card position:relative + ::before top/left/right:0, résolus contre la boîte
-   de padding, donc décalés de 1px vers l'intérieur) — un même rayon que la carte aurait laissé un
-   liseré visible au coin entre la courbe de la bordure et celle de la bande.
-   */
+   de "% du total" sur ces cartes, déjà porté par le donut et le tableau juste en dessous. Pas de
+   border-radius ici : un rayon (même réduit pour tenir compte de la bordure 1px) se fait recadrer
+   par le navigateur dès qu'il dépasse la hauteur de la boîte (4px ici, largement sous les ~11-12px
+   voulus), ce qui donnait une courbe plus resserrée que celle de la carte et un raccord visible au
+   coin. overflow:hidden sur .flux-cat-card fait ce découpage à la place, en épousant exactement SA
+   propre courbe (12px, moins l'épaisseur de bordure) — aucun calcul de rayon à maintenir en phase. */
 .flux-cat-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  border-radius: 11px 11px 0 0;
   background: var(--fcc-band, var(--primary));
 }
 /* --rc (couleur unie de la catégorie, posée en JS à côté de --fcc-band) plutôt que --primary fixe :
@@ -1763,7 +1763,8 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    mesure (un élément non affiché a un scrollWidth de 0). */
 .frr-seg-label {
   font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap;
-  padding: 2px 6px;
+  line-height: 1;
+  padding: 3px 6px;
   background: rgba(0,0,0,0.35);
   border-radius: 4px;
   pointer-events: none;
