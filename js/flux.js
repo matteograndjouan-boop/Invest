@@ -507,7 +507,11 @@ const Flux = {
 
       let segmentsHtml;
       if (showSub) {
-        segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
+        // Barre proportionnelle au % de la sous-catégorie dans la catégorie filtrée (même pct que
+        // .frr-pct affiché juste au-dessus) — pas 100% fixe : sans piste visible derrière (voir
+        // .frr-bar en CSS, pas de background), une barre toujours pleine aurait donné la fausse
+        // impression que chaque sous-catégorie occupe la totalité de la catégorie.
+        segmentsHtml = `<div class="frr-seg" style="width:${pct.toFixed(1)}%;background:${rowColor}"></div>`;
       } else {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');

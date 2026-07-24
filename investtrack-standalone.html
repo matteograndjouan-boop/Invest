@@ -1693,7 +1693,7 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
   background: var(--surface-alt);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: background 0.14s, border-color 0.14s, opacity 0.14s;
+  transition: background 0.14s, border-color 0.14s, border-width 0.14s, padding 0.14s, opacity 0.14s;
 }
 /* Bande du haut (couleur de la catégorie -> teinte claire, posée en JS via --fcc-band —
    Flux._renderCategoryCards) : remplace l'ancienne barre de progression du bas — plus de notion
@@ -1713,7 +1713,10 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
    à l'œil, bien visible sur les catégories non violettes (ex. Alimentation en rouge). Même recette
    que --rc sur .hbar-row/.flux-repartition-row. */
 .flux-cat-card:hover { border-color: var(--rc, var(--primary)); }
-.flux-cat-card.active { border-color: var(--rc, var(--primary)); background: var(--primary-light); }
+/* Bordure aussi épaisse que la bande du haut (4px) pour une sélection bien visible — padding
+   réduit d'autant (14px -> 11px, box-sizing:border-box) pour que le contenu (icône/nom/montant)
+   ne bouge pas d'un pixel quand la carte devient active, seul le cadre s'épaissit visuellement. */
+.flux-cat-card.active { border-color: var(--rc, var(--primary)); border-width: 4px; padding: 11px; background: var(--primary-light); }
 .flux-cat-card.dimmed { opacity: 0.4; }
 .flux-cat-card.dimmed:hover { opacity: 1; }
 .fcc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -1746,12 +1749,16 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .frr-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 .frr-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
 
-/* Piste pleine largeur, coins très arrondis (rayon = moitié de la hauteur → bouts en demi-cercle).
-   overflow:hidden sur la piste (pas sur chaque segment) : les segments d'extrémité n'ont pas besoin
-   de leur propre rayon, la piste les découpe proprement — et ça donne à l'automatic minimum size
+/* Pleine largeur, coins très arrondis (rayon = moitié de la hauteur → bouts en demi-cercle).
+   overflow:hidden ici (pas sur chaque segment) : les segments d'extrémité n'ont pas besoin de leur
+   propre rayon, le conteneur les découpe proprement — et ça donne à l'automatic minimum size
    flexbox de chaque .frr-seg une valeur de 0 (au lieu de sa taille de contenu), donc les segments
-   peuvent bien descendre sous la largeur de leur texte pour respecter leur % exact. */
-.frr-bar { display: flex; width: 100%; height: 22px; border-radius: 11px; overflow: hidden; background: var(--border); }
+   peuvent bien descendre sous la largeur de leur texte pour respecter leur % exact. Pas de fond :
+   en filtre 1 catégorie (Flux._renderRepartition, showSub) chaque barre s'arrête à son vrai
+   pourcentage (pas 100% fixe) — un fond aurait dessiné une "piste" vide derrière la partie
+   manquante, donnant l'impression trompeuse que la barre allait jusqu'au bout. Sans incidence sur
+   les barres segmentées (catégorie non filtrée) : leurs segments couvrent déjà toute la largeur. */
+.frr-bar { display: flex; width: 100%; height: 22px; border-radius: 11px; overflow: hidden; }
 .frr-seg {
   height: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -5973,7 +5980,11 @@ const Flux = {
 
       let segmentsHtml;
       if (showSub) {
-        segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
+        // Barre proportionnelle au % de la sous-catégorie dans la catégorie filtrée (même pct que
+        // .frr-pct affiché juste au-dessus) — pas 100% fixe : sans piste visible derrière (voir
+        // .frr-bar en CSS, pas de background), une barre toujours pleine aurait donné la fausse
+        // impression que chaque sous-catégorie occupe la totalité de la catégorie.
+        segmentsHtml = `<div class="frr-seg" style="width:${pct.toFixed(1)}%;background:${rowColor}"></div>`;
       } else {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
