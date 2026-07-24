@@ -557,15 +557,12 @@ const Flux = {
 
       return `<div class="${cls}" style="--rc:${rowColor}"${onClick}>
         <div class="frr-head">
-          <div class="frr-left">
-            <span class="frr-dot" style="background:${rowColor}"></span>
-            <span class="frr-name">${label}</span>
-            <span class="frr-pct">${pct.toFixed(1)}%</span>
-          </div>
-          <div class="frr-right">
-            <span class="frr-count">${countLabel}</span>
-            <span class="frr-amount">${Utils.formatCurrency(g.amount)}</span>
-          </div>
+          <span class="frr-dot" style="background:${rowColor}"></span>
+          <span class="frr-name">${label}</span>
+          <span class="frr-pct">${pct.toFixed(1)}%</span>
+          <span class="frr-sep">•</span>
+          <span class="frr-amount">${Utils.formatCurrency(g.amount)}</span>
+          <span class="frr-count">${countLabel}</span>
         </div>
         <div class="frr-bar">${segmentsHtml}</div>
       </div>`;

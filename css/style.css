@@ -1730,14 +1730,16 @@ body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 
 .flux-repartition-row.clickable { cursor: pointer; }
 .flux-repartition-row.clickable:hover { border-left-color: var(--rc, var(--primary)); background: rgba(255,255,255,0.03); }
 
-.frr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.frr-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* Tout aligné à gauche sur une seule ligne (dot, nom, %, séparateur, montant, nb d'opérations) —
+   plus de groupe droite/gauche séparé par justify-content:space-between : chaque info suit la
+   précédente dans l'ordre de lecture, pas de valeur "ancrée" à droite de la carte. */
+.frr-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .frr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.frr-name { font-size: 14px; font-weight: 700; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frr-name { font-size: 14px; font-weight: 700; color: var(--text); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; min-width: 0; }
 .frr-pct { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-.frr-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.frr-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-.frr-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.frr-sep { font-size: 11px; color: var(--text-muted); opacity: 0.5; flex-shrink: 0; }
+.frr-amount { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+.frr-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
 /* Pleine largeur, coins très arrondis (rayon = moitié de la hauteur → bouts en demi-cercle).
    overflow:hidden ici (pas sur chaque segment) : les segments d'extrémité n'ont pas besoin de leur
