@@ -335,7 +335,7 @@ input:focus:not(:focus-visible) { outline: none; }
   padding: 0 0 10px; margin-bottom: -1px;
   border: none; border-bottom: 2px solid transparent;
   background: transparent; color: var(--text-muted);
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-size: 17px; font-weight: 600; cursor: pointer;
   transition: color .15s, border-color .15s; white-space: nowrap;
 }
 .mode-tab:hover { color: var(--text); }
@@ -950,15 +950,20 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    pas une pilule neutre où un chevron discret avait du sens. */
 .period-trigger-chev { font-size: 0.65rem; color: rgba(255,255,255,.85); transition: transform .15s; opacity: .9; }
 .period-trigger.active .period-trigger-chev { transform: rotate(180deg); }
+/* Centré sur .period-compact (left:50%+translateX), pas ancré à right:0 : .period-compact
+   contient [flèche prev 30px][déclencheur][flèche next 30px] à écarts égaux (6px), donc son
+   centre horizontal EST déjà celui du déclencheur — un ancrage right:0 alignait le panneau sur le
+   bord droit du groupe entier (jusqu'à la flèche next), pas sur le bouton, décalant tout le
+   panneau (plus large que le déclencheur) visiblement vers la gauche par rapport à lui. */
 .period-panel {
-  position: absolute; top: calc(100% + 8px); right: 0;
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
   max-width: min(480px, calc(100vw - 48px));
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: 0 10px 28px rgba(0,0,0,0.2); z-index: 1000; padding: 12px 14px;
   animation: dropInRight 0.12s ease;
 }
 .period-panel.hidden { display: none; }
-@keyframes dropInRight { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
+@keyframes dropInRight { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 .period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .period-type-btns { display: flex; gap: 6px; }
 .period-type-btn {
@@ -1423,7 +1428,12 @@ select.dt-select:focus {
 .effective-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: rgba(99,102,241,0.1); color: var(--primary); white-space: nowrap; }
 
 /* ---- Date Mode Toggle ---- */
-.date-mode-toggle { display: flex; align-items: center; gap: 0.3rem; margin-left: 0.75rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
+/* flex:1 0 100% : force sa propre ligne pleine largeur dans .period-filter (même recette que
+   .period-nav juste au-dessus) puis justify-content:center centre vraiment les 2 boutons — cette
+   ligne n'a plus rien à sa gauche (period-nav force déjà un retour à la ligne avant elle), la
+   bordure/marge de gauche d'avant (pensée pour un séparateur inline) ne servait donc plus qu'à
+   décaler le groupe vers la droite sans rien à séparer. */
+.date-mode-toggle { display: flex; align-items: center; justify-content: center; gap: 0.3rem; flex: 1 0 100%; }
 .date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
@@ -1433,7 +1443,6 @@ select.dt-select:focus {
 body[data-view="comparisons"] .period-type-btns,
 body[data-view="comparisons"] .period-nav,
 body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
-body[data-view="comparisons"] .date-mode-toggle { margin-left: 0; padding-left: 0; border-left: none; }
 
 /* ---- KPI Trends ---- */
 .kpi-trend { font-size: 0.72rem; margin-top: 0.2rem; min-height: 1.1rem; line-height: 1.3; }
