@@ -453,9 +453,10 @@ const Flux = {
   },
 
   // idx=0 (plus gros montant) garde la couleur vive d'origine, les suivants s'éclaircissent
-  // progressivement (jusqu'à +60%) — sert à la fois aux segments d'une barre catégorie dépliée
-  // (plusieurs sous-catégories dans UNE barre) et aux barres sous-catégorie quand une seule
-  // catégorie est filtrée (plusieurs barres, une par sous-catégorie).
+  // progressivement (jusqu'à +60%) — sert aux barres sous-catégorie quand une seule catégorie est
+  // filtrée (plusieurs barres, une par sous-catégorie). Pour les segments D'UNE MÊME barre
+  // catégorie, voir SEG_OPACITY dans _renderRepartition : rang -> opacité fixe sur la même
+  // couleur, pas une teinte qui varie avec _shade.
   _shadeByIndex(baseColor, idx, count) {
     if (idx <= 0 || count <= 1) return baseColor;
     const pct = 0.15 + (idx / (count - 1)) * 0.45;
@@ -463,10 +464,13 @@ const Flux = {
   },
 
   // Barres HTML/CSS "faites main" reflétant exactement _summaryGroups : même ordre, même clé de
-  // regroupement. Chaque ligne = 1 barre pleine largeur segmentée par sous-catégorie (nuances de
-  // la couleur de la catégorie via _shadeByIndex, la plus grosse en teinte vive). Cas showSub (1
-  // seule catégorie filtrée) : une barre par sous-catégorie, non segmentée (pas de niveau
-  // en-dessous) — même nuance que l'ancien graphique horizontal pour ce cas.
+  // regroupement. Chaque ligne = 1 barre pleine largeur segmentée par sous-catégorie : même
+  // couleur de catégorie pour tous les segments, seule l'opacité change selon le rang (SEG_OPACITY
+  // ci-dessous, fixe et identique pour toutes les catégories — pas relatif au nombre de
+  // sous-catégories comme l'ancien _shadeByIndex). Au-delà du rang 4, les sous-catégories
+  // restantes sont regroupées dans un seul segment "Autres" en fin de barre. Cas showSub (1 seule
+  // catégorie filtrée) : une barre par sous-catégorie, non segmentée (pas de niveau en-dessous) —
+  // reste sur _shadeByIndex, inchangé pour ce cas.
   _renderRepartition(allExpenses, start, end, catFilters) {
     const container = document.getElementById('flux-repartition-list');
     const empty = document.getElementById('flux-repartition-empty');
@@ -499,6 +503,10 @@ const Flux = {
     const total = sorted.reduce((s, [, g]) => s + g.amount, 0);
     const escAttr = (s) => String(s).replace(/"/g, '&quot;');
     const filterColor = showSub ? Utils.getCategoryColor(catLabel) : null;
+    // Rang (index dans subEntries, trié décroissant) -> opacité. Fixe, identique pour toutes les
+    // catégories — au-delà de ce rang, tout part dans le segment "Autres" (SEG_AUTRES_OPACITY).
+    const SEG_OPACITY = [1, 0.65, 0.4, 0.25];
+    const SEG_AUTRES_OPACITY = 0.15;
 
     container.innerHTML = sorted.map(([label, g], idx) => {
       const pct = total > 0 ? (g.amount / total * 100) : 0;
@@ -516,11 +524,28 @@ const Flux = {
         const subEntries = Object.entries(g.subs).sort((a, b) => b[1].amount - a[1].amount);
         const hasSubs = subEntries.length > 0 && !(subEntries.length === 1 && subEntries[0][0] === '—');
         if (hasSubs) {
-          segmentsHtml = subEntries.map(([sub, sg], i) => {
-            const segColor = this._shadeByIndex(rowColor, i, subEntries.length);
+          // Rangs 1-4 : un segment chacun, largeur = leur vraie part, opacité fixe par rang
+          // (même couleur de catégorie pour tous). Rang 5+ : fusionnés dans un seul segment
+          // "Autres" ajouté APRÈS (donc toujours en fin de barre, quelle que soit sa taille
+          // combinée) — tooltip listant chaque sous-catégorie regroupée (nom + montant + %).
+          const top = subEntries.slice(0, SEG_OPACITY.length);
+          const rest = subEntries.slice(SEG_OPACITY.length);
+          segmentsHtml = top.map(([sub, sg], i) => {
+            const segColor = Charts._alpha(rowColor, SEG_OPACITY[i]);
             const segPct = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
             return `<div class="frr-seg" style="width:${segPct.toFixed(1)}%;background:${segColor}" title="${escAttr(sub)} : ${Utils.formatCurrency(sg.amount)} (${segPct.toFixed(1)}%)"><span class="frr-seg-label">${escAttr(sub)}</span></div>`;
           }).join('');
+          if (rest.length) {
+            const restAmount = rest.reduce((s, [, sg]) => s + sg.amount, 0);
+            const restPct = g.amount > 0 ? (restAmount / g.amount * 100) : 0;
+            const restLines = rest.map(([sub, sg]) => {
+              const sPct = g.amount > 0 ? (sg.amount / g.amount * 100) : 0;
+              return `${sub} : ${Utils.formatCurrency(sg.amount)} (${sPct.toFixed(1)}%)`;
+            });
+            const restTitle = `Autres (${rest.length}) :\n${restLines.join('\n')}`;
+            const restColor = Charts._alpha(rowColor, SEG_AUTRES_OPACITY);
+            segmentsHtml += `<div class="frr-seg" style="width:${restPct.toFixed(1)}%;background:${restColor}" title="${escAttr(restTitle)}"><span class="frr-seg-label">Autres</span></div>`;
+          }
         } else {
           segmentsHtml = `<div class="frr-seg" style="width:100%;background:${rowColor}"></div>`;
         }

@@ -48,6 +48,17 @@ const Charts = {
     return `rgb(${r},${g},${b})`;
   },
 
+  // Même couleur hex #rrggbb en rgba(r,g,b,alpha) — contrairement à _shade (qui change la TEINTE
+  // en mélangeant vers blanc/noir), la couleur de base reste strictement identique, seule sa
+  // transparence varie. Utilisé pour les segments de Flux._renderRepartition : tous les segments
+  // d'une même barre catégorie gardent la couleur de LA catégorie, seul le rang change l'opacité.
+  _alpha(hex, alpha) {
+    const h = hex.replace('#', '');
+    const num = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    const r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+    return `rgba(${r},${g},${b},${alpha})`;
+  },
+
   // Toujours en nombre entier, jamais abrégé (k€/M€) : mélanger "500 €" et "1 k€" sur une même
   // échelle n'est pas homogène — un seul format, quelle que soit l'ampleur des valeurs.
   _fmt(v) {
