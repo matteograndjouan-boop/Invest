@@ -137,16 +137,27 @@ const PeriodFilter = {
   // Déclencheur compact (juste la période en cours) : le panneau complet — jusqu'ici affiché en
   // permanence en pleine largeur — ne s'affiche plus qu'au clic, replié par défaut pour ne pas
   // encombrer le haut de page.
+  // Chevron SVG (pas un caractère Unicode ←/→) : le tracé d'un glyphe texte ne peut pas se
+  // contrôler précisément (épaisseur dépendante du rendu de la police, pas franchement plus épais
+  // via font-weight ; centrage optique imparfait, la police laisse un vide asymétrique autour du
+  // caractère) — un viewBox+polyline donne un tracé net, aussi épais que voulu (stroke-width) et
+  // strictement centré dans le carré du bouton. stroke="currentColor" suit la couleur du bouton
+  // (donc son survol) sans règle CSS séparée à maintenir en phase.
+  _arrowSvg(dir) {
+    const points = dir === 'left' ? '15,6 9,12 15,18' : '9,6 15,12 9,18';
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="${points}"/></svg>`;
+  },
+
   _buildHTML() {
     return `
       <div class="period-compact">
-        <button class="period-arrow" id="period-trigger-prev" title="Période précédente">&#8592;</button>
+        <button class="period-arrow" id="period-trigger-prev" title="Période précédente">${this._arrowSvg('left')}</button>
         <button class="period-trigger" id="period-trigger">
           <span class="period-trigger-ico">📅</span>
           <span id="period-trigger-label"></span>
           <span class="period-trigger-chev">▾</span>
         </button>
-        <button class="period-arrow" id="period-trigger-next" title="Période suivante">&#8594;</button>
+        <button class="period-arrow" id="period-trigger-next" title="Période suivante">${this._arrowSvg('right')}</button>
         <div class="period-panel hidden" id="period-panel">
           <div class="period-filter">
             <div class="period-type-btns">
@@ -157,12 +168,12 @@ const PeriodFilter = {
               <button class="period-type-btn" data-type="range">Plage libre</button>
             </div>
             <div class="period-nav" id="period-nav-row">
-              <button class="period-arrow" id="period-prev">&#8592;</button>
+              <button class="period-arrow" id="period-prev">${this._arrowSvg('left')}</button>
               <div class="period-label-wrap">
                 <button class="period-label-btn" id="period-label-btn"></button>
                 <div class="period-dropdown hidden" id="period-dropdown"></div>
               </div>
-              <button class="period-arrow" id="period-next">&#8594;</button>
+              <button class="period-arrow" id="period-next">${this._arrowSvg('right')}</button>
             </div>
             <div class="date-mode-toggle">
               <button class="date-mode-btn" id="date-mode-transaction" onclick="PeriodFilter._setDateMode('transaction')">Transaction</button>
