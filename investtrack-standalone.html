@@ -933,7 +933,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 
 /* ---- Period Filter (déclencheur compact, sur la même ligne que les onglets de mode
    — .mode-tabs-and-filter ci-dessus) ---- */
-.global-period-bar { display: flex; justify-content: flex-end; flex-shrink: 0; }
+/* margin-right : décale le groupe du bord droit de la zone de contenu — collé pile au bord
+   (justify-content:flex-end seul), il touchait presque le bord de la fenêtre sur un écran pas très
+   large, rendant le clic sur la flèche droite malaisé et laissant le déclencheur "coincé". */
+.global-period-bar { display: flex; justify-content: flex-end; flex-shrink: 0; margin-right: 24px; }
 /* .period-panel reste positionné en absolute (donc hors flux, non affecté par ce flex) : le flex
    ne sert ici qu'à aligner les 2 flèches de navigation de part et d'autre du déclencheur compact
    (voir .period-arrow plus bas, réutilisé tel quel — même bouton que dans le panneau déplié). */
@@ -988,17 +991,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    élément ne prenant que la largeur de son propre contenu (flèches + bouton), pas celle du
    panneau. Une fois pleine largeur, justify-content:center centre vraiment flèches + bouton. */
 .period-nav { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 0 100%; }
-/* Fond var(--surface-alt) (pas var(--bg), identique au fond de page) + bordure doublée (2px) et
-   glyphe en gras : au repos, un fond confondu avec la page + une bordure à rgba(255,255,255,0.06)
-   (var(--border), quasi invisible) laissait ces flèches se fondre dans le fond plutôt que se lire
-   comme un vrai bouton, à côté de la pilule pleine en dégradé du déclencheur. */
+/* Teintées violet accent (même famille que la pilule dégradée du déclencheur) plutôt que grises :
+   un 1er essai à bordure grise épaissie (var(--border), rgba(255,255,255,0.06)) restait quasi
+   invisible quelle que soit son épaisseur — la couleur elle-même était trop proche du fond, pas
+   seulement le trait trop fin. --primary-light (fond violet sombre) + bordure --primary pleine
+   opacité donnent un vrai contraste au repos, pas seulement au survol. */
 .period-arrow {
-  background: var(--surface-alt); border: 2px solid var(--border); color: var(--text);
-  border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 0.95rem; font-weight: 700;
+  background: var(--primary-light); border: 2px solid var(--primary); color: var(--primary-dark);
+  border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; font-weight: 800;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: background .15s, border-color .15s, color .15s, transform .1s;
 }
-.period-arrow:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.period-arrow:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+.period-arrow:active { transform: scale(0.92); }
 .period-label-wrap { position: relative; }
 .period-label-btn {
   min-width: 150px; padding: 6px 16px; border-radius: 8px;
