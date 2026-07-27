@@ -7,6 +7,15 @@
 // dessus. Composant à part (pas basé sur Dropdown, voir js/dropdown.js) — le comportement de
 // l'instance globale est resté strictement inchangé par cette généralisation (mêmes ids, donc
 // même CSS, même comportement).
+//
+// _allPickers : registre partagé de TOUTES les instances (module-level, pas par instance) — sur
+// Comparaisons, 3 coexistent sur la même page (filtre global + A + B). Chaque déclencheur stoppe
+// la propagation de son clic (voir _bindEvents), donc le listener document "ferme si clic dehors"
+// d'UNE instance ne voit jamais le clic sur le déclencheur d'une AUTRE : sans ce registre, ouvrir
+// le picker B pendant que A est encore ouvert laissait les 2 panneaux ouverts en même temps,
+// superposés (retour utilisateur explicite). _openPanel() ferme donc d'abord tous les autres.
+const _allPickers = [];
+
 function createPeriodPicker(idPrefix, storageKey, opts = {}) {
   const showDateModeToggle = !!opts.showDateModeToggle;
 
@@ -273,6 +282,8 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
     },
 
     _openPanel() {
+      // Un seul panneau ouvert à la fois, tous instances confondues (voir _allPickers plus haut).
+      _allPickers.forEach(p => { if (p !== this) p._closePanel(); });
       this._el('panel')?.classList.remove('hidden');
       this._el('trigger')?.classList.add('active');
       this._panelOpen = true;
@@ -520,6 +531,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
     },
   };
 
+  _allPickers.push(P);
   return P;
 }
 
