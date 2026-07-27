@@ -869,55 +869,45 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .text-center { text-align: center; }
 
 /* ---- Comparison redesign ---- */
-.comp-panel-row { display: grid; grid-template-columns: 1fr 64px 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+/* Bandeau "Comparer" compact : mêmes teintes A=indigo/B=rose que le tableau récapitulatif
+   juste en dessous (.cc-head-a/.cc-head-b) et la même pastille d'évolution (.cc-evo-pill,
+   voir _evoPillHtml) que sa colonne "Évolution" — un seul langage de couleur sur tout l'onglet.
+   flex-wrap : sur un viewport étroit, .comp-bar-readout (margin-left:auto) retombe proprement
+   à la ligne plutôt que de forcer un débordement horizontal. */
+.comp-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; row-gap: 10px; padding: 14px 20px; }
+.comp-bar-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); flex-shrink: 0; }
+.comp-bar-picker { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.comp-bar-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.comp-bar-dot-a { background: #6366f1; }
+.comp-bar-dot-b { background: #d946ef; }
+.comp-bar-arrow { display: flex; align-items: center; color: rgba(255,255,255,.2); flex-shrink: 0; }
+.comp-bar-arrow svg { width: 20px; height: 20px; }
 
-/* Cartes période A/B : même carcasse "fumée" que les KPI Flux (.flux-kpi-card/.fk-smoke), deux
-   teintes (indigo/rose) au lieu des 4 teintes sémantiques revenus/dépenses/solde/épargne —
-   period A/B n'a pas ce sens-là. Rose #d946ef : même remplacement du jaune/ambre déjà fait pour
-   le KPI "Taux d'épargne" et la palette des catégories, plus aucune teinte jaune dans l'app.
-   kpi-label/kpi-value/kpi-trend réutilisés tels quels (mêmes règles que Flux) : le nom du mois
-   tient le rôle de "label", le montant celui de "value". */
-.comp-kpi-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
-.comp-kpi-top .fk-icon { margin-bottom: 0; }
-.comp-kpi-a .fk-icon { color: #6366f1; }
-.comp-kpi-b .fk-icon { color: #d946ef; }
-.comp-kpi-a .fk-smoke {
-  background-color: #0d0f1f;
-  background-image:
-    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
-    radial-gradient(55% 65% at 18% 10%, rgba(99,102,241,.90) 0%, transparent 100%),
-    radial-gradient(50% 60% at 58% 0%,  rgba(99,102,241,.70) 0%, transparent 100%),
-    radial-gradient(60% 65% at 92% 30%, rgba(99,102,241,.50) 0%, transparent 100%),
-    radial-gradient(70% 65% at 42% 48%, rgba(99,102,241,.32) 0%, transparent 100%);
-}
-.comp-kpi-b .fk-smoke {
-  background-color: #0d0f1f;
-  background-image:
-    linear-gradient(180deg, transparent 30%, #0d0f1f 90%),
-    radial-gradient(55% 65% at 82% 8%,  rgba(217,70,239,.90) 0%, transparent 100%),
-    radial-gradient(50% 60% at 40% 0%,  rgba(217,70,239,.70) 0%, transparent 100%),
-    radial-gradient(60% 65% at 8% 32%,  rgba(217,70,239,.50) 0%, transparent 100%),
-    radial-gradient(70% 65% at 55% 48%, rgba(217,70,239,.32) 0%, transparent 100%);
-}
-.comp-month-input {
-  border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600;
-  color: rgba(255,255,255,.85); cursor: pointer; padding: 4px 8px; outline: none;
-  border-radius: var(--radius-sm); width: fit-content; color-scheme: dark;
-}
+/* Dropdowns teintés (pas la pilule pleine en dégradé accent par défaut de .dd-trigger) : les 2
+   dropdowns de période sont côte à côte, ils doivent rester visuellement distincts l'un de
+   l'autre — même recette bordure/fond que .period-arrow (fond clair de la teinte + bordure
+   pleine + texte de la teinte), déclinée en indigo/rose plutôt que --primary. */
+.comp-bar .dd-comp-a .dd-trigger { background: rgba(99,102,241,.14); border: 1px solid rgba(99,102,241,.5); color: #a5b4fc; }
+.comp-bar .dd-comp-a .dd-trigger:hover { background: rgba(99,102,241,.22); box-shadow: none; filter: none; }
+.comp-bar .dd-comp-a .dd-opt.active { border-left-color: #6366f1; color: #6366f1; background: rgba(99,102,241,.1); }
+.comp-bar .dd-comp-b .dd-trigger { background: rgba(217,70,239,.14); border: 1px solid rgba(217,70,239,.5); color: #f0abfc; }
+.comp-bar .dd-comp-b .dd-trigger:hover { background: rgba(217,70,239,.22); box-shadow: none; filter: none; }
+.comp-bar .dd-comp-b .dd-opt.active { border-left-color: #d946ef; color: #d946ef; background: rgba(217,70,239,.1); }
 
-/* Simple flèche discrète reliant les 2 cartes (aucun encadré séparé — l'écart lui-même vit
-   maintenant dans .kpi-trend à l'intérieur de la carte B, cf. comp-kpi-count ci-dessous). */
-.comp-center-arrow { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.2); }
-.comp-center-arrow svg { width: 30px; height: 30px; }
-
-/* Nombre de transactions : ligne discrète sous kpi-value (et sous kpi-trend sur la carte B). */
-.comp-kpi-count { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.45); }
+/* Lecture des 2 montants + pastille d'évolution, poussée à l'extrémité droite du bandeau. */
+.comp-bar-readout { display: flex; align-items: center; gap: 28px; margin-left: auto; flex-shrink: 0; }
+.comp-bar-amount-col { text-align: right; }
+.comp-bar-amount { font-size: 20px; font-weight: 800; letter-spacing: -.3px; line-height: 1.2; white-space: nowrap; }
+.comp-bar-amount-a { color: #6366f1; }
+.comp-bar-amount-b { color: #d946ef; }
+.comp-bar-amount-label { margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
 /* ---- Category comparison table ---- */
 /* Grid partagée entre l'en-tête et chaque ligne : colonne Catégorie flexible (porte le nom ET les
    mini-barres, sur 2 "lignes" de grille — voir .cc-bars), 4 colonnes numériques à largeur fixe.
-   Mêmes couleurs A/B que les cartes KPI juste au-dessus (indigo #6366f1 / rose #d946ef, voir
-   .comp-kpi-a/.comp-kpi-b) : la période B est systématiquement en rose partout sur cet onglet. */
+   Mêmes couleurs A/B que le bandeau "Comparer" juste au-dessus (indigo #6366f1 / rose #d946ef,
+   voir .comp-bar-dot-a/.comp-bar-dot-b) : la période B est systématiquement en rose partout sur
+   cet onglet. */
 .cc-table { display: flex; flex-direction: column; min-width: 640px; }
 .cc-head, .cc-row, .cc-total-row {
   display: grid; grid-template-columns: minmax(160px,1.6fr) 110px 110px 120px 110px;
@@ -970,11 +960,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .cc-total-amount.cc-total-a { color: #6366f1; }
 .cc-total-amount.cc-total-b { color: #d946ef; }
 .cc-total-row .cc-diff, .cc-total-row .cc-evo { font-size: 15px; }
-
-@media (max-width: 700px) {
-  .comp-panel-row { grid-template-columns: 1fr; }
-  .comp-center-col { padding: 0; }
-}
 
 /* ---- Period Filter (déclencheur compact, sur la même ligne que les onglets de mode
    — .mode-tabs-and-filter ci-dessus) ---- */

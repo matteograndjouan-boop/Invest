@@ -8,6 +8,36 @@ const Comparisons = {
     return MONTHS[m - 1] + ' \'' + String(y).slice(2);
   },
 
+  // Options du dropdown de période : fenêtre par défaut 36 mois en arrière / 2 en avant autour
+  // d'aujourd'hui, ÉLARGIE si besoin pour toujours inclure `selected` (sinon une <option selected>
+  // manquante retomberait silencieusement sur la 1ère option — piège Dropdown documenté dans
+  // CLAUDE.md — et afficherait une période différente de celle réellement en mémoire) ET la plus
+  // ancienne dépense réelle : contrairement à l'ancien <input type="month"> natif (sans bornes,
+  // n'importe quelle date atteignable en tapant), une liste figée à 36 mois rendrait
+  // silencieusement inaccessibles les périodes plus anciennes d'un historique importé (relevés
+  // bancaires sur plusieurs années) — une vraie régression, pas juste cosmétique.
+  _periodOptionsHtml(selected) {
+    const MFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const now = new Date();
+    const nowIdx = now.getFullYear() * 12 + now.getMonth();
+    const toIdx = (ym) => { const [y, m] = ym.split('-').map(Number); return y * 12 + (m - 1); };
+
+    const expenseMonths = Storage.getExpenses().map(e => Utils.getExpenseDate(e).substring(0, 7)).filter(Boolean);
+    const dataMinIdx = expenseMonths.length ? Math.min(...expenseMonths.map(toIdx)) : nowIdx;
+    const selIdx = selected ? toIdx(selected) : nowIdx;
+
+    const minIdx = Math.min(nowIdx - 36, dataMinIdx, selIdx);
+    const maxIdx = Math.max(nowIdx + 2, selIdx);
+    const opts = [];
+    for (let idx = minIdx; idx <= maxIdx; idx++) {
+      const y = Math.floor(idx / 12);
+      const m = idx % 12;
+      const v = `${y}-${String(m + 1).padStart(2, '0')}`;
+      opts.push(`<option value="${v}"${v === selected ? ' selected' : ''}>${MFR[m]} ${y}</option>`);
+    }
+    return opts.join('');
+  },
+
   init() {
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -18,10 +48,15 @@ const Comparisons = {
     this.periodA = lastMonth;
     this.periodB = thisMonth;
 
+    const slotA = document.getElementById('comp-period-a-slot');
+    const slotB = document.getElementById('comp-period-b-slot');
+    if (slotA) slotA.innerHTML = Dropdown.render('comp-period-a', this._periodOptionsHtml(this.periodA), { small: true, className: 'dd-comp-a' });
+    if (slotB) slotB.innerHTML = Dropdown.render('comp-period-b', this._periodOptionsHtml(this.periodB), { small: true, className: 'dd-comp-b' });
+
     const selA = document.getElementById('comp-period-a');
     const selB = document.getElementById('comp-period-b');
-    if (selA) { selA.value = this.periodA; selA.addEventListener('change', (e) => { this.periodA = e.target.value; this._reorderPeriods(); this.render(); }); }
-    if (selB) { selB.value = this.periodB; selB.addEventListener('change', (e) => { this.periodB = e.target.value; this._reorderPeriods(); this.render(); }); }
+    if (selA) selA.addEventListener('change', (e) => { this.periodA = e.target.value; this._reorderPeriods(); this.render(); });
+    if (selB) selB.addEventListener('change', (e) => { this.periodB = e.target.value; this._reorderPeriods(); this.render(); });
 
     // Re-render quand le toggle Date comptable/effective change (filtre global).
     PeriodFilter.onChange(() => {
@@ -29,18 +64,18 @@ const Comparisons = {
     });
   },
 
-  // La carte de droite (B) doit toujours être la période la plus récente : cohérent avec le sens
-  // de la flèche/tendance A -> B (kpi-trend "vs période A" sur la carte de droite n'aurait pas de
-  // sens si B était en fait antérieure). Si le choix de l'utilisateur inverse l'ordre
-  // chronologique, on permute A/B — variables internes ET valeur affichée des deux <input>.
+  // La lecture de droite (B) doit toujours être la période la plus récente : cohérent avec le
+  // sens de la pastille d'évolution ("B vs A"). Si le choix de l'utilisateur inverse l'ordre
+  // chronologique, on permute A/B — variables internes ET les 2 dropdowns, via setOptions (pas
+  // setValue) : la nouvelle valeur de chacun peut être hors de sa fenêtre d'origine (ex. une
+  // période ancienne qui n'existait jusque-là que dans la liste de l'AUTRE dropdown) —
+  // setOptions régénère une liste qui la contient forcément (voir _periodOptionsHtml).
   // Comparaison de chaînes 'YYYY-MM' : équivalente à une comparaison chronologique.
   _reorderPeriods() {
     if (this.periodA <= this.periodB) return;
     [this.periodA, this.periodB] = [this.periodB, this.periodA];
-    const selA = document.getElementById('comp-period-a');
-    const selB = document.getElementById('comp-period-b');
-    if (selA) selA.value = this.periodA;
-    if (selB) selB.value = this.periodB;
+    Dropdown.setOptions('comp-period-a', this._periodOptionsHtml(this.periodA), true);
+    Dropdown.setOptions('comp-period-b', this._periodOptionsHtml(this.periodB), true);
   },
 
   render() {
@@ -62,42 +97,16 @@ const Comparisons = {
     const diff   = totalB - totalA;
     const pct    = totalA > 0 ? (diff / totalA * 100) : (totalB > 0 ? 100 : 0);
 
-    // Panel KPIs
+    // Bandeau "Comparer" : montants + pastille d'évolution (_evoPillHtml, même logique/couleurs
+    // que la colonne "Évolution" du tableau récapitulatif juste en dessous).
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set('comp-total-a', Utils.formatCurrency(totalA));
     set('comp-total-b', Utils.formatCurrency(totalB));
-
-    this._renderPanelStats('comp-stats-a', expA);
-    this._renderPanelStats('comp-stats-b', expB);
-    this._renderDeltaTrend(diff, pct);
+    const evoEl = document.getElementById('comp-evo-pill');
+    if (evoEl) evoEl.innerHTML = this._evoPillHtml(diff, pct);
 
     this._renderCatTable(expA, expB, totalA, totalB);
     this._renderCatChart(expA, expB);
-  },
-
-  // Panier moyen / Top catégorie retirés : peu pertinents pour une dépense perso (montants trop
-  // hétérogènes d'une transaction à l'autre) et redondants avec le graphique par catégorie
-  // juste en dessous. Ne reste que le nombre de transactions, en une ligne discrète.
-  _renderPanelStats(containerId, expenses) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    const count = expenses.length;
-    el.textContent = count > 1 ? `${count} transactions` : count === 1 ? '1 transaction' : 'Aucune transaction';
-  },
-
-  // Écart B vs A directement dans la carte B (kpi-trend), même traitement que les tendances Flux
-  // (Charts._renderKpiTrend côté flux.js : flèche + signe + % colorés) plutôt qu'un encart séparé
-  // entre les 2 cartes. Contrairement à Flux (couleur = signe brut, agnostique à la métrique),
-  // ici on ne compare QUE des dépenses : "moins" est toujours souhaitable, donc vert/rouge
-  // suivent le sens dépenses en baisse/hausse plutôt que le signe mathématique de l'écart.
-  _renderDeltaTrend(diff, pct) {
-    const el = document.getElementById('comp-trend-b');
-    if (!el) return;
-    if (diff === 0) { el.innerHTML = `<span class="trend-neutral">→ égal à ${this._shortLabel(this.periodA)}</span>`; return; }
-    const cls   = diff <= 0 ? 'trend-good' : 'trend-bad';
-    const arrow = diff > 0 ? '↑' : '↓';
-    const sign  = diff > 0 ? '+' : '';
-    el.innerHTML = `<span class="${cls}">${arrow} ${sign}${Utils.formatCurrency(diff)} (${sign}${pct.toFixed(1)}%) vs ${this._shortLabel(this.periodA)}</span>`;
   },
 
   // Une entrée par catégorie présente dans au moins une des deux périodes, dans l'ordre des
@@ -129,7 +138,7 @@ const Comparisons = {
   },
 
   // Montant en écart (colonne "Écart") : signe seul ('+'/'−', jamais de double signe) — "moins"
-  // est toujours vert ici (une dépense qui baisse), même logique de sens que _renderDeltaTrend.
+  // est toujours vert ici (une dépense qui baisse), même logique de sens que _evoPillHtml.
   _diffHtml(diff) {
     if (diff === 0) return `<span class="cc-dash">–</span>`;
     const cls  = diff < 0 ? 'positive' : 'negative';

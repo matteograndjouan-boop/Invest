@@ -441,40 +441,37 @@
 
       <!-- COMPARISONS -->
       <section class="section hidden" id="section-comparisons">
-        <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
-             (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = rose) plutôt que
-             les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici.
-             L'écart A/B n'est plus un encart séparé entre les 2 cartes (ça dénotait, ne
-             ressemblait à rien du reste de l'app) mais une ligne kpi-trend DANS la carte B —
-             exactement le même schéma que Flux (Charts._renderKpiTrend) : flèche + montant + %
-             colorés, directement sous le chiffre concerné. Juste une flèche discrète relie les
-             2 cartes visuellement, sans encadré. -->
-        <div class="comp-panel-row">
-          <div class="flux-kpi-card comp-kpi comp-kpi-a">
-            <div class="fk-smoke"></div>
-            <div class="comp-kpi-top">
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-              <input type="month" id="comp-period-a" class="comp-month-input">
-            </div>
-            <div class="kpi-label" id="comp-period-name-a">—</div>
-            <div class="kpi-value" id="comp-total-a">0 €</div>
-            <div class="comp-kpi-count" id="comp-stats-a"></div>
+        <!-- Barre de comparaison compacte (remplace les 2 grandes cartes "fumée" — retour visuel
+             explicite de l'utilisateur) : un seul bandeau fin, sélecteurs de période à gauche
+             (pastille + dropdown teintés indigo/rose, .dd-comp-a/.dd-comp-b), lecture des 2
+             montants + pastille d'évolution à droite. Mêmes teintes A=indigo/B=rose que le
+             tableau récapitulatif juste en dessous (.cc-head-a/.cc-head-b) et la même pastille
+             d'évolution (_evoPillHtml) que sa colonne "Évolution", pour rester cohérent avec le
+             reste de l'onglet. -->
+        <div class="card comp-bar">
+          <span class="comp-bar-title">Comparer</span>
+          <div class="comp-bar-picker">
+            <span class="comp-bar-dot comp-bar-dot-a"></span>
+            <div id="comp-period-a-slot"></div>
+          </div>
+          <span class="comp-bar-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/></svg>
+          </span>
+          <div class="comp-bar-picker">
+            <span class="comp-bar-dot comp-bar-dot-b"></span>
+            <div id="comp-period-b-slot"></div>
           </div>
 
-          <div class="comp-center-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </div>
-
-          <div class="flux-kpi-card comp-kpi comp-kpi-b">
-            <div class="fk-smoke"></div>
-            <div class="comp-kpi-top">
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-              <input type="month" id="comp-period-b" class="comp-month-input">
+          <div class="comp-bar-readout">
+            <div class="comp-bar-amount-col">
+              <div class="comp-bar-amount comp-bar-amount-a" id="comp-total-a">0 €</div>
+              <div class="comp-bar-amount-label" id="comp-period-name-a">—</div>
             </div>
-            <div class="kpi-label" id="comp-period-name-b">—</div>
-            <div class="kpi-value" id="comp-total-b">0 €</div>
-            <div class="kpi-trend" id="comp-trend-b"></div>
-            <div class="comp-kpi-count" id="comp-stats-b"></div>
+            <div class="comp-bar-amount-col">
+              <div class="comp-bar-amount comp-bar-amount-b" id="comp-total-b">0 €</div>
+              <div class="comp-bar-amount-label" id="comp-period-name-b">—</div>
+            </div>
+            <div id="comp-evo-pill"></div>
           </div>
         </div>
 
