@@ -914,7 +914,62 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .comp-kpi-count { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.45); }
 
 /* ---- Category comparison table ---- */
-.cc-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+/* Grid partagée entre l'en-tête et chaque ligne : colonne Catégorie flexible (porte le nom ET les
+   mini-barres, sur 2 "lignes" de grille — voir .cc-bars), 4 colonnes numériques à largeur fixe.
+   Mêmes couleurs A/B que les cartes KPI juste au-dessus (indigo #6366f1 / rose #d946ef, voir
+   .comp-kpi-a/.comp-kpi-b) : la période B est systématiquement en rose partout sur cet onglet. */
+.cc-table { display: flex; flex-direction: column; min-width: 640px; }
+.cc-head, .cc-row, .cc-total-row {
+  display: grid; grid-template-columns: minmax(160px,1.6fr) 110px 110px 120px 110px;
+  column-gap: 14px; align-items: center;
+}
+.cc-head { padding: 0 4px 10px; border-bottom: 2px solid var(--border); }
+.cc-head > div { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); }
+.cc-head > div:not(:first-child) { text-align: right; }
+.cc-head > div.cc-head-a { color: #6366f1; }
+.cc-head > div.cc-head-b { color: #d946ef; }
+
+.cc-row { padding: 13px 4px; row-gap: 8px; border-bottom: 1px solid var(--border); }
+.cc-row:last-child { border-bottom: none; }
+.cc-cat { grid-row: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cc-name { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-amount { grid-row: 1; text-align: right; font-size: 14px; color: var(--text); white-space: nowrap; }
+.cc-diff { grid-row: 1; text-align: right; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.cc-evo { grid-row: 1; text-align: right; }
+.cc-dash { color: var(--text-muted); font-weight: 400; }
+
+/* grid-column non précisée = 1 seule colonne (celle de Catégorie, la 1ère) : les mini-barres
+   restent sous le nom, sans s'étendre sous les colonnes numériques. */
+.cc-bars { grid-row: 2; display: flex; flex-direction: column; gap: 4px; }
+.cc-bar-track { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.cc-bar-fill { height: 100%; border-radius: 2px; min-width: 2px; }
+.cc-bar-fill.cc-bar-a { background: #6366f1; }
+.cc-bar-fill.cc-bar-b { background: #d946ef; }
+
+.cc-evo-pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.cc-evo-pill.positive { background: rgba(0,179,126,0.15); color: var(--success); }
+.cc-evo-pill.negative { background: rgba(245,101,101,0.15); color: var(--danger); }
+.cc-evo-pill.neutral { background: var(--surface-alt); color: var(--text-muted); }
+
+/* Ligne de synthèse finale : mêmes colonnes que .cc-row (grid-template-columns partagée plus
+   haut) mais sans mini-barres (déjà résumées par les lignes du dessus) — juste des totaux, en
+   plus gros et gras pour se distinguer visuellement des lignes catégorie. */
+.cc-total-row { padding: 14px 4px 4px; margin-top: 4px; border-top: 2px solid var(--border); }
+.cc-total-row.hidden { display: none; }
+/* grid-row:1 explicite (comme .cc-diff/.cc-evo, réutilisées ici) : sans lui, ces 2 classes se
+   retrouvaient dans une catégorie de placement différente de .cc-total-label/.cc-total-amount
+   (auto sur les 2 axes) — l'algorithme d'auto-placement de CSS Grid positionne D'ABORD tous les
+   éléments à ligne fixe (mais colonne auto), quel que soit leur ordre dans le DOM, PUIS les
+   éléments totalement auto : .cc-diff/.cc-evo (ligne fixée par leur usage dans .cc-row, voir plus
+   haut) passaient donc avant .cc-total-label/.cc-total-amount malgré un ordre DOM inverse,
+   éclatant complètement l'alignement des colonnes sur cette ligne précise. */
+.cc-total-label, .cc-total-amount { grid-row: 1; }
+.cc-total-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted); }
+.cc-total-amount { text-align: right; font-size: 16px; font-weight: 800; white-space: nowrap; }
+.cc-total-amount.cc-total-a { color: #6366f1; }
+.cc-total-amount.cc-total-b { color: #d946ef; }
+.cc-total-row .cc-diff, .cc-total-row .cc-evo { font-size: 15px; }
 
 @media (max-width: 700px) {
   .comp-panel-row { grid-template-columns: 1fr; }

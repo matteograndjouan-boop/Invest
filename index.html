@@ -490,22 +490,24 @@
           <div class="chart-container" style="height:300px"><canvas id="chart-comparison"></canvas></div>
         </div>
 
-        <!-- Tableau récapitulatif -->
+        <!-- Tableau récapitulatif : lignes en div/grid (pas <table>) — chaque catégorie porte une
+             mini barre double (A/B) sous son nom, un <td> ne peut pas empiler proprement un
+             libellé et une barre pleine largeur sur 2 lignes sans casser l'alignement des
+             colonnes numériques avec les autres lignes. -->
         <div class="card mt-md">
           <h3>Tableau récapitulatif</h3>
           <div class="table-wrapper">
-            <table class="data-table summary-table">
-              <thead>
-                <tr>
-                  <th>Catégorie</th>
-                  <th class="text-right" id="cc-th-a">—</th>
-                  <th class="text-right" id="cc-th-b">—</th>
-                  <th class="text-right">Différence</th>
-                  <th class="text-right">Variation</th>
-                </tr>
-              </thead>
-              <tbody id="comp-cat-tbody"></tbody>
-            </table>
+            <div class="cc-table">
+              <div class="cc-head">
+                <div>Catégorie</div>
+                <div class="cc-head-a" id="cc-th-a">—</div>
+                <div class="cc-head-b" id="cc-th-b">—</div>
+                <div>Écart</div>
+                <div>Évolution</div>
+              </div>
+              <div id="comp-cat-rows"></div>
+              <div class="cc-total-row hidden" id="comp-total-row"></div>
+            </div>
           </div>
           <div id="comp-empty" class="empty-state hidden"><p>Aucune dépense pour ces périodes.</p></div>
         </div>

@@ -71,7 +71,7 @@ const Comparisons = {
     this._renderPanelStats('comp-stats-b', expB);
     this._renderDeltaTrend(diff, pct);
 
-    this._renderCatTable(expA, expB);
+    this._renderCatTable(expA, expB, totalA, totalB);
     this._renderCatChart(expA, expB);
   },
 
@@ -128,35 +128,79 @@ const Comparisons = {
     );
   },
 
-  _renderCatTable(expA, expB) {
-    const tbody = document.getElementById('comp-cat-tbody');
-    const empty = document.getElementById('comp-empty');
-    const thA   = document.getElementById('cc-th-a');
-    const thB   = document.getElementById('cc-th-b');
-    if (!tbody) return;
+  // Montant en écart (colonne "Écart") : signe seul ('+'/'−', jamais de double signe) — "moins"
+  // est toujours vert ici (une dépense qui baisse), même logique de sens que _renderDeltaTrend.
+  _diffHtml(diff) {
+    if (diff === 0) return `<span class="cc-dash">–</span>`;
+    const cls  = diff < 0 ? 'positive' : 'negative';
+    const sign = diff > 0 ? '+' : '−';
+    return `<span class="${cls}">${sign} ${Utils.formatCurrency(Math.abs(diff))}</span>`;
+  },
+
+  // Pastille "Évolution" : vert/rouge comme _diffHtml, ou neutre "≈0.0%" (pas juste "0.0%") quand
+  // les 2 montants sont strictement égaux — distingue visuellement "aucun changement" d'un
+  // pourcentage qui arrondirait à 0.0% sans être un vrai zéro.
+  _evoPillHtml(diff, pct) {
+    if (diff === 0) return `<span class="cc-evo-pill neutral">≈0.0%</span>`;
+    const cls  = diff < 0 ? 'positive' : 'negative';
+    const sign = diff > 0 ? '+' : '−';
+    return `<span class="cc-evo-pill ${cls}">${sign}${Math.abs(pct).toFixed(1)}%</span>`;
+  },
+
+  // Lignes en div/grid (pas <table>, voir index.html) : chaque ligne catégorie porte une mini
+  // barre double (A/B) sous son nom, à l'échelle du MAX affiché sur tout le tableau (pas du total
+  // de la ligne) pour rester comparable d'une catégorie à l'autre — même barre pleine pour la
+  // plus grosse dépense des 2 périodes, les autres lui sont proportionnelles.
+  _renderCatTable(expA, expB, totalA, totalB) {
+    const rowsEl   = document.getElementById('comp-cat-rows');
+    const totalRow = document.getElementById('comp-total-row');
+    const empty    = document.getElementById('comp-empty');
+    const thA      = document.getElementById('cc-th-a');
+    const thB      = document.getElementById('cc-th-b');
+    if (!rowsEl) return;
 
     if (thA) thA.textContent = this._shortLabel(this.periodA);
     if (thB) thB.textContent = this._shortLabel(this.periodB);
 
     const rows = this._categoryRows(expA, expB);
     if (!rows.length) {
-      tbody.innerHTML = '';
+      rowsEl.innerHTML = '';
+      if (totalRow) totalRow.classList.add('hidden');
       if (empty) empty.classList.remove('hidden');
       return;
     }
     if (empty) empty.classList.add('hidden');
 
-    tbody.innerHTML = rows.map(({ cat, amtA, amtB, diff, pct }) => {
+    const maxAmount = Math.max(1, ...rows.flatMap(r => [r.amtA, r.amtB]));
+
+    rowsEl.innerHTML = rows.map(({ cat, amtA, amtB, diff, pct }) => {
       const color = Utils.getCategoryColor(cat);
-      const cls   = diff <= 0 ? 'positive' : 'negative';
-      const sign  = diff > 0 ? '+' : diff < 0 ? '-' : '';
-      return `<tr>
-        <td><span class="cc-dot" style="background:${color}"></span>${cat}</td>
-        <td class="text-right">${amtA > 0 ? Utils.formatCurrency(amtA) : '—'}</td>
-        <td class="text-right">${amtB > 0 ? Utils.formatCurrency(amtB) : '—'}</td>
-        <td class="text-right ${cls}">${amtA > 0 || amtB > 0 ? sign + Utils.formatCurrency(Math.abs(diff)) : '—'}</td>
-        <td class="text-right ${cls}">${amtA > 0 ? sign + Math.abs(pct).toFixed(1) + '%' : '—'}</td>
-      </tr>`;
+      const barA  = (amtA / maxAmount * 100).toFixed(1);
+      const barB  = (amtB / maxAmount * 100).toFixed(1);
+      return `<div class="cc-row">
+        <div class="cc-cat"><span class="cc-dot" style="background:${color}"></span><span class="cc-name">${cat}</span></div>
+        <div class="cc-amount">${amtA > 0 ? Utils.formatCurrency(amtA) : '<span class="cc-dash">—</span>'}</div>
+        <div class="cc-amount">${amtB > 0 ? Utils.formatCurrency(amtB) : '<span class="cc-dash">—</span>'}</div>
+        <div class="cc-diff">${this._diffHtml(diff)}</div>
+        <div class="cc-evo">${this._evoPillHtml(diff, pct)}</div>
+        <div class="cc-bars">
+          <div class="cc-bar-track"><div class="cc-bar-fill cc-bar-a" style="width:${barA}%"></div></div>
+          <div class="cc-bar-track"><div class="cc-bar-fill cc-bar-b" style="width:${barB}%"></div></div>
+        </div>
+      </div>`;
     }).join('');
+
+    if (totalRow) {
+      totalRow.classList.remove('hidden');
+      const diffTotal = totalB - totalA;
+      const pctTotal  = totalA > 0 ? (diffTotal / totalA * 100) : (totalB > 0 ? 100 : 0);
+      totalRow.innerHTML = `
+        <div class="cc-total-label">Total dépenses</div>
+        <div class="cc-total-amount cc-total-a">${Utils.formatCurrency(totalA)}</div>
+        <div class="cc-total-amount cc-total-b">${Utils.formatCurrency(totalB)}</div>
+        <div class="cc-diff">${this._diffHtml(diffTotal)}</div>
+        <div class="cc-evo">${this._evoPillHtml(diffTotal, pctTotal)}</div>
+      `;
+    }
   },
 };
