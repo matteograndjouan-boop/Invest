@@ -290,11 +290,15 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
       this._positionPanel();
     },
 
-    // Centre le panneau sur le déclencheur (voir CSS .period-panel : left:50%+transform sert de
-    // repli avant que ce calcul s'exécute) SAUF si ça le ferait déborder. Borne droite sur
-    // clientWidth (pas getBoundingClientRect().right, la boîte de BORDURE) : .main-content a
-    // scrollbar-gutter:stable, qui réserve une gouttière de scrollbar verticale même sans besoin
-    // de scroller — cette gouttière fait partie de la boîte de bordure mais PAS de clientWidth.
+    // Centre le panneau sur le déclencheur (voir CSS .period-panel : left:50% sert de repli avant
+    // que ce calcul s'exécute) SAUF si ça le ferait déborder. Borne droite sur clientWidth (pas
+    // getBoundingClientRect().right, la boîte de BORDURE) : .main-content a scrollbar-gutter:
+    // stable, qui réserve une gouttière de scrollbar verticale même sans besoin de scroller —
+    // cette gouttière fait partie de la boîte de bordure mais PAS de clientWidth. Ne touche QUE
+    // `left` (jamais `transform`, laissé à l'animation d'ouverture — voir le commentaire CSS de
+    // .period-panel) : un ancien `panel.style.transform = 'none'` ici annulait le glissement
+    // vertical de l'ouverture en même temps qu'il neutralisait l'ancien centrage CSS par
+    // translateX(-50%), le panneau apparaissait donc d'un coup plutôt que de glisser.
     _positionPanel() {
       const trigger = this._el('trigger');
       const compact = trigger?.closest('.period-compact');
@@ -310,7 +314,6 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
       const idealLeft = triggerRect.left + triggerRect.width / 2 - panelWidth / 2;
       const clampedLeft = Math.min(Math.max(idealLeft, boundsRect.left + MARGIN), boundsRight - panelWidth - MARGIN);
       panel.style.left = `${clampedLeft - compactRect.left}px`;
-      panel.style.transform = 'none';
     },
 
     _closePanel() {

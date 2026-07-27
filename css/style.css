@@ -1005,20 +1005,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    pas une pilule neutre où un chevron discret avait du sens. */
 .period-trigger-chev { font-size: 0.65rem; color: rgba(255,255,255,.85); transition: transform .15s; opacity: .9; }
 .period-trigger.active .period-trigger-chev { transform: rotate(180deg); }
-/* Centré sur .period-compact (left:50%+translateX), pas ancré à right:0 : .period-compact
-   contient [flèche prev 30px][déclencheur][flèche next 30px] à écarts égaux (6px), donc son
-   centre horizontal EST déjà celui du déclencheur — un ancrage right:0 alignait le panneau sur le
-   bord droit du groupe entier (jusqu'à la flèche next), pas sur le bouton, décalant tout le
-   panneau (plus large que le déclencheur) visiblement vers la gauche par rapport à lui. */
+/* left:50% n'est qu'un repli avant que _positionPanel() (JS) ne pose un left en pixels précis,
+   centré sur .period-compact ([flèche prev][déclencheur][flèche next] à écarts égaux, donc son
+   centre horizontal EST déjà celui du déclencheur) et clampé pour ne jamais déborder de
+   .main-content — calcul synchrone juste après l'ouverture, avant la moindre peinture, ce repli
+   CSS n'est donc jamais visible. Pas de translateX(-50%) ici (contrairement à avant) : le left
+   posé par _positionPanel() EST déjà le bord gauche final du panneau, un translateX(-50%) fixe
+   par-dessus le décalerait d'une demi-largeur en trop. transform reste donc entièrement dédié à
+   l'animation d'ouverture ci-dessous (glissement vertical, même recette que .dd-panel/
+   js/dropdown.js) — auparavant, _positionPanel() devait explicitement remettre transform à `none`
+   pour annuler ce translateX(-50%) fixe une fois le left précis posé, ce qui annulait AUSSI le
+   glissement de l'animation (même propriété CSS, la dernière affectation gagne) : le panneau
+   apparaissait donc d'un coup plutôt que de glisser. */
 .period-panel {
-  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(100% + 8px); left: 50%;
   max-width: min(480px, calc(100vw - 48px));
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: 0 10px 28px rgba(0,0,0,0.2); z-index: 1000; padding: 12px 14px;
-  animation: dropInRight 0.12s ease;
+  animation: periodPanelDropIn 0.16s ease;
 }
 .period-panel.hidden { display: none; }
-@keyframes dropInRight { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+/* Nom distinct de .period-dropdown (le mini-calendrier DANS ce panneau, plus bas) : les 2
+   utilisaient auparavant le même nom "dropIn" par coïncidence — un @keyframes n'est PAS scopé à
+   la règle qui le déclare, le dernier du fichier gagne pour TOUT le monde. .period-panel héritait
+   donc silencieusement du translateX(-50%) figé de .period-dropdown (pensé pour SON propre
+   centrage CSS pur, jamais repositionné en JS) une fois l'animation terminée — en plus d'un
+   décalage vertical de -4px au lieu des -8px voulus ici, ce translateX(-50%) s'ajoutait par-dessus
+   le `left` déjà précis posé par _positionPanel(), décalant tout le panneau d'une demi-largeur. */
+@keyframes periodPanelDropIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
 .period-filter { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .period-type-btns { display: flex; gap: 6px; }
 .period-type-btn {
