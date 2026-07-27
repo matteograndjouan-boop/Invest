@@ -2621,8 +2621,7 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 
       <!-- PORTFOLIO — Vue globale -->
       <section class="section hidden" id="section-portfolio">
-        <div class="section-header">
-          <h1>Vue globale</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
             <div id="inv-evo-window-slot"></div>
@@ -2679,8 +2678,7 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 
       <!-- PORTFOLIO — Onglet par compte (gabarit partagé, voir Investments.renderAccountTab) -->
       <section class="section hidden" id="section-portfolio-account">
-        <div class="section-header">
-          <h1 id="inv-acc-title">Compte</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions">
             <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
@@ -2936,10 +2934,6 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 
       <!-- COMPARISONS -->
       <section class="section hidden" id="section-comparisons">
-        <div class="section-header">
-          <h1>Comparaison de périodes</h1>
-        </div>
-
         <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
              (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = rose) plutôt que
              les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici.
@@ -3008,7 +3002,7 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 
       <!-- BUDGET -->
       <section class="section hidden" id="section-budget">
-        <div class="section-header">
+        <div class="section-header" id="budget-section-header">
           <h1 id="budget-section-title">Budgets</h1>
           <div id="budget-header-actions" style="display:flex;gap:8px">
             <button class="btn-secondary btn-sm hidden" id="budget-back-btn" onclick="Budget.showList()">← Retour</button>
@@ -3043,8 +3037,7 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
 
       <!-- DONNEES -->
       <section class="section hidden" id="section-donnees">
-        <div class="section-header">
-          <h1>Données</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions" id="donnees-header-actions">
             <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
             <button class="btn-secondary" id="donnees-select-mode-btn" onclick="DataEntry.toggleSelectionMode()">☑️ Sélectionner</button>
@@ -3093,10 +3086,7 @@ body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
       <!-- CATEGORIES -->
       <section class="section hidden" id="section-categories">
         <div class="section-header">
-          <div>
-            <h1>Catégories</h1>
-            <div class="cat-page-sub" id="cat-subtitle"></div>
-          </div>
+          <div class="cat-page-sub" id="cat-subtitle"></div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn-danger-soft" onclick="Categories.resetToDefaults()">↺ Réinitialiser</button>
             <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
@@ -8109,7 +8099,10 @@ const Budget = {
     if (detailView) detailView.classList.add('hidden');
     if (addBtn)  { addBtn.textContent = '+ Nouveau budget'; addBtn.classList.remove('hidden'); }
     if (backBtn)   backBtn.classList.add('hidden');
-    document.getElementById('budget-section-title').textContent = 'Budgets';
+    // Titre masqué : redondant avec l'onglet "Budget" déjà visible (Flux/Comparaisons n'en ont
+    // pas non plus) — seule la vue détail le réaffiche, pour montrer le nom du thème.
+    document.getElementById('budget-section-title').classList.add('hidden');
+    document.getElementById('budget-section-header').style.justifyContent = 'flex-end';
 
     const rawThemes  = Storage.getBudgetThemes();
     const themes     = rawThemes.map(t => this._migrate({ ...t }));
@@ -8259,7 +8252,9 @@ const Budget = {
 
     document.getElementById('budget-list-view').classList.add('hidden');
     document.getElementById('budget-detail-view').classList.remove('hidden');
+    document.getElementById('budget-section-title').classList.remove('hidden');
     document.getElementById('budget-section-title').textContent = theme.name;
+    document.getElementById('budget-section-header').style.justifyContent = '';
     const addBtn  = document.getElementById('add-budget-btn');
     const backBtn = document.getElementById('budget-back-btn');
     if (addBtn)  { addBtn.textContent = '✏️ Modifier'; addBtn.classList.remove('hidden'); }

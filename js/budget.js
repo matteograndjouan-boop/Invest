@@ -125,7 +125,10 @@ const Budget = {
     if (detailView) detailView.classList.add('hidden');
     if (addBtn)  { addBtn.textContent = '+ Nouveau budget'; addBtn.classList.remove('hidden'); }
     if (backBtn)   backBtn.classList.add('hidden');
-    document.getElementById('budget-section-title').textContent = 'Budgets';
+    // Titre masqué : redondant avec l'onglet "Budget" déjà visible (Flux/Comparaisons n'en ont
+    // pas non plus) — seule la vue détail le réaffiche, pour montrer le nom du thème.
+    document.getElementById('budget-section-title').classList.add('hidden');
+    document.getElementById('budget-section-header').style.justifyContent = 'flex-end';
 
     const rawThemes  = Storage.getBudgetThemes();
     const themes     = rawThemes.map(t => this._migrate({ ...t }));
@@ -275,7 +278,9 @@ const Budget = {
 
     document.getElementById('budget-list-view').classList.add('hidden');
     document.getElementById('budget-detail-view').classList.remove('hidden');
+    document.getElementById('budget-section-title').classList.remove('hidden');
     document.getElementById('budget-section-title').textContent = theme.name;
+    document.getElementById('budget-section-header').style.justifyContent = '';
     const addBtn  = document.getElementById('add-budget-btn');
     const backBtn = document.getElementById('budget-back-btn');
     if (addBtn)  { addBtn.textContent = '✏️ Modifier'; addBtn.classList.remove('hidden'); }

@@ -128,8 +128,7 @@
 
       <!-- PORTFOLIO — Vue globale -->
       <section class="section hidden" id="section-portfolio">
-        <div class="section-header">
-          <h1>Vue globale</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions">
             <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
             <div id="inv-evo-window-slot"></div>
@@ -186,8 +185,7 @@
 
       <!-- PORTFOLIO — Onglet par compte (gabarit partagé, voir Investments.renderAccountTab) -->
       <section class="section hidden" id="section-portfolio-account">
-        <div class="section-header">
-          <h1 id="inv-acc-title">Compte</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions">
             <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
           </div>
@@ -443,10 +441,6 @@
 
       <!-- COMPARISONS -->
       <section class="section hidden" id="section-comparisons">
-        <div class="section-header">
-          <h1>Comparaison de périodes</h1>
-        </div>
-
         <!-- Side-by-side panels : même style "carte fumée" que les KPI de l'onglet Flux
              (.flux-kpi-card/.fk-smoke), déclinée en 2 teintes (A = indigo, B = rose) plutôt que
              les 4 teintes sémantiques revenus/dépenses/solde/épargne qui n'ont pas de sens ici.
@@ -515,7 +509,7 @@
 
       <!-- BUDGET -->
       <section class="section hidden" id="section-budget">
-        <div class="section-header">
+        <div class="section-header" id="budget-section-header">
           <h1 id="budget-section-title">Budgets</h1>
           <div id="budget-header-actions" style="display:flex;gap:8px">
             <button class="btn-secondary btn-sm hidden" id="budget-back-btn" onclick="Budget.showList()">← Retour</button>
@@ -550,8 +544,7 @@
 
       <!-- DONNEES -->
       <section class="section hidden" id="section-donnees">
-        <div class="section-header">
-          <h1>Données</h1>
+        <div class="section-header" style="justify-content:flex-end">
           <div class="header-actions" id="donnees-header-actions">
             <button class="btn-primary" id="add-donnees-btn">+ Ajouter une ligne</button>
             <button class="btn-secondary" id="donnees-select-mode-btn" onclick="DataEntry.toggleSelectionMode()">☑️ Sélectionner</button>
@@ -600,10 +593,7 @@
       <!-- CATEGORIES -->
       <section class="section hidden" id="section-categories">
         <div class="section-header">
-          <div>
-            <h1>Catégories</h1>
-            <div class="cat-page-sub" id="cat-subtitle"></div>
-          </div>
+          <div class="cat-page-sub" id="cat-subtitle"></div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn-danger-soft" onclick="Categories.resetToDefaults()">↺ Réinitialiser</button>
             <button class="btn-primary" onclick="Categories.openAddModal()">+ Ajouter une catégorie</button>
