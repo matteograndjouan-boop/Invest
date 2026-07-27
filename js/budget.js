@@ -140,6 +140,7 @@ const Budget = {
     if (!themes.length) {
       if (overviewBar) overviewBar.innerHTML = '';
       if (cardsGrid)   cardsGrid.innerHTML   = '';
+      Charts.destroy('chart-budget-category');
       if (emptyEl)     emptyEl.classList.remove('hidden');
       return;
     }
@@ -197,6 +198,18 @@ const Budget = {
           <div class="kpi-trend">Catégorie${overCount !== 1 ? 's' : ''} au-dessus</div>
         </div>`;
     }
+
+    // Barres réel/budget par catégorie, au-dessus des cartes — triées par dépensé décroissant
+    // (contrairement aux cartes juste en dessous, qui gardent leur ordre habituel).
+    const chartSorted = [...themes]
+      .map(theme => ({ theme, spent: this._computeSpent(theme, expenses), planned: this._plannedForPeriod(theme) }))
+      .sort((a, b) => b.spent - a.spent);
+    Charts.budgetCategoryBar(
+      chartSorted.map(s => s.theme.name),
+      chartSorted.map(s => s.spent),
+      chartSorted.map(s => s.planned),
+      chartSorted.map(s => Utils.getCategoryColor(s.theme.name))
+    );
 
     // Cards — même carcasse visuelle que les cartes de Catégories (ruban --cat-bar dérivé de
     // la couleur du budget, icône de la catégorie, coins arrondis) ; statut/barre en couleur

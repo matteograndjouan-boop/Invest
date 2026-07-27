@@ -526,7 +526,11 @@
         <!-- List view -->
         <div id="budget-list-view">
           <div id="budget-overview-bar" class="kpi-grid-4"></div>
-          <div id="budget-cards-grid" class="budget-cards-grid"></div>
+          <div class="chart-card mt-md" id="budget-category-chart-card">
+            <h3>Répartition des dépenses</h3>
+            <div class="chart-container" style="height:300px"><canvas id="chart-budget-category"></canvas></div>
+          </div>
+          <div id="budget-cards-grid" class="budget-cards-grid mt-md"></div>
           <div id="budget-empty" class="empty-state hidden">
             <p>Aucun budget. Cliquez sur <strong>+ Nouveau budget</strong> pour commencer.</p>
           </div>

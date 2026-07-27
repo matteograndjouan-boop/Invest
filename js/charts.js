@@ -132,27 +132,90 @@ const Charts = {
     };
   },
 
-  expensesBudget(expenses, budgets) {
-    const month = Utils.getCurrentMonth();
-    const monthExpenses = expenses.filter(e => Utils.getExpenseMonth(e) === month);
-    const categories = Object.keys(budgets);
-    if (!categories.length) { this.destroy('chart-expenses-budget'); return; }
+  // Barres "Dépensé" par catégorie (Budget, vue liste) : même technique que fluxBar (dégradé
+  // vertical par barre + ombre, _barGradientPlugin/_barShadowPlugin réutilisés tels quels) mais
+  // une couleur PAR BARRE (celle de la catégorie, via Utils.getCategoryColor) plutôt que la
+  // paire rouge/vert fixe de fluxBar — clair/sombre dérivés de cette couleur via _shade, même
+  // principe que la bande des cartes catégorie de Flux (_renderCategoryCards). Contour "budget"
+  // superposé (_budgetOutlinePlugin) : ni un 2e dataset Chart.js (grouperait/empilerait les
+  // barres au lieu de les superposer au même x), ni un simple repère — un rectangle tracé à la
+  // hauteur du budget, sur la même largeur que la barre réelle (lue sur le même élément de
+  // barre) ; le dépassement se voit alors de lui-même dès que la barre réelle dépasse ce contour.
+  budgetCategoryBar(labels, spentData, plannedData, colors, canvasId = 'chart-budget-category') {
+    if (!labels.length) { this.destroy(canvasId); return; }
+    const perBarPairs = colors.map(c => [this._shade(c, 0.35), this._shade(c, -0.45)]);
+    // Assez de marge au-dessus du plus grand des deux (dépensé OU budget) pour qu'un contour de
+    // budget jamais dépassé (cas normal) ne colle pas au bord haut du graphique.
+    const yMax = Math.max(1, ...spentData, ...plannedData) * 1.15;
 
-    this.create('chart-expenses-budget', {
+    this.create(canvasId, {
       type: 'bar',
       data: {
-        labels: categories,
-        datasets: [
-          { label: 'Dépensé', data: categories.map(cat => monthExpenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)), backgroundColor: '#6366f1', borderRadius: 4 },
-          { label: 'Budget', data: categories.map(cat => budgets[cat]), backgroundColor: '#e0e7ff', borderRadius: 4 },
-        ],
+        labels,
+        datasets: [{ label: 'Dépensé', data: spentData, backgroundColor: colors, borderWidth: 0, borderRadius: 6, barPercentage: 0.6, categoryPercentage: 0.7 }],
       },
       options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: this._leg('bottom'), tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatCurrency(ctx.raw)}` } } },
-        scales: { y: this._yAxis(), x: this._xAxis() },
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...this._tip(),
+            callbacks: {
+              label: (ctx) => ` Dépensé : ${Utils.formatCurrency(ctx.raw)}`,
+              afterLabel: (ctx) => `Budget : ${Utils.formatCurrency(plannedData[ctx.dataIndex] || 0)}`,
+            },
+          },
+        },
+        scales: { y: this._yAxis(this._dottedGrid({ suggestedMax: yMax })), x: this._xAxis() },
       },
+      plugins: [this._barShadowPlugin(), this._barGradientPlugin([perBarPairs]), this._budgetOutlinePlugin(plannedData)],
     });
+  },
+
+  // Rectangle tracé (pas rempli), coins arrondis côté haut — repère de budget superposé à la
+  // barre réelle (voir budgetCategoryBar). Lit position/largeur sur l'élément de la barre RÉELLE
+  // (dataset 0) mais calcule sa propre hauteur via l'échelle Y et la valeur de budget : les 2
+  // hauteurs sont donc indépendantes, une barre plus haute que son contour déborde visuellement
+  // au-dessus (dépassement), une barre plus basse laisse un vide entre son sommet et le contour.
+  // afterDatasetsDraw (pluriel, pas afterDatasetDraw) : garantit un passage APRÈS le dégradé de
+  // la barre (_barGradientPlugin, sur afterDatasetDraw) quel que soit l'ordre d'enregistrement
+  // des plugins, pour que le contour reste visible par-dessus le remplissage plutôt que dessous.
+  _budgetOutlinePlugin(plannedData, color = 'rgba(255,255,255,0.5)') {
+    return {
+      id: 'budgetOutline',
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || meta.type !== 'bar') return;
+        const { ctx } = chart;
+        const yScale = chart.scales.y;
+
+        meta.data.forEach((el, i) => {
+          const planned = plannedData[i];
+          if (!planned) return;
+          const { x, width, base } = el.getProps(['x', 'width', 'base'], true);
+          const left = x - width / 2;
+          const top = yScale.getPixelForValue(planned);
+          const bottom = base;
+          const h = bottom - top;
+          if (!isFinite(h) || h <= 0 || !isFinite(width) || width < 2) return;
+          const r = Math.max(0, Math.min(6, width / 2, h));
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(left, bottom);
+          ctx.lineTo(left, top + r);
+          ctx.arcTo(left, top, left + r, top, r);
+          ctx.lineTo(left + width - r, top);
+          ctx.arcTo(left + width, top, left + width, top + r, r);
+          ctx.lineTo(left + width, bottom);
+          ctx.closePath();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = color;
+          ctx.stroke();
+          ctx.restore();
+        });
+      },
+    };
   },
 
   // Anneau centré (petit texte à 2 lignes, ex. "Total" / "187 450 €") : plugin Chart.js par
