@@ -3861,7 +3861,7 @@ const Charts = {
             ...this._tip(),
             callbacks: {
               label: (ctx) => ` Dépensé : ${Utils.formatCurrency(ctx.raw)}`,
-              afterLabel: (ctx) => `Budget : ${Utils.formatCurrency(plannedData[ctx.dataIndex] || 0)}`,
+              afterLabel: (ctx) => plannedData[ctx.dataIndex] > 0 ? `Budget : ${Utils.formatCurrency(plannedData[ctx.dataIndex])}` : 'Aucun budget défini',
             },
           },
         },
@@ -8184,15 +8184,23 @@ const Budget = {
     }
 
     // Barres réel/budget par catégorie, au-dessus des cartes — triées par dépensé décroissant
-    // (contrairement aux cartes juste en dessous, qui gardent leur ordre habituel).
-    const chartSorted = [...themes]
-      .map(theme => ({ theme, spent: this._computeSpent(theme, expenses), planned: this._plannedForPeriod(theme) }))
-      .sort((a, b) => b.spent - a.spent);
+    // (contrairement aux cartes juste en dessous, qui gardent leur ordre habituel). TOUTES les
+    // catégories ayant une dépense sur la période, pas seulement celles avec un budget déjà fixé
+    // (les autres graphiques par catégorie de l'app — Flux, Comparaisons — ne filtrent pas non
+    // plus sur "a un budget") : planned=0 pour une catégorie sans thème, _budgetOutlinePlugin
+    // (voir charts.js) ignore déjà silencieusement un budget à 0/absent, donc juste une barre
+    // pleine sans contour pour ces catégories-là.
+    const trackedCatNames = new Set(themes.flatMap(t => t.categories || []));
+    const untrackedNames  = [...new Set(expenses.map(e => e.category))].filter(name => !trackedCatNames.has(name));
+    const chartSorted = [
+      ...themes.map(theme => ({ name: theme.name, spent: this._computeSpent(theme, expenses), planned: this._plannedForPeriod(theme) })),
+      ...untrackedNames.map(name => ({ name, spent: expenses.filter(e => e.category === name).reduce((s, e) => s + e.amount, 0), planned: 0 })),
+    ].sort((a, b) => b.spent - a.spent);
     Charts.budgetCategoryBar(
-      chartSorted.map(s => s.theme.name),
+      chartSorted.map(s => s.name),
       chartSorted.map(s => s.spent),
       chartSorted.map(s => s.planned),
-      chartSorted.map(s => Utils.getCategoryColor(s.theme.name))
+      chartSorted.map(s => Utils.getCategoryColor(s.name))
     );
 
     // Cards — même carcasse visuelle que les cartes de Catégories (ruban --cat-bar dérivé de

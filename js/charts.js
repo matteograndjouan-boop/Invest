@@ -162,7 +162,7 @@ const Charts = {
             ...this._tip(),
             callbacks: {
               label: (ctx) => ` Dépensé : ${Utils.formatCurrency(ctx.raw)}`,
-              afterLabel: (ctx) => `Budget : ${Utils.formatCurrency(plannedData[ctx.dataIndex] || 0)}`,
+              afterLabel: (ctx) => plannedData[ctx.dataIndex] > 0 ? `Budget : ${Utils.formatCurrency(plannedData[ctx.dataIndex])}` : 'Aucun budget défini',
             },
           },
         },
