@@ -1,62 +1,28 @@
 const Comparisons = {
-  periodA: '',
-  periodB: '',
+  pickerA: null,
+  pickerB: null,
+  _reordering: false,
 
-  _shortLabel(period) {
-    const [y, m] = period.split('-').map(Number);
-    const MONTHS = ['jan.','fév.','mar.','avr.','mai','jun.','jul.','aoû.','sep.','oct.','nov.','déc.'];
-    return MONTHS[m - 1] + ' \'' + String(y).slice(2);
-  },
-
-  // Options du dropdown de période : fenêtre par défaut 36 mois en arrière / 2 en avant autour
-  // d'aujourd'hui, ÉLARGIE si besoin pour toujours inclure `selected` (sinon une <option selected>
-  // manquante retomberait silencieusement sur la 1ère option — piège Dropdown documenté dans
-  // CLAUDE.md — et afficherait une période différente de celle réellement en mémoire) ET la plus
-  // ancienne dépense réelle : contrairement à l'ancien <input type="month"> natif (sans bornes,
-  // n'importe quelle date atteignable en tapant), une liste figée à 36 mois rendrait
-  // silencieusement inaccessibles les périodes plus anciennes d'un historique importé (relevés
-  // bancaires sur plusieurs années) — une vraie régression, pas juste cosmétique.
-  _periodOptionsHtml(selected) {
-    const MFR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-    const now = new Date();
-    const nowIdx = now.getFullYear() * 12 + now.getMonth();
-    const toIdx = (ym) => { const [y, m] = ym.split('-').map(Number); return y * 12 + (m - 1); };
-
-    const expenseMonths = Storage.getExpenses().map(e => Utils.getExpenseDate(e).substring(0, 7)).filter(Boolean);
-    const dataMinIdx = expenseMonths.length ? Math.min(...expenseMonths.map(toIdx)) : nowIdx;
-    const selIdx = selected ? toIdx(selected) : nowIdx;
-
-    const minIdx = Math.min(nowIdx - 36, dataMinIdx, selIdx);
-    const maxIdx = Math.max(nowIdx + 2, selIdx);
-    const opts = [];
-    for (let idx = minIdx; idx <= maxIdx; idx++) {
-      const y = Math.floor(idx / 12);
-      const m = idx % 12;
-      const v = `${y}-${String(m + 1).padStart(2, '0')}`;
-      opts.push(`<option value="${v}"${v === selected ? ' selected' : ''}>${MFR[m]} ${y}</option>`);
-    }
-    return opts.join('');
-  },
-
+  // 2 instances indépendantes du même sélecteur que le filtre global (createPeriodPicker, voir
+  // js/period-filter.js) : mois/trimestre/semestre/année/plage libre, chacune avec son propre
+  // état — pas persistées (storageKey null, comme l'ancien comportement periodA/periodB, qui
+  // repartait toujours de "mois dernier vs mois en cours" à chaque chargement de l'app).
   init() {
+    this.pickerA = createPeriodPicker('comp-period-a', null, { showDateModeToggle: false, wrapClassName: 'comp-picker-a', triggerClassName: 'comp-picker-a-trigger' });
+    this.pickerB = createPeriodPicker('comp-period-b', null, { showDateModeToggle: false, wrapClassName: 'comp-picker-b', triggerClassName: 'comp-picker-b-trigger' });
+
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastMonth = now.getMonth() === 0
       ? `${now.getFullYear() - 1}-12`
       : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+    this.pickerA.set({ ...this.pickerA.get(), type: 'month', month: lastMonth, year: Number(lastMonth.slice(0, 4)) });
+    this.pickerB.set({ ...this.pickerB.get(), type: 'month', month: thisMonth, year: now.getFullYear() });
 
-    this.periodA = lastMonth;
-    this.periodB = thisMonth;
-
-    const slotA = document.getElementById('comp-period-a-slot');
-    const slotB = document.getElementById('comp-period-b-slot');
-    if (slotA) slotA.innerHTML = Dropdown.render('comp-period-a', this._periodOptionsHtml(this.periodA), { small: true, className: 'dd-comp-a' });
-    if (slotB) slotB.innerHTML = Dropdown.render('comp-period-b', this._periodOptionsHtml(this.periodB), { small: true, className: 'dd-comp-b' });
-
-    const selA = document.getElementById('comp-period-a');
-    const selB = document.getElementById('comp-period-b');
-    if (selA) selA.addEventListener('change', (e) => { this.periodA = e.target.value; this._reorderPeriods(); this.render(); });
-    if (selB) selB.addEventListener('change', (e) => { this.periodB = e.target.value; this._reorderPeriods(); this.render(); });
+    this.pickerA.renderUI();
+    this.pickerB.renderUI();
+    this.pickerA.onChange(() => { this._reorderPeriods(); this.render(); });
+    this.pickerB.onChange(() => { this._reorderPeriods(); this.render(); });
 
     // Re-render quand le toggle Date comptable/effective change (filtre global).
     PeriodFilter.onChange(() => {
@@ -65,33 +31,60 @@ const Comparisons = {
   },
 
   // La lecture de droite (B) doit toujours être la période la plus récente : cohérent avec le
-  // sens de la pastille d'évolution ("B vs A"). Si le choix de l'utilisateur inverse l'ordre
-  // chronologique, on permute A/B — variables internes ET les 2 dropdowns, via setOptions (pas
-  // setValue) : la nouvelle valeur de chacun peut être hors de sa fenêtre d'origine (ex. une
-  // période ancienne qui n'existait jusque-là que dans la liste de l'AUTRE dropdown) —
-  // setOptions régénère une liste qui la contient forcément (voir _periodOptionsHtml).
-  // Comparaison de chaînes 'YYYY-MM' : équivalente à une comparaison chronologique.
+  // sens de la pastille d'évolution ("B vs A"). Comparée sur la date de DÉBUT de chaque plage
+  // (pas un simple 'YYYY-MM' — une période peut maintenant être un trimestre, une année, une
+  // plage libre...) : si l'utilisateur inverse l'ordre chronologique, on permute les 2 ÉTATS
+  // complets (type inclus — comparer un trimestre à une année n'a pas besoin d'être symétrique).
+  //
+  // _reordering : garde-fou anti-réentrance. pickerA/pickerB.set() déclenchent chacun LEUR PROPRE
+  // onChange (voir init(), les 2 abonnées au même _reorderPeriods()+render()) : le set() de la
+  // ligne suivante re-déclenche donc _reorderPeriods() en plein milieu de celui-ci, avant que les
+  // 2 côtés aient fini d'être permutés — sans garde, la comparaison s'y ferait sur un état
+  // transitoire incohérent (un seul des 2 déjà permuté). Le garde-fou fait juste sortir ces appels
+  // ré-entrants immédiatement ; le seul _reorderPeriods() qui compte est l'appel racine.
+  //
+  // _updateLabel() sur les 2 pickers après permutation : set() (contrairement à _selectMonth/
+  // _prev/le clic sur un type...) ne rafraîchit PAS l'affichage propre du picker (texte du
+  // déclencheur, visibilité des flèches, surbrillance du type actif) — normal pour un set() venu
+  // de l'INTÉRIEUR du picker lui-même (toujours suivi d'un _updateLabel() par l'appelant), mais
+  // ici l'appelant est Comparisons : sans cet appel explicite, le déclencheur du picker qui vient
+  // d'être permuté resterait visuellement figé sur son ANCIENNE période après un swap.
   _reorderPeriods() {
-    if (this.periodA <= this.periodB) return;
-    [this.periodA, this.periodB] = [this.periodB, this.periodA];
-    Dropdown.setOptions('comp-period-a', this._periodOptionsHtml(this.periodA), true);
-    Dropdown.setOptions('comp-period-b', this._periodOptionsHtml(this.periodB), true);
+    if (this._reordering) return;
+    const a = this.pickerA.getDateRange();
+    const b = this.pickerB.getDateRange();
+    if (!a.start || !b.start || a.start <= b.start) return;
+    this._reordering = true;
+    const stateA = this.pickerA.get();
+    const stateB = this.pickerB.get();
+    this.pickerA.set(stateB);
+    this.pickerB.set(stateA);
+    this.pickerA._updateLabel();
+    this.pickerB._updateLabel();
+    this._reordering = false;
   },
 
   render() {
+    const rangeA = this.pickerA.getDateRange();
+    const rangeB = this.pickerB.getDateRange();
+
     // Épargne/Revenus ne sont jamais des dépenses (Utils.isExpenseCategory), même si un
     // enregistrement existe techniquement dans invest_expenses.
     const expenses = Storage.getExpenses().filter(e => Utils.isExpenseCategory(e.category));
-    // Respecte le mode date comptable/effective (getExpenseDate → mois filtrant).
-    const expMonth = e => Utils.getExpenseDate(e).substring(0, 7);
-    const expA = expenses.filter(e => expMonth(e) === this.periodA);
-    const expB = expenses.filter(e => expMonth(e) === this.periodB);
+    // Respecte le mode date comptable/effective (getExpenseDate → date filtrante) ; plage
+    // inclusive, même idiome que Budget._renderList (PeriodFilter.getDateRange()).
+    const inRange = (e, range) => {
+      const d = Utils.getExpenseDate(e);
+      return !!range.start && !!range.end && d >= range.start && d <= range.end;
+    };
+    const expA = expenses.filter(e => inRange(e, rangeA));
+    const expB = expenses.filter(e => inRange(e, rangeB));
 
     // Update period name labels
     const nameA = document.getElementById('comp-period-name-a');
     const nameB = document.getElementById('comp-period-name-b');
-    if (nameA) nameA.textContent = Utils.getMonthLabel(this.periodA);
-    if (nameB) nameB.textContent = Utils.getMonthLabel(this.periodB);
+    if (nameA) nameA.textContent = this.pickerA.getLabel();
+    if (nameB) nameB.textContent = this.pickerB.getLabel();
     const totalA = expA.reduce((s, e) => s + e.amount, 0);
     const totalB = expB.reduce((s, e) => s + e.amount, 0);
     const diff   = totalB - totalA;
@@ -132,8 +125,8 @@ const Comparisons = {
       rows.map(r => r.cat),
       rows.map(r => r.amtA),
       rows.map(r => r.amtB),
-      this._shortLabel(this.periodA),
-      this._shortLabel(this.periodB)
+      this.pickerA.getLabel(),
+      this.pickerB.getLabel()
     );
   },
 
@@ -168,8 +161,8 @@ const Comparisons = {
     const thB      = document.getElementById('cc-th-b');
     if (!rowsEl) return;
 
-    if (thA) thA.textContent = this._shortLabel(this.periodA);
-    if (thB) thB.textContent = this._shortLabel(this.periodB);
+    if (thA) thA.textContent = this.pickerA.getLabel();
+    if (thB) thB.textContent = this.pickerB.getLabel();
 
     const rows = this._categoryRows(expA, expB);
     if (!rows.length) {

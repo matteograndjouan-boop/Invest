@@ -443,23 +443,25 @@
       <section class="section hidden" id="section-comparisons">
         <!-- Barre de comparaison compacte (remplace les 2 grandes cartes "fumée" — retour visuel
              explicite de l'utilisateur) : un seul bandeau fin, sélecteurs de période à gauche
-             (pastille + dropdown teintés indigo/rose, .dd-comp-a/.dd-comp-b), lecture des 2
-             montants + pastille d'évolution à droite. Mêmes teintes A=indigo/B=rose que le
-             tableau récapitulatif juste en dessous (.cc-head-a/.cc-head-b) et la même pastille
-             d'évolution (_evoPillHtml) que sa colonne "Évolution", pour rester cohérent avec le
-             reste de l'onglet. -->
+             (pastille + sélecteur mois/trimestre/semestre/année/plage libre teinté indigo/rose —
+             2 instances indépendantes de createPeriodPicker, voir js/period-filter.js +
+             js/comparisons.js — le MÊME composant que le filtre de période global, pour pouvoir
+             comparer n'importe quel type de période), lecture des 2 montants + pastille
+             d'évolution à droite. Mêmes teintes A=indigo/B=rose que le tableau récapitulatif juste
+             en dessous (.cc-head-a/.cc-head-b) et la même pastille d'évolution (_evoPillHtml) que
+             sa colonne "Évolution", pour rester cohérent avec le reste de l'onglet. -->
         <div class="card comp-bar">
           <span class="comp-bar-title">Comparer</span>
           <div class="comp-bar-picker">
             <span class="comp-bar-dot comp-bar-dot-a"></span>
-            <div id="comp-period-a-slot"></div>
+            <div id="comp-period-a-filter-container"></div>
           </div>
           <span class="comp-bar-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/></svg>
           </span>
           <div class="comp-bar-picker">
             <span class="comp-bar-dot comp-bar-dot-b"></span>
-            <div id="comp-period-b-slot"></div>
+            <div id="comp-period-b-filter-container"></div>
           </div>
 
           <div class="comp-bar-readout">

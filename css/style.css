@@ -883,16 +883,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
 .comp-bar-arrow { display: flex; align-items: center; color: rgba(255,255,255,.2); flex-shrink: 0; }
 .comp-bar-arrow svg { width: 20px; height: 20px; }
 
-/* Dropdowns teintés (pas la pilule pleine en dégradé accent par défaut de .dd-trigger) : les 2
-   dropdowns de période sont côte à côte, ils doivent rester visuellement distincts l'un de
-   l'autre — même recette bordure/fond que .period-arrow (fond clair de la teinte + bordure
-   pleine + texte de la teinte), déclinée en indigo/rose plutôt que --primary. */
-.comp-bar .dd-comp-a .dd-trigger { background: rgba(99,102,241,.14); border: 1px solid rgba(99,102,241,.5); color: #a5b4fc; }
-.comp-bar .dd-comp-a .dd-trigger:hover { background: rgba(99,102,241,.22); box-shadow: none; filter: none; }
-.comp-bar .dd-comp-a .dd-opt.active { border-left-color: #6366f1; color: #6366f1; background: rgba(99,102,241,.1); }
-.comp-bar .dd-comp-b .dd-trigger { background: rgba(217,70,239,.14); border: 1px solid rgba(217,70,239,.5); color: #f0abfc; }
-.comp-bar .dd-comp-b .dd-trigger:hover { background: rgba(217,70,239,.22); box-shadow: none; filter: none; }
-.comp-bar .dd-comp-b .dd-opt.active { border-left-color: #d946ef; color: #d946ef; background: rgba(217,70,239,.1); }
+/* Sélecteurs de période teintés (pas la pilule pleine en dégradé accent par défaut de
+   .period-trigger, ni --primary sur .period-arrow) : les 2 sélecteurs A/B (createPeriodPicker,
+   voir js/period-filter.js + js/comparisons.js) sont côte à côte, ils doivent rester visuellement
+   distincts l'un de l'autre. wrapClassName (comp-picker-a/b, posé sur .period-compact par
+   createPeriodPicker) scope aussi les 2 flèches prev/next qui entourent chaque déclencheur — même
+   recette que .period-arrow d'origine (fond clair de la teinte + bordure 2px pleine + texte de la
+   teinte), déclinée en indigo/rose plutôt que --primary. .period-panel (ouvert, position:fixed,
+   hors du bandeau) reste au style neutre par défaut : son contenu répète déjà "Mois/Trimestre/…"
+   sans ambiguïté sur laquelle des 2 périodes il édite. */
+.comp-bar .comp-picker-a .period-trigger { background: rgba(99,102,241,.14); border: 1px solid rgba(99,102,241,.5); color: #a5b4fc; }
+.comp-bar .comp-picker-a .period-trigger:hover, .comp-bar .comp-picker-a .period-trigger.active { background: rgba(99,102,241,.22); box-shadow: none; filter: none; }
+.comp-bar .comp-picker-a .period-arrow { background: rgba(99,102,241,.14); border-color: rgba(99,102,241,.5); color: #a5b4fc; }
+.comp-bar .comp-picker-a .period-arrow:hover { background: #6366f1; border-color: #6366f1; color: #fff; }
+.comp-bar .comp-picker-b .period-trigger { background: rgba(217,70,239,.14); border: 1px solid rgba(217,70,239,.5); color: #f0abfc; }
+.comp-bar .comp-picker-b .period-trigger:hover, .comp-bar .comp-picker-b .period-trigger.active { background: rgba(217,70,239,.22); box-shadow: none; filter: none; }
+.comp-bar .comp-picker-b .period-arrow { background: rgba(217,70,239,.14); border-color: rgba(217,70,239,.5); color: #f0abfc; }
+.comp-bar .comp-picker-b .period-arrow:hover { background: #d946ef; border-color: #d946ef; color: #fff; }
 
 /* Lecture des 2 montants + pastille d'évolution, poussée à l'extrémité droite du bandeau. */
 .comp-bar-readout { display: flex; align-items: center; gap: 28px; margin-left: auto; flex-shrink: 0; }
@@ -991,7 +998,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { background: var(--
    court que "Septembre 2026"). display:inline-block + text-align:center nécessaires pour qu'un
    <span> respecte min-width et centre un texte plus court que cette largeur réservée. */
 .period-trigger-ico { font-size: 0.85rem; }
-#period-trigger-label { display: inline-block; text-align: center; }
+/* Classe (pas #period-trigger-label) : partagée par toutes les instances de sélecteur de période
+   (filtre global + les 2 de Comparaisons, voir js/period-filter.js createPeriodPicker). */
+.period-trigger-label { display: inline-block; text-align: center; }
 /* Blanc (pas var(--text-muted)) : le fond est désormais un dégradé plein comme .dd-trigger-chev,
    pas une pilule neutre où un chevron discret avait du sens. */
 .period-trigger-chev { font-size: 0.65rem; color: rgba(255,255,255,.85); transition: transform .15s; opacity: .9; }
@@ -1497,12 +1506,16 @@ select.dt-select:focus {
 .date-mode-btn { padding: 0.2rem 0.65rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
 .date-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
 .date-mode-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-/* Sur Comparaisons, la barre ne sert qu'au toggle Date (les mois A/B ont leurs propres sélecteurs)
-   — les flèches à côté du déclencheur compact (.period-compact > .period-arrow) navigueraient
-   sur une période globale non affichée sur cet onglet, donc masquées comme le reste. */
-body[data-view="comparisons"] .period-type-btns,
-body[data-view="comparisons"] .period-nav,
-body[data-view="comparisons"] .period-compact > .period-arrow { display: none; }
+/* Sur Comparaisons, LE FILTRE GLOBAL (#period-filter-container, tout en haut) ne sert qu'au
+   toggle Date — les périodes A/B comparées ont leurs 2 PROPRES sélecteurs, embarqués dans le
+   bandeau "Comparer" de l'onglet (voir js/comparisons.js) : les flèches à côté du déclencheur
+   compact du filtre global navigueraient sur une période globale non affichée sur cet onglet,
+   donc masquées comme le reste. Scopé à #period-filter-container (pas juste body[data-view=
+   "comparisons"] .period-type-btns) : les 2 sélecteurs A/B réutilisent EXACTEMENT le même
+   gabarit/les mêmes classes (createPeriodPicker) et doivent, eux, rester pleinement visibles. */
+body[data-view="comparisons"] #period-filter-container .period-type-btns,
+body[data-view="comparisons"] #period-filter-container .period-nav,
+body[data-view="comparisons"] #period-filter-container .period-compact > .period-arrow { display: none; }
 
 /* ---- KPI Trends ---- */
 .kpi-trend { font-size: 0.72rem; margin-top: 0.2rem; min-height: 1.1rem; line-height: 1.3; }
