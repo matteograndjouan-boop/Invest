@@ -86,14 +86,6 @@ const Utils = {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   },
 
-  // Date du jour en YYYY-MM-DD (heure locale, jamais toISOString — décalerait la date près de
-  // minuit selon le fuseau) : borne "à aujourd'hui" pour la valorisation des enveloppes
-  // (PortfolioAnalytics), comparable telle quelle aux dates d'opération (même format).
-  getToday() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  },
-
   getMonthLabel(yearMonth) {
     const [year, month] = yearMonth.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -231,20 +223,6 @@ const Utils = {
     livret: [
       { key: 'interestRate', label: "Taux d'intérêt (%)", type: 'number', optional: true },
     ],
-  },
-
-  // Couleur fixe par type d'enveloppe (donuts "répartition par type", Vue globale/Analyse) — 3
-  // reprennent la teinte déjà associée au même concept dans ACCOUNT_COLORS (pea/compte_titres≈cto/
-  // assurance_vie) pour rester cohérent avec le motif déjà établi ailleurs dans l'app ; les 4
-  // autres (sans équivalent dans ACCOUNT_COLORS) reçoivent une teinte vive distincte.
-  ENVELOPE_TYPE_COLORS: {
-    pea:               '#6366f1',
-    compte_titres:     '#3b82f6',
-    assurance_vie:     '#8b5cf6',
-    livret:            '#10b981',
-    crypto:            '#f59e0b',
-    immobilier:        '#ec4899',
-    produit_structure: '#06b6d4',
   },
 
   // Palette des catégories : 8 teintes vives inspirées de la palette Excel standard — bleu,

@@ -2644,85 +2644,15 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
         </div>
       </section>
 
-      <!-- PORTFOLIO — Vue globale : patrimoine consolidé de TOUTES les enveloppes (js/envelopes.js
-           + js/portfolio-analytics.js pour la valorisation, js/portfolio-overview.js pour le
-           rendu). Distinct de l'ancien tableau de bord invest_investments (js/investments.js,
-           toujours fonctionnel en JS mais sans bouton d'accès depuis la nav) ; Dashboard/Bilan
-           patrimonial (page "Général") continuent de lire l'ancien modèle pour le patrimoine net,
-           eux inchangés. -->
+      <!-- PORTFOLIO — Vue globale : placeholder pour l'instant (demande explicite). Doit à terme
+           afficher le patrimoine total consolidé de toutes les enveloppes — l'ancien tableau de
+           bord (positions valorisées invest_investments : KPI, allocation, évolution) reste
+           entièrement fonctionnel en JS (js/investments.js, inchangé) mais n'a plus de bouton
+           d'accès depuis la nav ; Dashboard/Bilan patrimonial (page "Général") continuent de
+           lire ces mêmes données pour le calcul du patrimoine net, eux inchangés. -->
       <section class="section hidden" id="section-portfolio">
-        <div id="pf-content">
-          <div class="kpi-grid-4">
-            <div class="flux-kpi-card fk-balance">
-              <div class="fk-smoke"></div>
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-              <div class="kpi-label">Patrimoine total</div>
-              <div class="kpi-value" id="pf-kpi-value">0 €</div>
-              <div class="kpi-trend" id="pf-kpi-value-sub"></div>
-            </div>
-            <div class="flux-kpi-card fk-revenue">
-              <div class="fk-smoke"></div>
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
-              <div class="kpi-label">Performance globale</div>
-              <div class="kpi-value" id="pf-kpi-perf">+0 €</div>
-              <div class="kpi-trend" id="pf-kpi-perf-pct"></div>
-            </div>
-            <div class="flux-kpi-card fk-savings">
-              <div class="fk-smoke"></div>
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
-              <div class="kpi-label">Versements totaux</div>
-              <div class="kpi-value" id="pf-kpi-contrib">0 €</div>
-              <div class="kpi-trend">Toutes enveloppes confondues</div>
-            </div>
-            <div class="flux-kpi-card fk-return">
-              <div class="fk-smoke"></div>
-              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
-              <div class="kpi-label">Plus-value latente</div>
-              <div class="kpi-value" id="pf-kpi-gain">0 €</div>
-              <div class="kpi-trend" id="pf-kpi-gain-sub"></div>
-            </div>
-          </div>
-
-          <div class="charts-grid">
-            <div class="chart-card">
-              <h3>Répartition par type de placement</h3>
-              <div class="port-donut-wrap">
-                <div class="chart-container" style="height:220px"><canvas id="chart-pf-type"></canvas></div>
-                <div id="pf-type-legend" class="port-legend"></div>
-              </div>
-            </div>
-            <div class="chart-card">
-              <h3>Évolution du patrimoine total</h3>
-              <div class="chart-container chart-tall"><canvas id="chart-pf-evolution"></canvas></div>
-            </div>
-          </div>
-
-          <div class="card mt-md">
-            <h3>Bilan</h3>
-            <div class="kpi-grid-3">
-              <div class="kpi-card success">
-                <div class="kpi-badge">+</div>
-                <div class="kpi-label">Actifs</div>
-                <div class="kpi-value" id="pf-bilan-actifs">0 €</div>
-                <div class="kpi-sub">Somme de toutes les enveloppes</div>
-              </div>
-              <div class="kpi-card danger">
-                <div class="kpi-badge">−</div>
-                <div class="kpi-label">Passifs</div>
-                <div class="kpi-value" id="pf-bilan-passifs">0 €</div>
-                <div class="kpi-sub">Capital restant dû (immobilier)</div>
-              </div>
-              <div class="kpi-card primary">
-                <div class="kpi-badge">≈</div>
-                <div class="kpi-label">Net</div>
-                <div class="kpi-value" id="pf-bilan-net">0 €</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="empty-state hidden" id="pf-empty">
-          <p>Aucune enveloppe. Rendez-vous dans l'onglet <strong>Enveloppes</strong> pour en créer une.</p>
+        <div class="empty-state">
+          <p>Vue globale — à venir</p>
         </div>
       </section>
 
@@ -2791,86 +2721,13 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
         <p class="empty-state hidden" id="transactions-empty">Aucune opération.</p>
       </section>
 
-      <!-- ANALYSE (mode Investissement, ex-"Bilan patrimonial") — vue FILTRÉE du patrimoine des
-           enveloppes (js/analyse.js) : période + enveloppe/type/établissement. Distinct de Vue
-           globale (jamais filtrée, js/portfolio-overview.js) et de #section-patrimony (page
-           "Général" existante, actifs/passifs manuels + ancien portefeuille, inchangée). -->
+      <!-- BILAN PATRIMONIAL (mode Investissement) — placeholder pour l'instant (demande
+           explicite). Distinct de #section-patrimony (page "Général" existante, actifs/passifs
+           manuels + portefeuille, inchangée) : appelé à devenir la vue consolidée du patrimoine
+           des enveloppes spécifiquement, une fois construite. -->
       <section class="section hidden" id="section-patrimoine">
-        <div class="donnees-toolbar">
-          <div id="analyse-period-filter-container"></div>
-          <div id="analyse-filter-envelope-slot"></div>
-          <div id="analyse-filter-type-slot"></div>
-          <div id="analyse-filter-etab-slot"></div>
-        </div>
-
-        <div class="kpi-grid-4">
-          <div class="flux-kpi-card fk-balance">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-            <div class="kpi-label">Valeur totale</div>
-            <div class="kpi-value" id="an-kpi-value">0 €</div>
-            <div class="kpi-trend" id="an-kpi-value-sub"></div>
-          </div>
-          <div class="flux-kpi-card fk-revenue">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
-            <div class="kpi-label">Performance</div>
-            <div class="kpi-value" id="an-kpi-perf">+0 €</div>
-            <div class="kpi-trend" id="an-kpi-perf-pct"></div>
-          </div>
-          <div class="flux-kpi-card fk-savings">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
-            <div class="kpi-label">Versements sur la période</div>
-            <div class="kpi-value" id="an-kpi-contrib">0 €</div>
-            <div class="kpi-trend">&nbsp;</div>
-          </div>
-          <div class="flux-kpi-card fk-return">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
-            <div class="kpi-label">Plus-value latente</div>
-            <div class="kpi-value" id="an-kpi-gain">0 €</div>
-            <div class="kpi-trend" id="an-kpi-gain-sub"></div>
-          </div>
-        </div>
-
-        <div class="chart-card mt-md">
-          <h3>Évolution de la valeur</h3>
-          <div class="chart-container chart-tall"><canvas id="chart-an-evolution"></canvas></div>
-        </div>
-
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>Répartition par type</h3>
-            <div class="port-donut-wrap">
-              <div class="chart-container" style="height:200px"><canvas id="chart-an-type"></canvas></div>
-              <div id="an-type-legend" class="port-legend"></div>
-            </div>
-          </div>
-          <div class="chart-card">
-            <h3>Répartition par établissement</h3>
-            <div class="port-donut-wrap">
-              <div class="chart-container" style="height:200px"><canvas id="chart-an-etab"></canvas></div>
-              <div id="an-etab-legend" class="port-legend"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card mt-md">
-          <h3>Détail par enveloppe</h3>
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead><tr>
-                <th>Nom</th><th>Type</th><th>Établissement</th>
-                <th class="text-right">Valeur actuelle</th>
-                <th class="text-right">Versements totaux</th>
-                <th class="text-right">Plus-value</th>
-                <th class="text-right">Performance</th>
-              </tr></thead>
-              <tbody id="analyse-tbody"></tbody>
-            </table>
-          </div>
-          <p class="empty-state hidden" id="analyse-empty">Aucune enveloppe.</p>
+        <div class="empty-state">
+          <p>Bilan patrimonial — à venir</p>
         </div>
       </section>
 
@@ -3593,14 +3450,6 @@ const Utils = {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   },
 
-  // Date du jour en YYYY-MM-DD (heure locale, jamais toISOString — décalerait la date près de
-  // minuit selon le fuseau) : borne "à aujourd'hui" pour la valorisation des enveloppes
-  // (PortfolioAnalytics), comparable telle quelle aux dates d'opération (même format).
-  getToday() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  },
-
   getMonthLabel(yearMonth) {
     const [year, month] = yearMonth.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
@@ -3738,20 +3587,6 @@ const Utils = {
     livret: [
       { key: 'interestRate', label: "Taux d'intérêt (%)", type: 'number', optional: true },
     ],
-  },
-
-  // Couleur fixe par type d'enveloppe (donuts "répartition par type", Vue globale/Analyse) — 3
-  // reprennent la teinte déjà associée au même concept dans ACCOUNT_COLORS (pea/compte_titres≈cto/
-  // assurance_vie) pour rester cohérent avec le motif déjà établi ailleurs dans l'app ; les 4
-  // autres (sans équivalent dans ACCOUNT_COLORS) reçoivent une teinte vive distincte.
-  ENVELOPE_TYPE_COLORS: {
-    pea:               '#6366f1',
-    compte_titres:     '#3b82f6',
-    assurance_vie:     '#8b5cf6',
-    livret:            '#10b981',
-    crypto:            '#f59e0b',
-    immobilier:        '#ec4899',
-    produit_structure: '#06b6d4',
   },
 
   // Palette des catégories : 8 teintes vives inspirées de la palette Excel standard — bleu,
@@ -4318,64 +4153,6 @@ const Charts = {
   portfolioEvolution(points) {
     if (!points.length) { this.destroy('chart-port-evolution'); return; }
     this.create('chart-port-evolution', {
-      type: 'line',
-      data: {
-        labels: points.map(p => p.label),
-        datasets: [{
-          label: 'Valeur',
-          data: points.map(p => p.value),
-          borderColor: '#8b5cf6',
-          backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
-          borderWidth: 3,
-          pointRadius: points.length > 1 ? 3 : 4,
-          pointBackgroundColor: '#8b5cf6',
-          pointBorderColor: '#131525',
-          pointBorderWidth: 2,
-          fill: true,
-          tension: 0.35,
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
-        },
-        scales: { y: this._yAxis(this._dottedGrid({ beginAtZero: false })), x: this._xAxis() },
-      },
-    });
-  },
-
-  // Donut générique paramétré par canvas id : `entries` = [{label, value, color}] déjà préparées
-  // par l'appelant (répartition par type/établissement — Vue globale/Analyse du mode
-  // Investissement, plusieurs instances possibles sur une même page, contrairement à
-  // investmentsByAccount qui cible toujours 'chart-port-account'). Même recette (cutout 68%,
-  // dégradé/ombre/glacis, légende native désactivée — consommée séparément par l'appelant via une
-  // légende HTML façon .port-legend).
-  genericDonut(canvasId, entries, centerLines) {
-    if (!entries.length) { this.destroy(canvasId); return; }
-    const opts = this._doughnutOptions(Utils.formatCurrency);
-    opts.cutout = '68%';
-    opts.spacing = 3;
-    opts.plugins.legend = { display: false };
-    this.create(canvasId, {
-      type: 'doughnut',
-      data: {
-        labels: entries.map(e => e.label),
-        datasets: [{ data: entries.map(e => e.value), backgroundColor: entries.map(e => e.color), borderWidth: 2, borderColor: '#131525' }],
-      },
-      options: opts,
-      plugins: [this._donutShadowPlugin(), this._donutGradientPlugin(), this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
-    });
-  },
-
-  // Courbe d'évolution générique paramétrée par canvas id : `points` = [{label, value}] déjà
-  // préparés par l'appelant. Même recette que portfolioEvolution (aire dégradée violette, tension
-  // 0.35) — plusieurs instances possibles (Vue globale = historique complet toutes enveloppes,
-  // Analyse = période filtrée + filtres enveloppe/type/établissement).
-  genericLineEvolution(canvasId, points) {
-    if (!points.length) { this.destroy(canvasId); return; }
-    this.create(canvasId, {
       type: 'line',
       data: {
         labels: points.map(p => p.label),
@@ -6405,530 +6182,6 @@ const Transactions = {
         <td>${def ? def.label : op.type}</td>
         <td>${Envelopes._opDetailText(op)}</td>
         <td class="text-right">${amount != null ? Utils.formatCurrency(amount) : '—'}</td>
-      </tr>`;
-    }).join('');
-  },
-};
-
-</script>
-<script>
-// Moteur de valorisation des enveloppes (Vue globale + Analyse) — fonctions PURES uniquement,
-// aucune manipulation DOM. Le modèle enveloppes+opérations (js/envelopes.js) n'a ni prix de
-// marché ni "valeur actuelle" stockée : une enveloppe PEA/Compte-titres/Crypto n'a que des
-// achats/ventes/mouvements d'espèces, jamais de cours du jour. La valeur d'une enveloppe se
-// déduit donc en rejouant ses opérations comme un grand livre de trésorerie (_cashLedger) : le
-// DERNIER prix connu par actif (celui du dernier achat/vente) tient lieu de cours courant —
-// approximation assumée, cohérente avec le modèle de données déjà validé (pas de suivi FIFO par
-// lot, hors périmètre : seule la valeur AGRÉGÉE de l'enveloppe est demandée, pas la plus/moins-
-// value par ligne).
-const PortfolioAnalytics = {
-  // Types qui alimentent (+) ou retirent (-) du cash SANS créer/modifier de position — un seul
-  // champ `amount` au sens variable selon le type (voir Utils.ENVELOPE_OPERATIONS/amountLabel).
-  _CASH_IN: ['versement', 'depot', 'souscription', 'transfert_entrant', 'dividende'],
-  _CASH_OUT: ['retrait', 'transfert_sortant'],
-  // Opérations qui expriment une valeur ABSOLUE (solde/valeur totale/montant reçu constaté) et
-  // non un mouvement : la trésorerie est redéfinie directement à ce montant, toute position
-  // titres est vidée — ces enveloppes (assurance-vie, livret, immobilier, produit structuré) ne
-  // suivent jamais de position par actif, seuls PEA/Compte-titres/Crypto le font (achat/vente).
-  _ABSOLUTE_RESET: ['maj_valeur', 'maj_solde', 'maj_valeur_estimee', 'remboursement'],
-
-  // Types qui comptent comme un "apport" (versements totaux, base de coût) — dividende en est
-  // délibérément exclu : c'est un gain, pas un apport, même s'il alimente le cash de la même
-  // façon dans le grand livre (_cashLedger).
-  _CONTRIB_TYPES: ['versement', 'depot', 'souscription', 'transfert_entrant'],
-  _WITHDRAW_TYPES: ['retrait', 'transfert_sortant'],
-
-  // Clé de position = assetName SEUL, jamais assetName+ticker : Utils.ENVELOPE_OPERATIONS ne
-  // collecte le champ `ticker` que sur les opérations "achat" PEA/Compte-titres — "vente" (tous
-  // types) et achat/vente Crypto n'ont pas ce champ dans leur liste `fields`, donc `op.ticker` y
-  // vaut toujours null (voir Envelopes.saveOperation : `fields.includes('ticker') ? ... : null`).
-  // Clé sur assetName+ticker aurait fait d'une vente une position FANTÔME distincte de l'achat
-  // correspondant (jamais décrémentée) dès que le ticker était renseigné à l'achat.
-  _posKey(op) { return op.assetName || ''; },
-
-  // Rejoue les opérations d'UNE enveloppe (déjà filtrées, pas encore triées) jusqu'à `cutoff`
-  // inclus (YYYY-MM-DD ; falsy = toutes). Retourne {cash, positions} — positions est une Map
-  // clé "nom|ticker" -> {qty, lastPrice, name, ticker}. Achat/vente sont neutres en valeur (le
-  // cash converti en titres reste la même valeur totale au moment de l'opération) ; seule la
-  // valorisation au dernier prix connu peut ensuite diverger du prix d'achat, ce qui capture la
-  // plus/moins-value latente sans historique par lot.
-  _cashLedger(envOps, cutoff) {
-    const sorted = [...envOps]
-      .filter(o => !cutoff || o.date <= cutoff)
-      .sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id)));
-
-    let cash = 0;
-    const positions = new Map();
-
-    sorted.forEach(op => {
-      if (this._CASH_IN.includes(op.type)) {
-        cash += op.amount || 0;
-      } else if (this._CASH_OUT.includes(op.type)) {
-        cash -= op.amount || 0;
-      } else if (op.type === 'achat') {
-        const qty = op.quantity || 0, price = op.unitPrice || 0;
-        cash -= qty * price;
-        const key = this._posKey(op);
-        const pos = positions.get(key) || { qty: 0, lastPrice: 0, name: op.assetName, ticker: op.ticker };
-        pos.qty += qty;
-        pos.lastPrice = price;
-        positions.set(key, pos);
-      } else if (op.type === 'vente') {
-        const qty = op.quantity || 0, price = op.unitPrice || 0;
-        cash += qty * price;
-        const key = this._posKey(op);
-        const pos = positions.get(key) || { qty: 0, lastPrice: 0, name: op.assetName, ticker: op.ticker };
-        pos.qty -= qty;
-        pos.lastPrice = price;
-        positions.set(key, pos);
-      } else if (this._ABSOLUTE_RESET.includes(op.type)) {
-        cash = op.amount || 0;
-        positions.clear();
-      }
-      // maj_capital_restant : ignoré ici (aucun effet sur la valeur d'actif) — c'est un passif,
-      // voir envelopeLiability.
-    });
-
-    return { cash, positions };
-  },
-
-  // Valeur totale d'UNE enveloppe (opérations déjà filtrées) à `cutoff` (falsy = valeur actuelle,
-  // toutes opérations confondues).
-  _valueAtCutoff(envOps, cutoff) {
-    const { cash, positions } = this._cashLedger(envOps, cutoff);
-    let posValue = 0;
-    positions.forEach(p => { posValue += p.qty * p.lastPrice; });
-    return cash + posValue;
-  },
-
-  // API publique : filtre `allOps` sur l'enveloppe avant de valoriser, pour éviter à chaque
-  // appelant de refaire ce filtre lui-même.
-  envelopeValue(envelopeId, allOps, cutoff) {
-    return this._valueAtCutoff(allOps.filter(o => o.envelopeId === envelopeId), cutoff);
-  },
-
-  // Somme des apports sur ]start, end] — bornes YYYY-MM-DD optionnelles (falsy = pas de borne).
-  // Brut, PAS net des retraits (voir envelopeWithdrawals séparément) : "versements" doit rester
-  // lisible comme "combien déposé", indépendamment de ce qui a été retiré dans le même intervalle.
-  envelopeContributions(envOps, start, end) {
-    return envOps
-      .filter(o => this._CONTRIB_TYPES.includes(o.type))
-      .filter(o => (!start || o.date >= start) && (!end || o.date <= end))
-      .reduce((s, o) => s + (o.amount || 0), 0);
-  },
-
-  envelopeWithdrawals(envOps, start, end) {
-    return envOps
-      .filter(o => this._WITHDRAW_TYPES.includes(o.type))
-      .filter(o => (!start || o.date >= start) && (!end || o.date <= end))
-      .reduce((s, o) => s + (o.amount || 0), 0);
-  },
-
-  // Dernière opération d'un type donné à date <= cutoff (falsy = pas de borne) — même recette que
-  // Envelopes._latestOpAmount, généralisée avec un cutoff pour pouvoir être évaluée "à une date
-  // donnée" (Analyse, filtre de période) et pas seulement "aujourd'hui".
-  _latestOpAmount(envOps, opType, cutoff) {
-    const matches = envOps
-      .filter(o => o.type === opType && o.amount != null && (!cutoff || o.date <= cutoff))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    return matches.length ? matches[matches.length - 1].amount : null;
-  },
-
-  // Passif d'une enveloppe (capital restant dû) : dernière opération "maj_capital_restant" connue
-  // à `cutoff`, sinon le champ statique saisi à la création de l'enveloppe (remainingLoanCapital)
-  // — seul un type 'immobilier' peut porter un passif dans ce modèle.
-  envelopeLiability(envelope, envOps, cutoff) {
-    if (envelope.type !== 'immobilier') return 0;
-    const fromOps = this._latestOpAmount(envOps, 'maj_capital_restant', cutoff);
-    if (fromOps !== null) return fromOps;
-    return envelope.remainingLoanCapital || 0;
-  },
-
-  // Gain/performance "à date" — délibérément simplifié en gain TOTAL depuis l'origine jusqu'à
-  // `end` (pas de performance pondérée dans le temps / period-delta, trop complexe pour la
-  // fiabilité visée ici) : valeur à `end` moins net investi depuis toujours jusqu'à `end`. gain
-  // reste `null` (affiché "—" par les appelants) quand netInvested <= 0 — aucune base de coût
-  // (ex. Immobilier, qui n'a jamais d'opération de versement) plutôt qu'un pourcentage trompeur.
-  //
-  // `start` ne sert QUE pour les champs contributions/withdrawals (période affichée) — le gain
-  // reste toujours calculé depuis l'origine réelle de l'enveloppe, jamais depuis `start`.
-  envelopeMetrics(envelope, allOps, start, end) {
-    const envOps = allOps.filter(o => o.envelopeId === envelope.id);
-    const value = this._valueAtCutoff(envOps, end);
-    const netInvested = this.envelopeContributions(envOps, null, end) - this.envelopeWithdrawals(envOps, null, end);
-    const gain = netInvested > 0 ? (value - netInvested) : null;
-    const gainPct = gain !== null ? (gain / netInvested * 100) : null;
-    return {
-      value,
-      netInvested,
-      gain,
-      gainPct,
-      contributions: this.envelopeContributions(envOps, start, end),
-      withdrawals: this.envelopeWithdrawals(envOps, start, end),
-      liability: this.envelopeLiability(envelope, envOps, end),
-    };
-  },
-
-  // Agrège les métriques de plusieurs enveloppes — gain % recalculé sur le net investi AGRÉGÉ
-  // (pas une moyenne des % individuels, qui pondérerait à tort une petite enveloppe autant qu'une
-  // grosse).
-  aggregateMetrics(envelopes, allOps, start, end) {
-    const perEnv = envelopes.map(e => this.envelopeMetrics(e, allOps, start, end));
-    const value = perEnv.reduce((s, m) => s + m.value, 0);
-    const netInvested = perEnv.reduce((s, m) => s + m.netInvested, 0);
-    const contributions = perEnv.reduce((s, m) => s + m.contributions, 0);
-    const withdrawals = perEnv.reduce((s, m) => s + m.withdrawals, 0);
-    const liability = perEnv.reduce((s, m) => s + m.liability, 0);
-    const gain = netInvested > 0 ? (value - netInvested) : null;
-    const gainPct = gain !== null ? (gain / netInvested * 100) : null;
-    return { value, netInvested, gain, gainPct, contributions, withdrawals, liability };
-  },
-
-  // Regroupe la valeur (à `cutoff`) par une clé arbitraire (type, établissement...) — donuts
-  // "répartition par type"/"répartition par établissement". Ne renvoie que les groupes non nuls.
-  valueByGroup(envelopes, allOps, cutoff, keyFn) {
-    const totals = new Map();
-    envelopes.forEach(e => {
-      const key = keyFn(e);
-      const value = this.envelopeValue(e.id, allOps, cutoff);
-      totals.set(key, (totals.get(key) || 0) + value);
-    });
-    return [...totals.entries()].filter(([, v]) => v !== 0).map(([key, value]) => ({ key, value }));
-  },
-
-  // Liste de dates de fin de mois (YYYY-MM-DD) entre `fromDate` et `toDate` inclus, dernier point
-  // = `toDate` lui-même (jamais un 30/31 situé dans le futur si le mois n'est pas terminé — le
-  // dernier point de la série doit être la valeur À `toDate`, pas après). Un point par mois
-  // calendaire. Utilisée pour les 2 courbes d'évolution (Vue globale = historique complet,
-  // Analyse = période filtrée).
-  monthEndDates(fromDate, toDate) {
-    if (!fromDate || !toDate || fromDate > toDate) return [];
-    const dates = [];
-    let [y, m] = fromDate.split('-').map(Number);
-    while (true) {
-      const lastDay = new Date(y, m, 0).getDate();
-      const monthEnd = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      if (monthEnd >= toDate) break;
-      dates.push(monthEnd);
-      m++;
-      if (m > 12) { m = 1; y++; }
-    }
-    dates.push(toDate);
-    return dates;
-  },
-
-  // Série temporelle de la valeur agrégée d'un ensemble d'enveloppes, une valeur par date de
-  // `dates` (YYYY-MM-DD, voir monthEndDates).
-  valueTimeSeries(envelopes, allOps, dates) {
-    return dates.map(date => ({
-      date,
-      value: envelopes.reduce((s, e) => s + this.envelopeValue(e.id, allOps, date), 0),
-    }));
-  },
-};
-
-</script>
-<script>
-// Vue globale (mode Investissement, onglet par défaut) : patrimoine consolidé de TOUTES les
-// enveloppes (js/envelopes.js) — KPIs "à aujourd'hui", répartition par type, évolution historique
-// complète, bilan actifs/passifs. Pas de filtre ici (voir Analyse, js/analyse.js, pour la vue
-// filtrée) — toute la valorisation vient de PortfolioAnalytics (js/portfolio-analytics.js),
-// aucun calcul dupliqué ici.
-const Portfolio = {
-  render() {
-    const envelopes = Storage.getEnvelopes();
-    const ops = Storage.getOperations();
-
-    const content = document.getElementById('pf-content');
-    const empty = document.getElementById('pf-empty');
-    if (!envelopes.length) {
-      if (content) content.classList.add('hidden');
-      if (empty) empty.classList.remove('hidden');
-      Charts.destroy('chart-pf-type');
-      Charts.destroy('chart-pf-evolution');
-      return;
-    }
-    if (content) content.classList.remove('hidden');
-    if (empty) empty.classList.add('hidden');
-
-    const today = Utils.getToday();
-    const metrics = PortfolioAnalytics.aggregateMetrics(envelopes, ops, null, today);
-
-    document.getElementById('pf-kpi-value').textContent = Utils.formatCurrency(metrics.value);
-    document.getElementById('pf-kpi-value-sub').textContent =
-      `${envelopes.length} enveloppe${envelopes.length > 1 ? 's' : ''}`;
-
-    const perfEl = document.getElementById('pf-kpi-perf');
-    const perfPctEl = document.getElementById('pf-kpi-perf-pct');
-    if (metrics.gain !== null) {
-      perfEl.textContent = (metrics.gain >= 0 ? '+' : '−') + Utils.formatCurrency(Math.abs(metrics.gain));
-      perfEl.className = 'kpi-value ' + (metrics.gain >= 0 ? 'positive' : 'negative');
-      perfPctEl.textContent = Utils.formatPercent(metrics.gainPct);
-      perfPctEl.className = 'kpi-trend ' + (metrics.gainPct >= 0 ? 'positive' : 'negative');
-    } else {
-      perfEl.textContent = '—';
-      perfEl.className = 'kpi-value';
-      perfPctEl.textContent = '';
-      perfPctEl.className = 'kpi-trend';
-    }
-
-    document.getElementById('pf-kpi-contrib').textContent = Utils.formatCurrency(metrics.contributions);
-
-    const gainEl = document.getElementById('pf-kpi-gain');
-    const gainSubEl = document.getElementById('pf-kpi-gain-sub');
-    if (metrics.gain !== null) {
-      gainEl.textContent = (metrics.gain >= 0 ? '+' : '−') + Utils.formatCurrency(Math.abs(metrics.gain));
-      gainEl.className = 'kpi-value ' + (metrics.gain >= 0 ? 'positive' : 'negative');
-      gainSubEl.textContent = "Depuis l'origine";
-    } else {
-      gainEl.textContent = '—';
-      gainEl.className = 'kpi-value';
-      gainSubEl.textContent = '';
-    }
-
-    this._renderTypeDonut(envelopes, ops, today);
-    this._renderEvolution(envelopes, ops, today);
-    this._renderBilan(envelopes, ops, today);
-  },
-
-  _renderTypeDonut(envelopes, ops, today) {
-    const groups = PortfolioAnalytics.valueByGroup(envelopes, ops, today, e => e.type);
-    const entries = groups.map(g => ({
-      label: Envelopes._typeLabel(g.key),
-      value: g.value,
-      color: Utils.ENVELOPE_TYPE_COLORS[g.key] || '#6b7280',
-    })).sort((a, b) => b.value - a.value);
-    Charts.genericDonut('chart-pf-type', entries);
-    this._renderLegend('pf-type-legend', entries);
-  },
-
-  // entries: [{label, value, color}] — légende verticale pastille/nom/montant/%, même gabarit que
-  // Investments._renderLegend (.port-legend-item/.pl-*, déjà stylé — partagé visuellement, pas en
-  // code, chaque module de rendu garde sa propre petite copie comme le fait déjà Investments).
-  _renderLegend(containerId, entries) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    if (!entries.length) { container.innerHTML = '<p class="text-muted">Aucune donnée</p>'; return; }
-    const total = entries.reduce((s, e) => s + e.value, 0);
-    container.innerHTML = entries.map(e => {
-      const pct = total > 0 ? (e.value / total * 100) : 0;
-      return `<div class="port-legend-item">
-        <span class="pl-dot" style="background:${e.color}"></span>
-        <div class="pl-info">
-          <span class="pl-name">${e.label}</span>
-          <span class="pl-sub">${Utils.formatCurrency(e.value)} · ${pct.toFixed(0)}%</span>
-        </div>
-      </div>`;
-    }).join('');
-  },
-
-  _renderEvolution(envelopes, ops, today) {
-    const firstDate = ops.reduce((min, o) => (!min || o.date < min) ? o.date : min, null);
-    if (!firstDate) { Charts.destroy('chart-pf-evolution'); return; }
-    const dates = PortfolioAnalytics.monthEndDates(firstDate, today);
-    const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
-    Charts.genericLineEvolution('chart-pf-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));
-  },
-
-  _renderBilan(envelopes, ops, today) {
-    const actifs = envelopes.reduce((s, e) => s + PortfolioAnalytics.envelopeValue(e.id, ops, today), 0);
-    const passifs = envelopes
-      .filter(e => e.type === 'immobilier')
-      .reduce((s, e) => s + PortfolioAnalytics.envelopeLiability(e, ops.filter(o => o.envelopeId === e.id), today), 0);
-    document.getElementById('pf-bilan-actifs').textContent = Utils.formatCurrency(actifs);
-    document.getElementById('pf-bilan-passifs').textContent = Utils.formatCurrency(passifs);
-    const netEl = document.getElementById('pf-bilan-net');
-    const net = actifs - passifs;
-    netEl.textContent = Utils.formatCurrency(net);
-    netEl.className = 'kpi-value ' + (net >= 0 ? 'positive' : 'negative');
-  },
-};
-
-</script>
-<script>
-// Analyse (mode Investissement, remplace l'ex-onglet "Bilan patrimonial") : vue FILTRÉE du
-// patrimoine des enveloppes — période (createPeriodPicker, même style que Flux) + enveloppe/type/
-// établissement, tous combinables. Valorisation via PortfolioAnalytics (js/portfolio-analytics.js)
-// — aucun calcul dupliqué ici. Distinct de Vue globale (js/portfolio-overview.js, jamais filtrée)
-// et de la page "Bilan patrimonial" générale (js/patrimony.js, actifs/passifs manuels + ancien
-// portefeuille, inchangée).
-const Analyse = {
-  picker: null,
-
-  // Non persisté (storageKey null) : même choix que Comparisons (2 instances de
-  // createPeriodPicker) — repart sur le mois courant à chaque rechargement plutôt que de garder
-  // un filtre oublié qui rendrait une visite ultérieure déroutante ("pourquoi ça n'affiche
-  // presque rien"). Pas de toggle Date transaction/effective : les opérations n'ont qu'une seule
-  // date, ce concept n'existe pas ici (propre aux dépenses/revenus).
-  init() {
-    this.picker = createPeriodPicker('analyse-period', null, { showDateModeToggle: false });
-    this.picker.renderUI();
-    this.picker.onChange(() => this.render());
-
-    this._populateFilters();
-    ['envelope', 'type', 'etab'].forEach(key => {
-      const el = document.getElementById(`analyse-filter-${key}`);
-      if (el) el.addEventListener('change', () => this.render());
-    });
-  },
-
-  // Même schéma que Envelopes._populateFilters/Transactions._populateFilters (Dropdown.mount,
-  // ré-appelé à chaque render — enveloppes/établissements peuvent changer entre 2 visites).
-  _populateFilters() {
-    const envVal = document.getElementById('analyse-filter-envelope')?.value || '';
-    const envOpts = ['<option value="">Toutes les enveloppes</option>']
-      .concat(Storage.getEnvelopes().map(e => `<option value="${e.id}"${e.id === envVal ? ' selected' : ''}>${e.name}</option>`))
-      .join('');
-    Dropdown.mount('analyse-filter-envelope-slot', 'analyse-filter-envelope', envOpts);
-
-    const typeVal = document.getElementById('analyse-filter-type')?.value || '';
-    const typeOpts = ['<option value="">Tous les types</option>']
-      .concat(Utils.ENVELOPE_TYPES.map(t => `<option value="${t.key}"${t.key === typeVal ? ' selected' : ''}>${t.label}</option>`))
-      .join('');
-    Dropdown.mount('analyse-filter-type-slot', 'analyse-filter-type', typeOpts);
-
-    const etabVal = document.getElementById('analyse-filter-etab')?.value || '';
-    const etabOpts = ['<option value="">Tous les établissements</option>']
-      .concat(Storage.getEtablissements().map(e => `<option value="${e}"${e === etabVal ? ' selected' : ''}>${e}</option>`))
-      .join('');
-    Dropdown.mount('analyse-filter-etab-slot', 'analyse-filter-etab', etabOpts);
-  },
-
-  _filteredEnvelopes() {
-    const all = Storage.getEnvelopes();
-    const envFilter = document.getElementById('analyse-filter-envelope')?.value || '';
-    const typeFilter = document.getElementById('analyse-filter-type')?.value || '';
-    const etabFilter = document.getElementById('analyse-filter-etab')?.value || '';
-    let list = all;
-    if (envFilter) list = list.filter(e => e.id === envFilter);
-    if (typeFilter) list = list.filter(e => e.type === typeFilter);
-    if (etabFilter) list = list.filter(e => e.etablissement === etabFilter);
-    return { all, list };
-  },
-
-  render() {
-    this._populateFilters();
-    const { all: allEnvelopes, list: envelopes } = this._filteredEnvelopes();
-    const ops = Storage.getOperations();
-    const { start, end } = this.picker.getDateRange();
-
-    const metrics = PortfolioAnalytics.aggregateMetrics(envelopes, ops, start, end);
-
-    document.getElementById('an-kpi-value').textContent = Utils.formatCurrency(metrics.value);
-    document.getElementById('an-kpi-value-sub').textContent =
-      `${envelopes.length} enveloppe${envelopes.length > 1 ? 's' : ''}`;
-
-    const perfEl = document.getElementById('an-kpi-perf');
-    const perfPctEl = document.getElementById('an-kpi-perf-pct');
-    if (metrics.gain !== null) {
-      perfEl.textContent = (metrics.gain >= 0 ? '+' : '−') + Utils.formatCurrency(Math.abs(metrics.gain));
-      perfEl.className = 'kpi-value ' + (metrics.gain >= 0 ? 'positive' : 'negative');
-      perfPctEl.textContent = Utils.formatPercent(metrics.gainPct);
-      perfPctEl.className = 'kpi-trend ' + (metrics.gainPct >= 0 ? 'positive' : 'negative');
-    } else {
-      perfEl.textContent = '—';
-      perfEl.className = 'kpi-value';
-      perfPctEl.textContent = '';
-      perfPctEl.className = 'kpi-trend';
-    }
-
-    document.getElementById('an-kpi-contrib').textContent = Utils.formatCurrency(metrics.contributions);
-
-    const gainEl = document.getElementById('an-kpi-gain');
-    const gainSubEl = document.getElementById('an-kpi-gain-sub');
-    if (metrics.gain !== null) {
-      gainEl.textContent = (metrics.gain >= 0 ? '+' : '−') + Utils.formatCurrency(Math.abs(metrics.gain));
-      gainEl.className = 'kpi-value ' + (metrics.gain >= 0 ? 'positive' : 'negative');
-      gainSubEl.textContent = "Depuis l'origine";
-    } else {
-      gainEl.textContent = '—';
-      gainEl.className = 'kpi-value';
-      gainSubEl.textContent = '';
-    }
-
-    this._renderEvolution(envelopes, ops, start, end);
-    this._renderDonut('chart-an-type', 'an-type-legend', envelopes, ops, end,
-      e => e.type, k => Envelopes._typeLabel(k), k => Utils.ENVELOPE_TYPE_COLORS[k] || '#6b7280');
-    this._renderDonut('chart-an-etab', 'an-etab-legend', envelopes, ops, end,
-      e => e.etablissement || '—', k => k, (k, i) => Utils.POSITION_COLORS[i % Utils.POSITION_COLORS.length]);
-    this._renderTable(allEnvelopes, envelopes, ops, end);
-  },
-
-  _renderEvolution(envelopes, ops, start, end) {
-    if (!start || !end) { Charts.destroy('chart-an-evolution'); return; }
-    const dates = PortfolioAnalytics.monthEndDates(start, end);
-    const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
-    Charts.genericLineEvolution('chart-an-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));
-  },
-
-  // `colorFn` reçoit (clé, index) — même signature pour la palette fixe par type (index ignoré,
-  // voir l'appel "type" dans render()) et la palette rotative par rang pour établissement (clé
-  // ignorée, voir l'appel "etab") : noms d'établissement libres/non bornés, pas de couleur
-  // d'identité stable possible comme pour les types fixes.
-  _renderDonut(canvasId, legendId, envelopes, ops, cutoff, keyFn, labelFn, colorFn) {
-    const groups = PortfolioAnalytics.valueByGroup(envelopes, ops, cutoff, keyFn);
-    const entries = groups
-      .map((g, i) => ({ label: labelFn(g.key), value: g.value, color: colorFn(g.key, i) }))
-      .sort((a, b) => b.value - a.value);
-    Charts.genericDonut(canvasId, entries);
-    this._renderLegend(legendId, entries);
-  },
-
-  _renderLegend(containerId, entries) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    if (!entries.length) { container.innerHTML = '<p class="text-muted">Aucune donnée</p>'; return; }
-    const total = entries.reduce((s, e) => s + e.value, 0);
-    container.innerHTML = entries.map(e => {
-      const pct = total > 0 ? (e.value / total * 100) : 0;
-      return `<div class="port-legend-item">
-        <span class="pl-dot" style="background:${e.color}"></span>
-        <div class="pl-info">
-          <span class="pl-name">${e.label}</span>
-          <span class="pl-sub">${Utils.formatCurrency(e.value)} · ${pct.toFixed(0)}%</span>
-        </div>
-      </div>`;
-    }).join('');
-  },
-
-  // Colonne "Versements totaux" : ALL-TIME (pas bornée par le début de la période filtrée,
-  // contrairement au KPI "Versements sur la période" au-dessus) — demande explicite ("versements
-  // TOTAUX", sans "sur la période"), lisible comme "combien j'ai mis dans cette enveloppe depuis
-  // toujours" indépendamment du filtre de période en cours. Obtenu en appelant envelopeMetrics
-  // avec start=null (seuls les champs contributions/withdrawals en dépendent — value/gain restent
-  // identiques, ils ne dépendent jamais de `start`, voir PortfolioAnalytics.envelopeMetrics).
-  _renderTable(allEnvelopes, envelopes, ops, cutoff) {
-    const tbody = document.getElementById('analyse-tbody');
-    const empty = document.getElementById('analyse-empty');
-    if (!tbody) return;
-
-    if (!envelopes.length) {
-      tbody.innerHTML = '';
-      if (empty) {
-        empty.textContent = allEnvelopes.length ? 'Aucune enveloppe ne correspond à ces filtres.' : 'Aucune enveloppe.';
-        empty.classList.remove('hidden');
-      }
-      return;
-    }
-    if (empty) empty.classList.add('hidden');
-
-    tbody.innerHTML = envelopes.map(env => {
-      const m = PortfolioAnalytics.envelopeMetrics(env, ops, null, cutoff);
-      const gainHtml = m.gain !== null
-        ? `<span class="${m.gain >= 0 ? 'positive' : 'negative'}">${m.gain >= 0 ? '+' : '−'}${Utils.formatCurrency(Math.abs(m.gain))}</span>
-           <br><span class="text-muted" style="font-size:11px">${Utils.formatPercent(m.gainPct)}</span>`
-        : '—';
-      const perfHtml = m.gainPct !== null
-        ? `<span class="${m.gainPct >= 0 ? 'positive' : 'negative'}">${Utils.formatPercent(m.gainPct)}</span>`
-        : '—';
-      return `<tr>
-        <td>${env.name}</td>
-        <td><span class="badge badge-category">${Envelopes._typeLabel(env.type)}</span></td>
-        <td>${env.etablissement || '—'}</td>
-        <td class="text-right">${Utils.formatCurrency(m.value)}</td>
-        <td class="text-right">${Utils.formatCurrency(m.contributions)}</td>
-        <td class="text-right">${gainHtml}</td>
-        <td class="text-right">${perfHtml}</td>
       </tr>`;
     }).join('');
   },
@@ -13901,22 +13154,20 @@ const Dashboard = {
 // ---- Mode & Navigation ----
 
 const APP_MODES = {
-  // 4 onglets fixes (structure demandée telle quelle) : Vue globale (patrimoine consolidé, voir
-  // js/portfolio-overview.js) et Analyse (vue filtrée, ex-"Bilan patrimonial", voir js/analyse.js)
-  // sont maintenant de vraies vues, comme Enveloppes/Transactions, toutes sur le modèle
-  // enveloppes+opérations (js/envelopes.js, js/transactions.js) valorisé par
-  // js/portfolio-analytics.js. Plus de dynamicSections (l'ancien onglet par compte, sur
-  // invest_investments/js/investments.js) : le nouveau modèle enveloppes le remplace, la
-  // structure demandée n'en a plus besoin. Le code et les données de l'ancien modèle "positions"
-  // restent en place (Dashboard/Patrimoine s'en servent toujours pour le calcul du patrimoine
-  // net), seule sa navigation dédiée disparaît.
+  // 4 onglets fixes (structure demandée telle quelle) : Vue globale et Bilan patrimonial sont
+  // des placeholders pour l'instant, Enveloppes/Transactions sont les vraies vues sur les
+  // données du nouveau modèle enveloppes+opérations (js/envelopes.js, js/transactions.js). Plus
+  // de dynamicSections (l'ancien onglet par compte, sur invest_investments/js/investments.js) :
+  // le nouveau modèle enveloppes le remplace, la structure demandée n'en a plus besoin. Le code
+  // et les données de l'ancien modèle "positions" restent en place (Dashboard/Patrimoine s'en
+  // servent toujours pour le calcul du patrimoine net), seule sa navigation dédiée disparaît.
   investments: {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
       { id: 'envelopes', label: 'Enveloppes' },
       { id: 'transactions', label: 'Transactions' },
-      { id: 'patrimoine', label: 'Analyse' },
+      { id: 'patrimoine', label: 'Bilan patrimonial' },
     ],
     default: 'portfolio',
   },
@@ -14039,17 +13290,14 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    case 'portfolio':
-      Portfolio.render();
-      break;
+    // Pas de case 'portfolio' ni 'patrimoine' : les 2 sont des placeholders statiques ("à
+    // venir") sans rien à calculer — le HTML de la section suffit, déjà rendu visible par la
+    // logique générique de bascule .hidden juste au-dessus, avant ce switch.
     case 'envelopes':
       Envelopes.render();
       break;
     case 'transactions':
       Transactions.render();
-      break;
-    case 'patrimoine':
-      Analyse.render();
       break;
     case 'flux':
       Flux.render();
@@ -14132,7 +13380,6 @@ document.addEventListener('DOMContentLoaded', () => {
   Comparisons.init();
   Envelopes.init();
   Transactions.init();
-  Analyse.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {
