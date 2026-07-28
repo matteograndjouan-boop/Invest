@@ -18,6 +18,13 @@ const _allPickers = [];
 
 function createPeriodPicker(idPrefix, storageKey, opts = {}) {
   const showDateModeToggle = !!opts.showDateModeToggle;
+  // Type de période optionnel "Toute la période" (Vue globale du mode Investissement) : sans lui,
+  // désélectionner un type retombe sur le fallback par défaut de getDateRange()/getLabel() — le
+  // MOIS COURANT, pas "tout" — ce qui est le comportement voulu pour Flux/Budget/Comparisons mais
+  // pas pour un patrimoine, qui doit par défaut montrer TOUT l'historique. Opt-in (n'affecte
+  // aucune instance existante) : un vrai type sélectionnable avec ses propres getDateRange/
+  // getLabel, pas une réinterprétation du fallback "aucun type".
+  const allowAllTime = !!opts.allowAllTime;
 
   const P = {
     _storageKey: storageKey,
@@ -76,6 +83,8 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
           return { start: `${s.year}-01-01`, end: `${s.year}-12-31` };
         case 'range':
           return { start: s.start || '', end: s.end || '' };
+        case 'all':
+          return { start: '', end: '' };
         default: {
           const now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
           return { start: `${y}-${String(m).padStart(2,'0')}-01`, end: `${y}-${String(m).padStart(2,'0')}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}` };
@@ -95,6 +104,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
           const fmt = d => d ? new Intl.DateTimeFormat('fr-FR').format(new Date(d+'T00:00:00')) : '?';
           return s.start || s.end ? `${fmt(s.start)} → ${fmt(s.end)}` : 'Choisir une plage';
         }
+        case 'all': return 'Toute la période';
         default: {
           const now = new Date();
           return `${MFR[now.getMonth()]} ${now.getFullYear()}`;
@@ -193,6 +203,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
           <div class="period-panel hidden" id="${this._id('panel')}">
             <div class="period-filter">
               <div class="period-type-btns">
+                ${allowAllTime ? '<button class="period-type-btn" data-type="all">Toute la période</button>' : ''}
                 <button class="period-type-btn" data-type="month">Mois</button>
                 <button class="period-type-btn" data-type="quarter">Trimestre</button>
                 <button class="period-type-btn" data-type="semester">Semestre</button>
@@ -325,7 +336,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
 
     _openDropdown() {
       const s = this.get();
-      if (!s.type) return; // aucun filtre actif, pas de dropdown
+      if (!s.type || s.type === 'all') return; // aucun filtre actif / "toute la période" : pas de dropdown (rien à choisir en dessous)
       if (s.type === 'month') { const [y] = s.month.split('-').map(Number); this._dropdownYear = y; }
       else this._dropdownYear = s.year || new Date().getFullYear();
       this._renderDropdown();
@@ -500,7 +511,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
       const triggerLabelEl = this._el('trigger-label');
       const panelLabelBtn = this._el('label-btn');
       const s = this.get();
-      const hasArrows = s.type && s.type !== 'range';
+      const hasArrows = s.type && s.type !== 'range' && s.type !== 'all';
       const base = hasArrows
         ? ['month', 'quarter', 'semester', 'year'].flatMap(t => this._labelsForType(t, s.year || new Date().getFullYear()))
         : null;
@@ -526,7 +537,7 @@ function createPeriodPicker(idPrefix, storageKey, opts = {}) {
       const next = this._el('next');
       const triggerPrev = this._el('trigger-prev');
       const triggerNext = this._el('trigger-next');
-      const hide = s.type === 'range' || !s.type;
+      const hide = s.type === 'range' || s.type === 'all' || !s.type;
       if (prev) prev.style.visibility = hide ? 'hidden' : '';
       if (next) next.style.visibility = hide ? 'hidden' : '';
       if (triggerPrev) triggerPrev.style.visibility = hide ? 'hidden' : '';
