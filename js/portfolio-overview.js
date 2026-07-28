@@ -91,9 +91,22 @@ const Portfolio = {
     }).join('');
   },
 
+  // Cache le graphique (pas juste "rien à afficher") tant qu'aucune opération n'existe : avec une
+  // série à zéro partout, Chart.js doit inventer une échelle Y et produit un axe qui part en
+  // négatif avec des libellés dupliqués — visuellement cassé sans qu'aucune erreur JS ne se
+  // déclenche. Un message "Aucune donnée" est bien plus honnête qu'un graphique qui semble buggé.
   _renderEvolution(envelopes, ops, today) {
     const firstDate = ops.reduce((min, o) => (!min || o.date < min) ? o.date : min, null);
-    if (!firstDate) { Charts.destroy('chart-pf-evolution'); return; }
+    const container = document.getElementById('chart-pf-evolution')?.parentElement;
+    const empty = document.getElementById('pf-evolution-empty');
+    if (!firstDate) {
+      Charts.destroy('chart-pf-evolution');
+      if (container) container.classList.add('hidden');
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (container) container.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
     const dates = PortfolioAnalytics.monthEndDates(firstDate, today);
     const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
     Charts.genericLineEvolution('chart-pf-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));

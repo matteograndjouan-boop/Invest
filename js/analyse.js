@@ -106,8 +106,27 @@ const Analyse = {
     this._renderTable(allEnvelopes, envelopes, ops, end);
   },
 
+  // Ne tente PAS de tracer une courbe tant qu'aucune opération pertinente n'existe avant `end` :
+  // sans données, la série ne contiendrait que des zéros (souvent un seul point), et Chart.js
+  // doit alors inventer une échelle Y autour de "0 partout" — ça produit un axe qui part en
+  // négatif avec des libellés dupliqués (ex. "1 €"/"1 €"/"-1 €"), visuellement cassé alors qu'il
+  // n'y a techniquement aucune erreur. Le cas le plus courant qui déclenche ça : aucune enveloppe
+  // du tout (utilisateur qui découvre l'onglet), ou un filtre qui ne laisse aucune opération avant
+  // la fin de la période choisie. Les opérations POSTÉRIEURES à `end` ne comptent pas : elles ne
+  // peuvent influencer aucun point de la série, qui s'arrête à `end`.
   _renderEvolution(envelopes, ops, start, end) {
-    if (!start || !end) { Charts.destroy('chart-an-evolution'); return; }
+    const envIds = new Set(envelopes.map(e => e.id));
+    const hasData = ops.some(o => envIds.has(o.envelopeId) && o.date <= end);
+    const container = document.getElementById('chart-an-evolution')?.parentElement;
+    const empty = document.getElementById('an-evolution-empty');
+    if (!start || !end || !hasData) {
+      Charts.destroy('chart-an-evolution');
+      if (container) container.classList.add('hidden');
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (container) container.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
     const dates = PortfolioAnalytics.monthEndDates(start, end);
     const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
     Charts.genericLineEvolution('chart-an-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));

@@ -2694,6 +2694,7 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
             <div class="chart-card">
               <h3>Évolution du patrimoine total</h3>
               <div class="chart-container chart-tall"><canvas id="chart-pf-evolution"></canvas></div>
+              <p class="empty-state hidden" id="pf-evolution-empty">Aucune donnée.</p>
             </div>
           </div>
 
@@ -2837,6 +2838,7 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
         <div class="chart-card mt-md">
           <h3>Évolution de la valeur</h3>
           <div class="chart-container chart-tall"><canvas id="chart-an-evolution"></canvas></div>
+          <p class="empty-state hidden" id="an-evolution-empty">Aucune donnée pour ces filtres.</p>
         </div>
 
         <div class="charts-grid">
@@ -6722,9 +6724,22 @@ const Portfolio = {
     }).join('');
   },
 
+  // Cache le graphique (pas juste "rien à afficher") tant qu'aucune opération n'existe : avec une
+  // série à zéro partout, Chart.js doit inventer une échelle Y et produit un axe qui part en
+  // négatif avec des libellés dupliqués — visuellement cassé sans qu'aucune erreur JS ne se
+  // déclenche. Un message "Aucune donnée" est bien plus honnête qu'un graphique qui semble buggé.
   _renderEvolution(envelopes, ops, today) {
     const firstDate = ops.reduce((min, o) => (!min || o.date < min) ? o.date : min, null);
-    if (!firstDate) { Charts.destroy('chart-pf-evolution'); return; }
+    const container = document.getElementById('chart-pf-evolution')?.parentElement;
+    const empty = document.getElementById('pf-evolution-empty');
+    if (!firstDate) {
+      Charts.destroy('chart-pf-evolution');
+      if (container) container.classList.add('hidden');
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (container) container.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
     const dates = PortfolioAnalytics.monthEndDates(firstDate, today);
     const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
     Charts.genericLineEvolution('chart-pf-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));
@@ -6854,8 +6869,27 @@ const Analyse = {
     this._renderTable(allEnvelopes, envelopes, ops, end);
   },
 
+  // Ne tente PAS de tracer une courbe tant qu'aucune opération pertinente n'existe avant `end` :
+  // sans données, la série ne contiendrait que des zéros (souvent un seul point), et Chart.js
+  // doit alors inventer une échelle Y autour de "0 partout" — ça produit un axe qui part en
+  // négatif avec des libellés dupliqués (ex. "1 €"/"1 €"/"-1 €"), visuellement cassé alors qu'il
+  // n'y a techniquement aucune erreur. Le cas le plus courant qui déclenche ça : aucune enveloppe
+  // du tout (utilisateur qui découvre l'onglet), ou un filtre qui ne laisse aucune opération avant
+  // la fin de la période choisie. Les opérations POSTÉRIEURES à `end` ne comptent pas : elles ne
+  // peuvent influencer aucun point de la série, qui s'arrête à `end`.
   _renderEvolution(envelopes, ops, start, end) {
-    if (!start || !end) { Charts.destroy('chart-an-evolution'); return; }
+    const envIds = new Set(envelopes.map(e => e.id));
+    const hasData = ops.some(o => envIds.has(o.envelopeId) && o.date <= end);
+    const container = document.getElementById('chart-an-evolution')?.parentElement;
+    const empty = document.getElementById('an-evolution-empty');
+    if (!start || !end || !hasData) {
+      Charts.destroy('chart-an-evolution');
+      if (container) container.classList.add('hidden');
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (container) container.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
     const dates = PortfolioAnalytics.monthEndDates(start, end);
     const series = PortfolioAnalytics.valueTimeSeries(envelopes, ops, dates);
     Charts.genericLineEvolution('chart-an-evolution', series.map(p => ({ label: Utils.formatDate(p.date), value: p.value })));
