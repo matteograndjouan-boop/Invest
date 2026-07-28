@@ -183,6 +183,42 @@
         </div>
       </section>
 
+      <!-- ENVELOPPES — création d'enveloppes (PEA, assurance-vie, livret...) et saisie
+           d'opérations (js/envelopes.js) : modèle distinct de invest_investments/Vue globale
+           ci-dessus, uniquement la logique/les formulaires pour l'instant (pas de refonte
+           visuelle) — mêmes classes génériques .card/.form-grid/.table que le reste de l'app. -->
+      <section class="section hidden" id="section-envelopes">
+        <div class="section-header" style="justify-content:flex-end">
+          <div class="header-actions">
+            <button class="btn-secondary btn-sm hidden" id="env-back-btn" onclick="Envelopes.showList()">← Retour</button>
+            <button class="btn-primary" id="add-envelope-btn" onclick="Envelopes.openAddForm()">+ Nouvelle enveloppe</button>
+          </div>
+        </div>
+
+        <!-- List view -->
+        <div id="envelopes-list-view">
+          <div id="envelopes-grid" class="envelopes-grid"></div>
+          <div class="empty-state hidden" id="envelopes-empty">
+            <p>Aucune enveloppe. Cliquez sur <strong>+ Nouvelle enveloppe</strong> pour commencer.</p>
+          </div>
+        </div>
+
+        <!-- Detail view -->
+        <div id="envelope-detail-view" class="hidden">
+          <div class="card" id="envelope-detail-info"></div>
+          <div class="card mt-md">
+            <h3>Opérations</h3>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead><tr><th>Date</th><th>Type</th><th>Détail</th><th class="text-right">Montant</th><th></th></tr></thead>
+                <tbody id="envelope-ops-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="envelope-ops-empty">Aucune opération.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- PORTFOLIO — Onglet par compte (gabarit partagé, voir Investments.renderAccountTab) -->
       <section class="section hidden" id="section-portfolio-account">
         <div class="section-header" style="justify-content:flex-end">
@@ -670,6 +706,7 @@
   <script src="js/charts.js"></script>
   <script src="js/period-filter.js"></script>
   <script src="js/investments.js"></script>
+  <script src="js/envelopes.js"></script>
   <script src="js/expenses.js"></script>
   <script src="js/revenues.js"></script>
   <script src="js/flux.js"></script>

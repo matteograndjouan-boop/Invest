@@ -1887,6 +1887,19 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
 @media (max-width: 1100px) { .budget-cards-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .budget-cards-grid { grid-template-columns: 1fr; } }
 
+/* Enveloppes (js/envelopes.js) — même recette de grille que .budget-cards-grid (3 colonnes, un
+   peu plus de contenu par carte que les cartes budget) ; .env-info-grid est un simple relevé
+   clé/valeur (pas de nouveau style visuel, juste le texte discret déjà utilisé partout — voir
+   .text-muted) pour l'en-tête de la vue détail. */
+.envelopes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .envelopes-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .envelopes-grid { grid-template-columns: 1fr; } }
+
+.env-info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 16px; }
+@media (max-width: 700px) { .env-info-grid { grid-template-columns: repeat(2, 1fr); } }
+.env-info-item { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.env-info-item .text-muted { font-size: 11px; }
+
 /* Budget card — même carcasse visuelle que .category-card (ruban --cat-bar, coins arrondis,
    fond) : la carte porte les deux classes, .cat-icon/.cat-left/.cat-name/.cat-edit-btn/
    .cat-top-right sont réutilisées telles quelles depuis Catégories. */

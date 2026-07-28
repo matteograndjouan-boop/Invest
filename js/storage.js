@@ -9,6 +9,9 @@ const Storage = {
     BUDGET_THEMES: 'invest_budgets_v2',
     DATE_MODE: 'invest_date_mode',
     PORTFOLIO_HISTORY: 'invest_portfolio_history',
+    ENVELOPES: 'invest_envelopes',
+    OPERATIONS: 'invest_operations',
+    ETABLISSEMENTS: 'invest_etablissements',
   },
 
   get(key) {
@@ -51,6 +54,31 @@ const Storage = {
 
   getRevenues() { return this.get(this.KEYS.REVENUES) || []; },
   saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
+
+  // Enveloppes (PEA, assurance-vie, livret...) et leurs opérations (js/envelopes.js) : modèle
+  // distinct de invest_investments/getInvestments (positions valorisées avec prix courant),
+  // pensé comme un journal d'opérations par enveloppe plutôt qu'une liste de positions.
+  getEnvelopes() { return this.get(this.KEYS.ENVELOPES) || []; },
+  saveEnvelopes(data) { this.set(this.KEYS.ENVELOPES, data); },
+
+  getOperations() { return this.get(this.KEYS.OPERATIONS) || []; },
+  saveOperations(data) { this.set(this.KEYS.OPERATIONS, data); },
+
+  getEtablissements() { return this.get(this.KEYS.ETABLISSEMENTS) || []; },
+  // Ajoute un établissement s'il n'existe pas déjà (comparaison insensible à la casse/aux espaces
+  // superflus) et renvoie son nom canonique (existant ou nouvellement enregistré) — évite que
+  // "Boursorama" et "boursorama " finissent par désigner 2 établissements distincts selon la
+  // saisie exacte d'un formulaire à l'autre.
+  addEtablissement(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '';
+    const list = this.getEtablissements();
+    const existing = list.find(e => e.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    list.push(trimmed);
+    this.set(this.KEYS.ETABLISSEMENTS, list);
+    return trimmed;
+  },
 
   _defaultCategories() {
     const data = [
@@ -95,6 +123,9 @@ const Storage = {
       revenues: this.getRevenues(),
       categories: this.getCategories(),
       portfolioHistory: this.getPortfolioHistory(),
+      envelopes: this.getEnvelopes(),
+      operations: this.getOperations(),
+      etablissements: this.getEtablissements(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -108,5 +139,8 @@ const Storage = {
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);
     if (data.portfolioHistory) this.savePortfolioHistory(data.portfolioHistory);
+    if (data.envelopes) this.saveEnvelopes(data.envelopes);
+    if (data.operations) this.saveOperations(data.operations);
+    if (data.etablissements) this.set(this.KEYS.ETABLISSEMENTS, data.etablissements);
   },
 };

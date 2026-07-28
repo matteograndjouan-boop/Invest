@@ -145,6 +145,86 @@ const Utils = {
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
   },
 
+  // ---- Enveloppes (js/envelopes.js) ----
+  // Types d'enveloppe fixes (liste imposée par la demande) — distincts des types de position de
+  // Storage.getInvestments (INVESTMENT_TYPES/INVESTMENT_ACCOUNTS ci-dessus), qui restent le
+  // modèle "positions valorisées" existant, inchangé.
+  ENVELOPE_TYPES: [
+    { key: 'pea',               label: 'PEA' },
+    { key: 'compte_titres',     label: 'Compte-titres' },
+    { key: 'assurance_vie',     label: 'Assurance-vie' },
+    { key: 'livret',            label: 'Livret' },
+    { key: 'crypto',            label: 'Crypto' },
+    { key: 'immobilier',        label: 'Immobilier' },
+    { key: 'produit_structure', label: 'Produit structuré' },
+  ],
+
+  // Types d'opération disponibles PAR type d'enveloppe. `fields` liste les champs du formulaire
+  // (voir Envelopes._FIELD_DEFS) ; `amountLabel` personnalise le libellé du champ générique
+  // `amount` selon ce qu'il représente pour cette opération précise (un seul champ de stockage,
+  // plusieurs sens selon le type — voir le commentaire sur Envelopes.saveOperation).
+  ENVELOPE_OPERATIONS: (() => {
+    const buySell = [
+      { key: 'achat', label: 'Achat', fields: ['date', 'assetName', 'ticker', 'quantity', 'unitPrice'] },
+      { key: 'vente', label: 'Vente', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+      { key: 'dividende', label: 'Dividende', fields: ['date', 'assetName', 'amount'], amountLabel: 'Montant (€)' },
+      { key: 'versement', label: "Versement d'espèces", fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+      { key: 'retrait', label: "Retrait d'espèces", fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+    ];
+    return {
+      pea: buySell,
+      compte_titres: buySell,
+      assurance_vie: [
+        { key: 'versement', label: 'Versement', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'retrait', label: 'Retrait', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'maj_valeur', label: 'Mise à jour valeur', fields: ['date', 'amount'], amountLabel: 'Valeur totale du contrat (€)' },
+      ],
+      livret: [
+        { key: 'depot', label: 'Dépôt', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'retrait', label: 'Retrait', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'maj_solde', label: 'Mise à jour solde', fields: ['date', 'amount'], amountLabel: 'Solde actuel (€)' },
+      ],
+      crypto: [
+        { key: 'achat', label: 'Achat', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+        { key: 'vente', label: 'Vente', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+        { key: 'transfert_entrant', label: 'Transfert entrant', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'transfert_sortant', label: 'Transfert sortant', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+      ],
+      immobilier: [
+        { key: 'maj_valeur_estimee', label: 'Mise à jour valeur estimée', fields: ['date', 'amount'], amountLabel: 'Valeur estimée (€)' },
+        { key: 'maj_capital_restant', label: 'Mise à jour capital restant dû', fields: ['date', 'amount'], amountLabel: 'Capital restant dû (€)' },
+      ],
+      produit_structure: [
+        { key: 'souscription', label: 'Souscription', fields: ['date', 'amount'], amountLabel: 'Montant investi (€)' },
+        { key: 'maj_valeur', label: 'Mise à jour valeur', fields: ['date', 'amount'], amountLabel: 'Valeur actuelle (€)' },
+        { key: 'remboursement', label: 'Remboursement', fields: ['date', 'amount'], amountLabel: 'Montant reçu (€)' },
+      ],
+    };
+  })(),
+
+  // Champs additionnels du formulaire de création/édition d'enveloppe, SEULEMENT pour certains
+  // types (voir Envelopes._extraFieldsHtml). `optional` = pas de required sur le <input> — reflète
+  // exactement la demande initiale, qui ne marque "(optionnel)" que sur le taux d'intérêt du
+  // Livret et le capital restant dû de l'Immobilier ; tout le reste de ces blocs est requis.
+  ENVELOPE_EXTRA_FIELDS: {
+    produit_structure: [
+      { key: 'maturityDate', label: "Date d'échéance", type: 'date' },
+      { key: 'yieldConditions', label: 'Conditions de rendement', type: 'textarea' },
+    ],
+    immobilier: [
+      { key: 'address', label: 'Adresse', type: 'text' },
+      { key: 'propertyType', label: 'Type de bien', type: 'select', options: [
+        { value: 'residence_principale', label: 'Résidence principale' },
+        { value: 'locatif', label: 'Locatif' },
+        { value: 'autre', label: 'Autre' },
+      ] },
+      { key: 'remainingLoanCapital', label: 'Capital restant dû (€)', type: 'number', optional: true },
+    ],
+    livret: [
+      { key: 'interestRate', label: "Taux d'intérêt (%)", type: 'number', optional: true },
+    ],
+  },
+
   // Palette des catégories : 8 teintes vives inspirées de la palette Excel standard — bleu,
   // rouge, vert (olive/foncé), violet, orange, cyan/turquoise, rose, ambre/or — choisies pour
   // rester bien lisibles sur fond sombre et immédiatement reconnaissables les unes des autres.

@@ -260,6 +260,7 @@ const APP_MODES = {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
+      { id: 'envelopes', label: 'Enveloppes' },
     ],
     // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
     // affichage des onglets, pas figé comme les autres modes.
@@ -329,6 +330,7 @@ function navigateTo(sectionId) {
   // (account-pea, account-assurance_vie...) partagent tous le même gabarit HTML.
   const sectionMap = {
     portfolio: 'portfolio',
+    envelopes: 'envelopes',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -384,6 +386,9 @@ function navigateTo(sectionId) {
       break;
     case 'portfolio':
       Investments.renderPortfolio();
+      break;
+    case 'envelopes':
+      Envelopes.render();
       break;
     case 'flux':
       Flux.render();

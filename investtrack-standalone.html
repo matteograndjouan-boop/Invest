@@ -1897,6 +1897,19 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
 @media (max-width: 1100px) { .budget-cards-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .budget-cards-grid { grid-template-columns: 1fr; } }
 
+/* Enveloppes (js/envelopes.js) — même recette de grille que .budget-cards-grid (3 colonnes, un
+   peu plus de contenu par carte que les cartes budget) ; .env-info-grid est un simple relevé
+   clé/valeur (pas de nouveau style visuel, juste le texte discret déjà utilisé partout — voir
+   .text-muted) pour l'en-tête de la vue détail. */
+.envelopes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .envelopes-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .envelopes-grid { grid-template-columns: 1fr; } }
+
+.env-info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 16px; }
+@media (max-width: 700px) { .env-info-grid { grid-template-columns: repeat(2, 1fr); } }
+.env-info-item { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.env-info-item .text-muted { font-size: 11px; }
+
 /* Budget card — même carcasse visuelle que .category-card (ruban --cat-bar, coins arrondis,
    fond) : la carte porte les deux classes, .cat-icon/.cat-left/.cat-name/.cat-edit-btn/
    .cat-top-right sont réutilisées telles quelles depuis Catégories. */
@@ -2688,6 +2701,42 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
         </div>
       </section>
 
+      <!-- ENVELOPPES — création d'enveloppes (PEA, assurance-vie, livret...) et saisie
+           d'opérations (js/envelopes.js) : modèle distinct de invest_investments/Vue globale
+           ci-dessus, uniquement la logique/les formulaires pour l'instant (pas de refonte
+           visuelle) — mêmes classes génériques .card/.form-grid/.table que le reste de l'app. -->
+      <section class="section hidden" id="section-envelopes">
+        <div class="section-header" style="justify-content:flex-end">
+          <div class="header-actions">
+            <button class="btn-secondary btn-sm hidden" id="env-back-btn" onclick="Envelopes.showList()">← Retour</button>
+            <button class="btn-primary" id="add-envelope-btn" onclick="Envelopes.openAddForm()">+ Nouvelle enveloppe</button>
+          </div>
+        </div>
+
+        <!-- List view -->
+        <div id="envelopes-list-view">
+          <div id="envelopes-grid" class="envelopes-grid"></div>
+          <div class="empty-state hidden" id="envelopes-empty">
+            <p>Aucune enveloppe. Cliquez sur <strong>+ Nouvelle enveloppe</strong> pour commencer.</p>
+          </div>
+        </div>
+
+        <!-- Detail view -->
+        <div id="envelope-detail-view" class="hidden">
+          <div class="card" id="envelope-detail-info"></div>
+          <div class="card mt-md">
+            <h3>Opérations</h3>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead><tr><th>Date</th><th>Type</th><th>Détail</th><th class="text-right">Montant</th><th></th></tr></thead>
+                <tbody id="envelope-ops-tbody"></tbody>
+              </table>
+            </div>
+            <p class="empty-state hidden" id="envelope-ops-empty">Aucune opération.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- PORTFOLIO — Onglet par compte (gabarit partagé, voir Investments.renderAccountTab) -->
       <section class="section hidden" id="section-portfolio-account">
         <div class="section-header" style="justify-content:flex-end">
@@ -3181,6 +3230,9 @@ const Storage = {
     BUDGET_THEMES: 'invest_budgets_v2',
     DATE_MODE: 'invest_date_mode',
     PORTFOLIO_HISTORY: 'invest_portfolio_history',
+    ENVELOPES: 'invest_envelopes',
+    OPERATIONS: 'invest_operations',
+    ETABLISSEMENTS: 'invest_etablissements',
   },
 
   get(key) {
@@ -3223,6 +3275,31 @@ const Storage = {
 
   getRevenues() { return this.get(this.KEYS.REVENUES) || []; },
   saveRevenues(data) { this.set(this.KEYS.REVENUES, data); },
+
+  // Enveloppes (PEA, assurance-vie, livret...) et leurs opérations (js/envelopes.js) : modèle
+  // distinct de invest_investments/getInvestments (positions valorisées avec prix courant),
+  // pensé comme un journal d'opérations par enveloppe plutôt qu'une liste de positions.
+  getEnvelopes() { return this.get(this.KEYS.ENVELOPES) || []; },
+  saveEnvelopes(data) { this.set(this.KEYS.ENVELOPES, data); },
+
+  getOperations() { return this.get(this.KEYS.OPERATIONS) || []; },
+  saveOperations(data) { this.set(this.KEYS.OPERATIONS, data); },
+
+  getEtablissements() { return this.get(this.KEYS.ETABLISSEMENTS) || []; },
+  // Ajoute un établissement s'il n'existe pas déjà (comparaison insensible à la casse/aux espaces
+  // superflus) et renvoie son nom canonique (existant ou nouvellement enregistré) — évite que
+  // "Boursorama" et "boursorama " finissent par désigner 2 établissements distincts selon la
+  // saisie exacte d'un formulaire à l'autre.
+  addEtablissement(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '';
+    const list = this.getEtablissements();
+    const existing = list.find(e => e.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    list.push(trimmed);
+    this.set(this.KEYS.ETABLISSEMENTS, list);
+    return trimmed;
+  },
 
   _defaultCategories() {
     const data = [
@@ -3267,6 +3344,9 @@ const Storage = {
       revenues: this.getRevenues(),
       categories: this.getCategories(),
       portfolioHistory: this.getPortfolioHistory(),
+      envelopes: this.getEnvelopes(),
+      operations: this.getOperations(),
+      etablissements: this.getEtablissements(),
       exportDate: new Date().toISOString(),
     };
   },
@@ -3280,6 +3360,9 @@ const Storage = {
     if (data.revenues) this.saveRevenues(data.revenues);
     if (data.categories) this.saveCategories(data.categories);
     if (data.portfolioHistory) this.savePortfolioHistory(data.portfolioHistory);
+    if (data.envelopes) this.saveEnvelopes(data.envelopes);
+    if (data.operations) this.saveOperations(data.operations);
+    if (data.etablissements) this.set(this.KEYS.ETABLISSEMENTS, data.etablissements);
   },
 };
 
@@ -3430,6 +3513,86 @@ const Utils = {
   PATRIMONY_CATEGORIES: {
     actif: ['Liquidités', 'Investissements', 'Immobilier', 'Véhicule', 'Autre actif'],
     passif: ['Crédit immobilier', 'Crédit auto', 'Prêt personnel', 'Dettes', 'Autre passif'],
+  },
+
+  // ---- Enveloppes (js/envelopes.js) ----
+  // Types d'enveloppe fixes (liste imposée par la demande) — distincts des types de position de
+  // Storage.getInvestments (INVESTMENT_TYPES/INVESTMENT_ACCOUNTS ci-dessus), qui restent le
+  // modèle "positions valorisées" existant, inchangé.
+  ENVELOPE_TYPES: [
+    { key: 'pea',               label: 'PEA' },
+    { key: 'compte_titres',     label: 'Compte-titres' },
+    { key: 'assurance_vie',     label: 'Assurance-vie' },
+    { key: 'livret',            label: 'Livret' },
+    { key: 'crypto',            label: 'Crypto' },
+    { key: 'immobilier',        label: 'Immobilier' },
+    { key: 'produit_structure', label: 'Produit structuré' },
+  ],
+
+  // Types d'opération disponibles PAR type d'enveloppe. `fields` liste les champs du formulaire
+  // (voir Envelopes._FIELD_DEFS) ; `amountLabel` personnalise le libellé du champ générique
+  // `amount` selon ce qu'il représente pour cette opération précise (un seul champ de stockage,
+  // plusieurs sens selon le type — voir le commentaire sur Envelopes.saveOperation).
+  ENVELOPE_OPERATIONS: (() => {
+    const buySell = [
+      { key: 'achat', label: 'Achat', fields: ['date', 'assetName', 'ticker', 'quantity', 'unitPrice'] },
+      { key: 'vente', label: 'Vente', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+      { key: 'dividende', label: 'Dividende', fields: ['date', 'assetName', 'amount'], amountLabel: 'Montant (€)' },
+      { key: 'versement', label: "Versement d'espèces", fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+      { key: 'retrait', label: "Retrait d'espèces", fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+    ];
+    return {
+      pea: buySell,
+      compte_titres: buySell,
+      assurance_vie: [
+        { key: 'versement', label: 'Versement', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'retrait', label: 'Retrait', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'maj_valeur', label: 'Mise à jour valeur', fields: ['date', 'amount'], amountLabel: 'Valeur totale du contrat (€)' },
+      ],
+      livret: [
+        { key: 'depot', label: 'Dépôt', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'retrait', label: 'Retrait', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'maj_solde', label: 'Mise à jour solde', fields: ['date', 'amount'], amountLabel: 'Solde actuel (€)' },
+      ],
+      crypto: [
+        { key: 'achat', label: 'Achat', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+        { key: 'vente', label: 'Vente', fields: ['date', 'assetName', 'quantity', 'unitPrice'] },
+        { key: 'transfert_entrant', label: 'Transfert entrant', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+        { key: 'transfert_sortant', label: 'Transfert sortant', fields: ['date', 'amount'], amountLabel: 'Montant (€)' },
+      ],
+      immobilier: [
+        { key: 'maj_valeur_estimee', label: 'Mise à jour valeur estimée', fields: ['date', 'amount'], amountLabel: 'Valeur estimée (€)' },
+        { key: 'maj_capital_restant', label: 'Mise à jour capital restant dû', fields: ['date', 'amount'], amountLabel: 'Capital restant dû (€)' },
+      ],
+      produit_structure: [
+        { key: 'souscription', label: 'Souscription', fields: ['date', 'amount'], amountLabel: 'Montant investi (€)' },
+        { key: 'maj_valeur', label: 'Mise à jour valeur', fields: ['date', 'amount'], amountLabel: 'Valeur actuelle (€)' },
+        { key: 'remboursement', label: 'Remboursement', fields: ['date', 'amount'], amountLabel: 'Montant reçu (€)' },
+      ],
+    };
+  })(),
+
+  // Champs additionnels du formulaire de création/édition d'enveloppe, SEULEMENT pour certains
+  // types (voir Envelopes._extraFieldsHtml). `optional` = pas de required sur le <input> — reflète
+  // exactement la demande initiale, qui ne marque "(optionnel)" que sur le taux d'intérêt du
+  // Livret et le capital restant dû de l'Immobilier ; tout le reste de ces blocs est requis.
+  ENVELOPE_EXTRA_FIELDS: {
+    produit_structure: [
+      { key: 'maturityDate', label: "Date d'échéance", type: 'date' },
+      { key: 'yieldConditions', label: 'Conditions de rendement', type: 'textarea' },
+    ],
+    immobilier: [
+      { key: 'address', label: 'Adresse', type: 'text' },
+      { key: 'propertyType', label: 'Type de bien', type: 'select', options: [
+        { value: 'residence_principale', label: 'Résidence principale' },
+        { value: 'locatif', label: 'Locatif' },
+        { value: 'autre', label: 'Autre' },
+      ] },
+      { key: 'remainingLoanCapital', label: 'Capital restant dû (€)', type: 'number', optional: true },
+    ],
+    livret: [
+      { key: 'interestRate', label: "Taux d'intérêt (%)", type: 'number', optional: true },
+    ],
   },
 
   // Palette des catégories : 8 teintes vives inspirées de la palette Excel standard — bleu,
@@ -5431,6 +5594,451 @@ const Investments = {
     else if (this._currentAccount) this.renderAccountTab();
     renderModeTabs(currentMode, portfolioVisible ? 'portfolio' : `account-${this._currentAccount}`);
     Dashboard.render();
+  },
+};
+
+</script>
+<script>
+// Enveloppes (PEA, assurance-vie, livret, crypto, immobilier, produit structuré...) et leurs
+// opérations — modèle en 2 listes plates (Storage.getEnvelopes/getOperations, liées par
+// operation.envelopeId) distinct de Storage.getInvestments (positions valorisées avec prix
+// courant, utilisé par l'onglet "Vue globale"/js/investments.js, inchangé). Même gabarit
+// liste/détail que Budget (js/budget.js : _currentThemeId/_renderList/_renderDetail/showList/
+// showDetail/openAddForm intelligent selon la vue) — voir _currentEnvelopeId ci-dessous.
+const Envelopes = {
+  _currentEnvelopeId: null,
+
+  // Définition des champs de formulaire d'opération, partagée par TOUS les types d'enveloppe —
+  // seule la liste `fields` de Utils.ENVELOPE_OPERATIONS[type][i] varie d'une opération à
+  // l'autre ; label/type/step/required de chaque champ ne dépendent que du champ lui-même.
+  // amountLabel (sur la définition d'opération) surcharge le label par défaut de `amount` : un
+  // seul champ de stockage (voir saveOperation) représente selon le type "un montant versé/
+  // retiré", "une valeur totale de contrat", "un solde", "un capital restant dû"...
+  _FIELD_DEFS: {
+    date:      { label: 'Date', type: 'date', required: true },
+    assetName: { label: "Nom de l'actif", type: 'text', required: true },
+    ticker:    { label: 'Ticker', type: 'text', required: false },
+    quantity:  { label: 'Quantité', type: 'number', step: '0.000001', required: true },
+    unitPrice: { label: 'Prix unitaire (€)', type: 'number', step: '0.01', required: true },
+    amount:    { label: 'Montant (€)', type: 'number', step: '0.01', required: true },
+  },
+
+  render() {
+    if (this._currentEnvelopeId) this._renderDetail(this._currentEnvelopeId);
+    else this._renderList();
+  },
+
+  showList() { this._currentEnvelopeId = null; this._renderList(); },
+  showDetail(id) { this._currentEnvelopeId = id; this._renderDetail(id); },
+
+  _typeLabel(type) { return (Utils.ENVELOPE_TYPES.find(t => t.key === type) || {}).label || type; },
+  _opDefs(envelopeType) { return Utils.ENVELOPE_OPERATIONS[envelopeType] || []; },
+  _opDef(envelopeType, opType) { return this._opDefs(envelopeType).find(o => o.key === opType); },
+
+  // ─── LIST VIEW ───────────────────────────────────────────────────────────
+
+  _renderList() {
+    const listView   = document.getElementById('envelopes-list-view');
+    const detailView = document.getElementById('envelope-detail-view');
+    const addBtn     = document.getElementById('add-envelope-btn');
+    const backBtn    = document.getElementById('env-back-btn');
+    if (listView)   listView.classList.remove('hidden');
+    if (detailView) detailView.classList.add('hidden');
+    if (addBtn)   addBtn.textContent = '+ Nouvelle enveloppe';
+    if (backBtn)  backBtn.classList.add('hidden');
+
+    const envelopes = Storage.getEnvelopes();
+    const grid  = document.getElementById('envelopes-grid');
+    const empty = document.getElementById('envelopes-empty');
+    if (!grid) return;
+
+    if (!envelopes.length) {
+      grid.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    const ops = Storage.getOperations();
+    grid.innerHTML = envelopes.map(env => {
+      const envOps = ops.filter(o => o.envelopeId === env.id);
+      return `<div class="card">
+        <div class="card-header-row">
+          <h3 style="cursor:pointer" onclick="Envelopes.showDetail('${env.id}')">${env.name}</h3>
+          <span class="badge badge-category">${this._typeLabel(env.type)}</span>
+        </div>
+        <p class="text-muted" style="margin:0 0 8px;cursor:pointer" onclick="Envelopes.showDetail('${env.id}')">${env.etablissement || 'Établissement non renseigné'}</p>
+        <p style="margin:0 0 12px;cursor:pointer" onclick="Envelopes.showDetail('${env.id}')">${this._envelopeSummary(env, envOps)}</p>
+        <div class="form-actions" style="margin-top:0;justify-content:flex-end">
+          <button class="btn-icon" onclick="event.stopPropagation();Envelopes.openEditForm('${env.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="event.stopPropagation();Envelopes.deleteEnvelope('${env.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  // Dernière opération d'un type donné (triée par date) — sert à afficher la valeur/solde le
+  // plus récent sans tenir un solde couru (pas demandé, et faux dès qu'une opération est
+  // ajoutée/modifiée hors ordre chronologique sans recalcul).
+  _latestOpAmount(envOps, opType) {
+    const matches = envOps.filter(o => o.type === opType && o.amount != null).sort((a, b) => a.date.localeCompare(b.date));
+    return matches.length ? matches[matches.length - 1].amount : null;
+  },
+
+  // Résumé 1 ligne affiché sur la carte de la liste : la dernière valeur/solde connu pour les
+  // types qui ont une opération "mise à jour" dédiée, sinon juste le nombre d'opérations — PEA/
+  // Compte-titres/Crypto n'ont pas d'opération de valorisation (seulement achats/ventes/mouvements
+  // d'espèces), calculer une valeur de portefeuille courante nécessiterait un cours actuel par
+  // actif qu'aucun champ ne fournit ici : hors périmètre de cette tâche (logique/formulaires).
+  _envelopeSummary(env, envOps) {
+    if (!envOps.length) return 'Aucune opération';
+    const n = envOps.length;
+    const nOps = `${n} opération${n > 1 ? 's' : ''}`;
+    const byType = {
+      assurance_vie: 'maj_valeur', produit_structure: 'maj_valeur',
+      livret: 'maj_solde', immobilier: 'maj_valeur_estimee',
+    };
+    const opType = byType[env.type];
+    if (!opType) return nOps;
+    const v = this._latestOpAmount(envOps, opType);
+    return v !== null ? `${Utils.formatCurrency(v)} · ${nOps}` : nOps;
+  },
+
+  // ─── DETAIL VIEW ─────────────────────────────────────────────────────────
+
+  _renderDetail(id) {
+    const env = Storage.getEnvelopes().find(e => e.id === id);
+    if (!env) { this.showList(); return; }
+
+    const listView   = document.getElementById('envelopes-list-view');
+    const detailView = document.getElementById('envelope-detail-view');
+    const addBtn      = document.getElementById('add-envelope-btn');
+    const backBtn     = document.getElementById('env-back-btn');
+    if (listView)   listView.classList.add('hidden');
+    if (detailView) detailView.classList.remove('hidden');
+    if (addBtn)   addBtn.textContent = '+ Nouvelle opération';
+    if (backBtn)  backBtn.classList.remove('hidden');
+
+    const infoCard = document.getElementById('envelope-detail-info');
+    if (infoCard) infoCard.innerHTML = this._envelopeInfoHtml(env);
+
+    const ops = Storage.getOperations().filter(o => o.envelopeId === id).sort((a, b) => b.date.localeCompare(a.date));
+    this._renderOpsTable(ops, env);
+  },
+
+  _envelopeInfoHtml(env) {
+    const extra = Utils.ENVELOPE_EXTRA_FIELDS[env.type] || [];
+    const extraLines = extra.map(f => {
+      let val = env[f.key];
+      if (val === undefined || val === null || val === '') return '';
+      if (f.type === 'select') val = (f.options.find(o => o.value === val) || {}).label || val;
+      if (f.type === 'date') val = Utils.formatDate(val);
+      if (f.type === 'number') val = Utils.formatCurrency(val);
+      return `<div class="env-info-item"><span class="text-muted">${f.label}</span><strong>${val}</strong></div>`;
+    }).filter(Boolean).join('');
+
+    return `
+      <div class="card-header-row">
+        <h3>${env.name}</h3>
+        <div class="form-actions" style="margin-top:0">
+          <button class="btn-icon" onclick="Envelopes.openEditForm('${env.id}')" title="Modifier l'enveloppe">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Envelopes.deleteEnvelope('${env.id}')" title="Supprimer l'enveloppe">${Utils.ICON_TRASH}</button>
+        </div>
+      </div>
+      <div class="env-info-grid">
+        <div class="env-info-item"><span class="text-muted">Type</span><strong>${this._typeLabel(env.type)}</strong></div>
+        <div class="env-info-item"><span class="text-muted">Établissement</span><strong>${env.etablissement || '—'}</strong></div>
+        <div class="env-info-item"><span class="text-muted">Date d'ouverture</span><strong>${env.openDate ? Utils.formatDate(env.openDate) : '—'}</strong></div>
+        <div class="env-info-item"><span class="text-muted">Devise</span><strong>${env.currency || 'EUR'}</strong></div>
+        ${extraLines}
+      </div>`;
+  },
+
+  _opDetailText(op) {
+    if (op.assetName) {
+      const ticker = op.ticker ? ` (${op.ticker})` : '';
+      const qtyPrice = (op.quantity != null && op.unitPrice != null)
+        ? ` — ${op.quantity} × ${Utils.formatCurrency(op.unitPrice)}` : '';
+      return `${op.assetName}${ticker}${qtyPrice}`;
+    }
+    return '—';
+  },
+
+  _renderOpsTable(ops, env) {
+    const tbody = document.getElementById('envelope-ops-tbody');
+    const empty = document.getElementById('envelope-ops-empty');
+    if (!tbody) return;
+
+    if (!ops.length) {
+      tbody.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    tbody.innerHTML = ops.map(op => {
+      const def = this._opDef(env.type, op.type);
+      const amount = op.amount != null ? op.amount : (op.quantity != null && op.unitPrice != null ? op.quantity * op.unitPrice : null);
+      return `<tr>
+        <td>${Utils.formatDate(op.date)}</td>
+        <td>${def ? def.label : op.type}</td>
+        <td>${this._opDetailText(op)}</td>
+        <td class="text-right">${amount != null ? Utils.formatCurrency(amount) : '—'}</td>
+        <td class="actions-cell">
+          <button class="btn-icon" onclick="Envelopes.editOperation('${op.id}')" title="Modifier">✏️</button>
+          <button class="btn-icon btn-danger" onclick="Envelopes.deleteOperation('${op.id}')" title="Supprimer">${Utils.ICON_TRASH}</button>
+        </td>
+      </tr>`;
+    }).join('');
+  },
+
+  // ─── FORMULAIRE ENVELOPPE ────────────────────────────────────────────────
+
+  // Même bouton "+ Nouvelle enveloppe"/"+ Nouvelle opération" que Budget.openAddForm : selon la
+  // vue actuelle (liste ou détail), ouvre soit la création d'enveloppe soit la création
+  // d'opération pour l'enveloppe affichée.
+  openAddForm() {
+    if (this._currentEnvelopeId) this.openAddOperation();
+    else Modal.open('Nouvelle enveloppe', this._envelopeForm(null));
+  },
+
+  openEditForm(id) {
+    const env = Storage.getEnvelopes().find(e => e.id === id);
+    if (env) Modal.open("Modifier l'enveloppe", this._envelopeForm(env));
+  },
+
+  _etablissementDatalist() {
+    return Storage.getEtablissements().map(e => `<option value="${e}">`).join('');
+  },
+
+  _envelopeForm(env) {
+    const isEdit = !!env;
+    const type = env?.type || Utils.ENVELOPE_TYPES[0].key;
+    const typeOptions = Utils.ENVELOPE_TYPES
+      .map(t => `<option value="${t.key}" ${type === t.key ? 'selected' : ''}>${t.label}</option>`).join('');
+
+    return `
+      <form onsubmit="Envelopes.saveEnvelope(event, ${isEdit ? `'${env.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Nom *</label><input name="name" required value="${env?.name || ''}" placeholder='ex: "Mon PEA", "Livret A LCL"'></div>
+          <div class="form-group"><label>Type *</label>${Dropdown.render('type', typeOptions, { required: true, id: 'env-type-select', onchange: 'Envelopes._onEnvelopeTypeChange(this.value)' })}</div>
+          <div class="form-group">
+            <label>Établissement *</label>
+            <input name="etablissement" list="env-etab-datalist" required value="${env?.etablissement || ''}" placeholder="ex: Boursorama, Green Got, Degiro">
+            <datalist id="env-etab-datalist">${this._etablissementDatalist()}</datalist>
+          </div>
+          <div class="form-group"><label>Date d'ouverture</label><input name="openDate" type="date" value="${env?.openDate || ''}"></div>
+          <div class="form-group"><label>Devise</label><input name="currency" value="${env?.currency || 'EUR'}"></div>
+        </div>
+        <div id="env-extra-fields">${this._extraFieldsHtml(type, env)}</div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Créer'}</button>
+        </div>
+      </form>`;
+  },
+
+  _extraFieldsHtml(type, env) {
+    const fields = Utils.ENVELOPE_EXTRA_FIELDS[type];
+    if (!fields || !fields.length) return '';
+    return `<div class="form-grid mt-md">${fields.map(f => {
+      const val = env?.[f.key] ?? '';
+      const req = f.optional ? '' : 'required';
+      let input;
+      if (f.type === 'select') {
+        const opts = f.options.map(o => `<option value="${o.value}" ${val === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+        input = Dropdown.render(f.key, opts, { required: !f.optional });
+      } else if (f.type === 'textarea') {
+        input = `<textarea name="${f.key}" rows="2" ${req}>${val}</textarea>`;
+      } else {
+        input = `<input name="${f.key}" type="${f.type}" ${f.type === 'number' ? 'step="0.01" min="0"' : ''} ${req} value="${val}">`;
+      }
+      const full = f.type === 'textarea' ? ' form-full' : '';
+      return `<div class="form-group${full}"><label>${f.label}${f.optional ? '' : ' *'}</label>${input}</div>`;
+    }).join('')}</div>`;
+  },
+
+  _onEnvelopeTypeChange(type) {
+    const container = document.getElementById('env-extra-fields');
+    if (container) container.innerHTML = this._extraFieldsHtml(type, null);
+  },
+
+  saveEnvelope(event, id) {
+    event.preventDefault();
+    // Capturé AVANT toute réassignation : une création doit enchaîner sur le détail de la
+    // nouvelle enveloppe (suite naturelle "maintenant j'ajoute des opérations"), mais éditer une
+    // enveloppe depuis SA carte dans la liste (_currentEnvelopeId encore null à cet instant) ne
+    // doit pas faire sauter l'utilisateur dans le détail — seule l'édition depuis le détail
+    // lui-même doit y rester.
+    const wasInDetail = !!this._currentEnvelopeId;
+    const fd = new FormData(event.target);
+    const type = fd.get('type');
+    const etablissement = Storage.addEtablissement(fd.get('etablissement'));
+
+    const data = {
+      id: id || Utils.generateId(),
+      name: fd.get('name').trim(),
+      type,
+      etablissement,
+      openDate: fd.get('openDate') || '',
+      currency: (fd.get('currency') || 'EUR').trim() || 'EUR',
+    };
+    (Utils.ENVELOPE_EXTRA_FIELDS[type] || []).forEach(f => {
+      const raw = fd.get(f.key);
+      data[f.key] = f.type === 'number' ? (raw ? parseFloat(raw) : null) : (raw || '').trim();
+    });
+
+    const list = Storage.getEnvelopes();
+    if (id) { const idx = list.findIndex(e => e.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveEnvelopes(list);
+    Modal.close();
+    this._currentEnvelopeId = id ? (wasInDetail ? id : null) : data.id;
+    this.render();
+  },
+
+  deleteEnvelope(id) {
+    if (!confirm('Supprimer cette enveloppe et toutes ses opérations ?')) return;
+    Storage.saveEnvelopes(Storage.getEnvelopes().filter(e => e.id !== id));
+    Storage.saveOperations(Storage.getOperations().filter(o => o.envelopeId !== id));
+    if (this._currentEnvelopeId === id) this._currentEnvelopeId = null;
+    this.render();
+  },
+
+  // ─── FORMULAIRE OPÉRATION ────────────────────────────────────────────────
+
+  openAddOperation() {
+    const env = Storage.getEnvelopes().find(e => e.id === this._currentEnvelopeId);
+    if (!env) return;
+    Modal.open('Nouvelle opération', this._operationForm(env, null));
+  },
+
+  editOperation(opId) {
+    const op = Storage.getOperations().find(o => o.id === opId);
+    if (!op) return;
+    const env = Storage.getEnvelopes().find(e => e.id === op.envelopeId);
+    if (!env) return;
+    Modal.open("Modifier l'opération", this._operationForm(env, op));
+  },
+
+  // La visibilité initiale de chaque champ est calculée directement ici (pas via un <script>
+  // injecté dans le HTML de la modale, qu'un innerHTML= n'exécute jamais — comportement standard
+  // du DOM, pas un oubli) : même schéma que _extraFieldsHtml, qui calcule aussi son état initial
+  // en construisant la chaîne plutôt qu'en rappelant une fonction après coup. _onOperationTypeChange
+  // ne sert donc qu'aux changements APRÈS l'ouverture (l'utilisateur change le type d'opération).
+  _operationForm(env, op) {
+    const isEdit = !!op;
+    const defs = this._opDefs(env.type);
+    const opType = op?.type || defs[0]?.key;
+    const typeOptions = defs.map(d => `<option value="${d.key}" ${opType === d.key ? 'selected' : ''}>${d.label}</option>`).join('');
+    const currentDef = this._opDef(env.type, opType);
+    const visibleFields = currentDef ? currentDef.fields : [];
+
+    const fieldHtml = (key) => {
+      const def = this._FIELD_DEFS[key];
+      const val = op?.[key] ?? '';
+      const isVisible = visibleFields.includes(key);
+      // required seulement si le champ est ET requis ET actuellement visible : un <input required>
+      // caché par display:none n'est PAS exempté de la validation HTML5 native malgré ce qu'on
+      // pourrait attendre (testé empiriquement — Chromium bloque quand même la soumission, avec
+      // juste un avertissement console "invalid form control ... not focusable", sans retour visuel
+      // puisque l'input est injoignable). _onOperationTypeChange doit donc retirer/remettre required
+      // en plus de .hidden à chaque changement de type, pas seulement au premier rendu ici.
+      const req = (def.required && isVisible) ? 'required' : '';
+      const label = key === 'amount' ? (currentDef?.amountLabel || def.label) : def.label;
+      const hiddenCls = isVisible ? '' : ' hidden';
+      let input;
+      if (def.type === 'number') {
+        input = `<input name="${key}" type="number" step="${def.step || '0.01'}" min="0" ${req} value="${val}">`;
+      } else {
+        input = `<input name="${key}" type="${def.type}" ${req} value="${val}">`;
+      }
+      return `<div class="form-group${hiddenCls}" data-field="${key}"><label id="op-label-${key}">${label}${def.required ? ' *' : ''}</label>${input}</div>`;
+    };
+
+    const allFields = ['date', 'assetName', 'ticker', 'quantity', 'unitPrice', 'amount'];
+
+    return `
+      <form onsubmit="Envelopes.saveOperation(event, ${isEdit ? `'${op.id}'` : 'null'})">
+        <div class="form-grid">
+          <div class="form-group form-full"><label>Type d'opération *</label>${Dropdown.render('opType', typeOptions, { required: true, id: 'op-type-select', onchange: `Envelopes._onOperationTypeChange('${env.type}', this.value)` })}</div>
+          ${allFields.map(fieldHtml).join('')}
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.close()">Annuler</button>
+          <button type="submit" class="btn-primary">${isEdit ? 'Modifier' : 'Ajouter'}</button>
+        </div>
+      </form>`;
+  },
+
+  // Affiche/masque les .form-group[data-field] selon la liste `fields` de l'opération choisie.
+  // Retire/remet aussi `required` sur l'input de chaque champ masqué/révélé : contrairement à ce
+  // qu'on pourrait attendre, un <input required> cache par display:none n'est PAS exempté de la
+  // validation HTML5 native (testé empiriquement — Chromium bloque quand même la soumission,
+  // silencieusement côté utilisateur puisque l'input injoignable ne peut pas recevoir le focus
+  // pour afficher la bulle d'erreur). Ajuste aussi le libellé du champ `amount`, dont le sens
+  // dépend du type choisi (amountLabel — voir Utils.ENVELOPE_OPERATIONS).
+  _onOperationTypeChange(envelopeType, opType) {
+    const def = this._opDef(envelopeType, opType);
+    const fields = def ? def.fields : [];
+    document.querySelectorAll('#modal-body [data-field]').forEach(el => {
+      const visible = fields.includes(el.dataset.field);
+      el.classList.toggle('hidden', !visible);
+      const fieldDef = this._FIELD_DEFS[el.dataset.field];
+      if (fieldDef.required) {
+        const input = el.querySelector('input, textarea');
+        if (input) input.required = visible;
+      }
+    });
+    const amountLabelEl = document.getElementById('op-label-amount');
+    if (amountLabelEl && def) amountLabelEl.textContent = (def.amountLabel || this._FIELD_DEFS.amount.label) + (this._FIELD_DEFS.amount.required ? ' *' : '');
+  },
+
+  // En édition, l'enveloppe se déduit de l'opération elle-même (son envelopeId stocké) plutôt que
+  // de this._currentEnvelopeId : les 2 coïncident forcément dans l'app réelle (editOperation n'est
+  // jamais accessible que depuis la vue détail de CETTE enveloppe), mais dériver directement de
+  // l'opération est strictement plus robuste — indépendant de tout état de navigation — pour un
+  // coût nul. En création, il n'y a pas encore d'opération à consulter : _currentEnvelopeId reste
+  // la seule source possible (et y est, lui, bien garanti correct — openAddOperation vient de le
+  // vérifier avant même d'ouvrir le formulaire).
+  saveOperation(event, id) {
+    event.preventDefault();
+    const fd = new FormData(event.target);
+    const opType = fd.get('opType');
+    const targetEnvelopeId = id
+      ? Storage.getOperations().find(o => o.id === id)?.envelopeId
+      : this._currentEnvelopeId;
+    const env = Storage.getEnvelopes().find(e => e.id === targetEnvelopeId);
+    if (!env) return;
+    const def = this._opDef(env.type, opType);
+    const fields = def ? def.fields : [];
+
+    const num = (key) => { const v = fd.get(key); return (v === null || v === '') ? null : parseFloat(v); };
+    const data = {
+      id: id || Utils.generateId(),
+      envelopeId: env.id,
+      type: opType,
+      date: fd.get('date'),
+      assetName: fields.includes('assetName') ? (fd.get('assetName') || '').trim() : null,
+      ticker: fields.includes('ticker') ? (fd.get('ticker') || '').trim().toUpperCase() || null : null,
+      quantity: fields.includes('quantity') ? num('quantity') : null,
+      unitPrice: fields.includes('unitPrice') ? num('unitPrice') : null,
+      amount: fields.includes('amount') ? num('amount') : null,
+    };
+
+    const list = Storage.getOperations();
+    if (id) { const idx = list.findIndex(o => o.id === id); if (idx !== -1) list[idx] = data; }
+    else list.push(data);
+    Storage.saveOperations(list);
+    Modal.close();
+    this._currentEnvelopeId = env.id;
+    this.render();
+  },
+
+  deleteOperation(id) {
+    if (!confirm('Supprimer cette opération ?')) return;
+    Storage.saveOperations(Storage.getOperations().filter(o => o.id !== id));
+    this.render();
   },
 };
 
@@ -12405,6 +13013,7 @@ const APP_MODES = {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
+      { id: 'envelopes', label: 'Enveloppes' },
     ],
     // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
     // affichage des onglets, pas figé comme les autres modes.
@@ -12474,6 +13083,7 @@ function navigateTo(sectionId) {
   // (account-pea, account-assurance_vie...) partagent tous le même gabarit HTML.
   const sectionMap = {
     portfolio: 'portfolio',
+    envelopes: 'envelopes',
     flux: 'flux',
     donnees: 'donnees',
     revenues: 'revenues',
@@ -12529,6 +13139,9 @@ function navigateTo(sectionId) {
       break;
     case 'portfolio':
       Investments.renderPortfolio();
+      break;
+    case 'envelopes':
+      Envelopes.render();
       break;
     case 'flux':
       Flux.render();
