@@ -126,15 +126,85 @@
         </div>
       </section>
 
-      <!-- PORTFOLIO — Vue globale : placeholder pour l'instant (demande explicite). Doit à terme
-           afficher le patrimoine total consolidé de toutes les enveloppes — l'ancien tableau de
-           bord (positions valorisées invest_investments : KPI, allocation, évolution) reste
-           entièrement fonctionnel en JS (js/investments.js, inchangé) mais n'a plus de bouton
-           d'accès depuis la nav ; Dashboard/Bilan patrimonial (page "Général") continuent de
-           lire ces mêmes données pour le calcul du patrimoine net, eux inchangés. -->
+      <!-- PORTFOLIO — Vue globale : patrimoine consolidé de TOUTES les enveloppes (js/envelopes.js
+           + js/portfolio-analytics.js pour la valorisation, js/portfolio-overview.js pour le
+           rendu). Distinct de l'ancien tableau de bord invest_investments (js/investments.js,
+           toujours fonctionnel en JS mais sans bouton d'accès depuis la nav) ; Dashboard/Bilan
+           patrimonial (page "Général") continuent de lire l'ancien modèle pour le patrimoine net,
+           eux inchangés. -->
       <section class="section hidden" id="section-portfolio">
-        <div class="empty-state">
-          <p>Vue globale — à venir</p>
+        <div id="pf-content">
+          <div class="kpi-grid-4">
+            <div class="flux-kpi-card fk-balance">
+              <div class="fk-smoke"></div>
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+              <div class="kpi-label">Patrimoine total</div>
+              <div class="kpi-value" id="pf-kpi-value">0 €</div>
+              <div class="kpi-trend" id="pf-kpi-value-sub"></div>
+            </div>
+            <div class="flux-kpi-card fk-revenue">
+              <div class="fk-smoke"></div>
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
+              <div class="kpi-label">Performance globale</div>
+              <div class="kpi-value" id="pf-kpi-perf">+0 €</div>
+              <div class="kpi-trend" id="pf-kpi-perf-pct"></div>
+            </div>
+            <div class="flux-kpi-card fk-savings">
+              <div class="fk-smoke"></div>
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
+              <div class="kpi-label">Versements totaux</div>
+              <div class="kpi-value" id="pf-kpi-contrib">0 €</div>
+              <div class="kpi-trend">Toutes enveloppes confondues</div>
+            </div>
+            <div class="flux-kpi-card fk-return">
+              <div class="fk-smoke"></div>
+              <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
+              <div class="kpi-label">Plus-value latente</div>
+              <div class="kpi-value" id="pf-kpi-gain">0 €</div>
+              <div class="kpi-trend" id="pf-kpi-gain-sub"></div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Répartition par type de placement</h3>
+              <div class="port-donut-wrap">
+                <div class="chart-container" style="height:220px"><canvas id="chart-pf-type"></canvas></div>
+                <div id="pf-type-legend" class="port-legend"></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h3>Évolution du patrimoine total</h3>
+              <div class="chart-container chart-tall"><canvas id="chart-pf-evolution"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card mt-md">
+            <h3>Bilan</h3>
+            <div class="kpi-grid-3">
+              <div class="kpi-card success">
+                <div class="kpi-badge">+</div>
+                <div class="kpi-label">Actifs</div>
+                <div class="kpi-value" id="pf-bilan-actifs">0 €</div>
+                <div class="kpi-sub">Somme de toutes les enveloppes</div>
+              </div>
+              <div class="kpi-card danger">
+                <div class="kpi-badge">−</div>
+                <div class="kpi-label">Passifs</div>
+                <div class="kpi-value" id="pf-bilan-passifs">0 €</div>
+                <div class="kpi-sub">Capital restant dû (immobilier)</div>
+              </div>
+              <div class="kpi-card primary">
+                <div class="kpi-badge">≈</div>
+                <div class="kpi-label">Net</div>
+                <div class="kpi-value" id="pf-bilan-net">0 €</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state hidden" id="pf-empty">
+          <p>Aucune enveloppe. Rendez-vous dans l'onglet <strong>Enveloppes</strong> pour en créer une.</p>
         </div>
       </section>
 
@@ -203,13 +273,86 @@
         <p class="empty-state hidden" id="transactions-empty">Aucune opération.</p>
       </section>
 
-      <!-- BILAN PATRIMONIAL (mode Investissement) — placeholder pour l'instant (demande
-           explicite). Distinct de #section-patrimony (page "Général" existante, actifs/passifs
-           manuels + portefeuille, inchangée) : appelé à devenir la vue consolidée du patrimoine
-           des enveloppes spécifiquement, une fois construite. -->
+      <!-- ANALYSE (mode Investissement, ex-"Bilan patrimonial") — vue FILTRÉE du patrimoine des
+           enveloppes (js/analyse.js) : période + enveloppe/type/établissement. Distinct de Vue
+           globale (jamais filtrée, js/portfolio-overview.js) et de #section-patrimony (page
+           "Général" existante, actifs/passifs manuels + ancien portefeuille, inchangée). -->
       <section class="section hidden" id="section-patrimoine">
-        <div class="empty-state">
-          <p>Bilan patrimonial — à venir</p>
+        <div class="donnees-toolbar">
+          <div id="analyse-period-filter-container"></div>
+          <div id="analyse-filter-envelope-slot"></div>
+          <div id="analyse-filter-type-slot"></div>
+          <div id="analyse-filter-etab-slot"></div>
+        </div>
+
+        <div class="kpi-grid-4">
+          <div class="flux-kpi-card fk-balance">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+            <div class="kpi-label">Valeur totale</div>
+            <div class="kpi-value" id="an-kpi-value">0 €</div>
+            <div class="kpi-trend" id="an-kpi-value-sub"></div>
+          </div>
+          <div class="flux-kpi-card fk-revenue">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
+            <div class="kpi-label">Performance</div>
+            <div class="kpi-value" id="an-kpi-perf">+0 €</div>
+            <div class="kpi-trend" id="an-kpi-perf-pct"></div>
+          </div>
+          <div class="flux-kpi-card fk-savings">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
+            <div class="kpi-label">Versements sur la période</div>
+            <div class="kpi-value" id="an-kpi-contrib">0 €</div>
+            <div class="kpi-trend">&nbsp;</div>
+          </div>
+          <div class="flux-kpi-card fk-return">
+            <div class="fk-smoke"></div>
+            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
+            <div class="kpi-label">Plus-value latente</div>
+            <div class="kpi-value" id="an-kpi-gain">0 €</div>
+            <div class="kpi-trend" id="an-kpi-gain-sub"></div>
+          </div>
+        </div>
+
+        <div class="chart-card mt-md">
+          <h3>Évolution de la valeur</h3>
+          <div class="chart-container chart-tall"><canvas id="chart-an-evolution"></canvas></div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Répartition par type</h3>
+            <div class="port-donut-wrap">
+              <div class="chart-container" style="height:200px"><canvas id="chart-an-type"></canvas></div>
+              <div id="an-type-legend" class="port-legend"></div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Répartition par établissement</h3>
+            <div class="port-donut-wrap">
+              <div class="chart-container" style="height:200px"><canvas id="chart-an-etab"></canvas></div>
+              <div id="an-etab-legend" class="port-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-md">
+          <h3>Détail par enveloppe</h3>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr>
+                <th>Nom</th><th>Type</th><th>Établissement</th>
+                <th class="text-right">Valeur actuelle</th>
+                <th class="text-right">Versements totaux</th>
+                <th class="text-right">Plus-value</th>
+                <th class="text-right">Performance</th>
+              </tr></thead>
+              <tbody id="analyse-tbody"></tbody>
+            </table>
+          </div>
+          <p class="empty-state hidden" id="analyse-empty">Aucune enveloppe.</p>
         </div>
       </section>
 
@@ -702,6 +845,9 @@
   <script src="js/investments.js"></script>
   <script src="js/envelopes.js"></script>
   <script src="js/transactions.js"></script>
+  <script src="js/portfolio-analytics.js"></script>
+  <script src="js/portfolio-overview.js"></script>
+  <script src="js/analyse.js"></script>
   <script src="js/expenses.js"></script>
   <script src="js/revenues.js"></script>
   <script src="js/flux.js"></script>
