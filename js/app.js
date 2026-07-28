@@ -256,20 +256,22 @@ const Dashboard = {
 // ---- Mode & Navigation ----
 
 const APP_MODES = {
-  // 4 onglets fixes (structure demandée telle quelle) : Vue globale et Bilan patrimonial sont
-  // des placeholders pour l'instant, Enveloppes/Transactions sont les vraies vues sur les
-  // données du nouveau modèle enveloppes+opérations (js/envelopes.js, js/transactions.js). Plus
-  // de dynamicSections (l'ancien onglet par compte, sur invest_investments/js/investments.js) :
-  // le nouveau modèle enveloppes le remplace, la structure demandée n'en a plus besoin. Le code
-  // et les données de l'ancien modèle "positions" restent en place (Dashboard/Patrimoine s'en
-  // servent toujours pour le calcul du patrimoine net), seule sa navigation dédiée disparaît.
+  // 4 onglets fixes (structure demandée telle quelle) : Vue globale (patrimoine consolidé, voir
+  // js/portfolio-overview.js) et Analyse (vue filtrée, ex-"Bilan patrimonial", voir js/analyse.js)
+  // sont maintenant de vraies vues, comme Enveloppes/Transactions, toutes sur le modèle
+  // enveloppes+opérations (js/envelopes.js, js/transactions.js) valorisé par
+  // js/portfolio-analytics.js. Plus de dynamicSections (l'ancien onglet par compte, sur
+  // invest_investments/js/investments.js) : le nouveau modèle enveloppes le remplace, la
+  // structure demandée n'en a plus besoin. Le code et les données de l'ancien modèle "positions"
+  // restent en place (Dashboard/Patrimoine s'en servent toujours pour le calcul du patrimoine
+  // net), seule sa navigation dédiée disparaît.
   investments: {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
       { id: 'envelopes', label: 'Enveloppes' },
       { id: 'transactions', label: 'Transactions' },
-      { id: 'patrimoine', label: 'Bilan patrimonial' },
+      { id: 'patrimoine', label: 'Analyse' },
     ],
     default: 'portfolio',
   },
@@ -392,14 +394,17 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    // Pas de case 'portfolio' ni 'patrimoine' : les 2 sont des placeholders statiques ("à
-    // venir") sans rien à calculer — le HTML de la section suffit, déjà rendu visible par la
-    // logique générique de bascule .hidden juste au-dessus, avant ce switch.
+    case 'portfolio':
+      Portfolio.render();
+      break;
     case 'envelopes':
       Envelopes.render();
       break;
     case 'transactions':
       Transactions.render();
+      break;
+    case 'patrimoine':
+      Analyse.render();
       break;
     case 'flux':
       Flux.render();
@@ -482,6 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Comparisons.init();
   Envelopes.init();
   Transactions.init();
+  Analyse.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

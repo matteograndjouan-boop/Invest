@@ -324,6 +324,64 @@ const Charts = {
     });
   },
 
+  // Donut générique paramétré par canvas id : `entries` = [{label, value, color}] déjà préparées
+  // par l'appelant (répartition par type/établissement — Vue globale/Analyse du mode
+  // Investissement, plusieurs instances possibles sur une même page, contrairement à
+  // investmentsByAccount qui cible toujours 'chart-port-account'). Même recette (cutout 68%,
+  // dégradé/ombre/glacis, légende native désactivée — consommée séparément par l'appelant via une
+  // légende HTML façon .port-legend).
+  genericDonut(canvasId, entries, centerLines) {
+    if (!entries.length) { this.destroy(canvasId); return; }
+    const opts = this._doughnutOptions(Utils.formatCurrency);
+    opts.cutout = '68%';
+    opts.spacing = 3;
+    opts.plugins.legend = { display: false };
+    this.create(canvasId, {
+      type: 'doughnut',
+      data: {
+        labels: entries.map(e => e.label),
+        datasets: [{ data: entries.map(e => e.value), backgroundColor: entries.map(e => e.color), borderWidth: 2, borderColor: '#131525' }],
+      },
+      options: opts,
+      plugins: [this._donutShadowPlugin(), this._donutGradientPlugin(), this._donutGlossPlugin(), ...(centerLines ? [this._centerTextPlugin(centerLines)] : [])],
+    });
+  },
+
+  // Courbe d'évolution générique paramétrée par canvas id : `points` = [{label, value}] déjà
+  // préparés par l'appelant. Même recette que portfolioEvolution (aire dégradée violette, tension
+  // 0.35) — plusieurs instances possibles (Vue globale = historique complet toutes enveloppes,
+  // Analyse = période filtrée + filtres enveloppe/type/établissement).
+  genericLineEvolution(canvasId, points) {
+    if (!points.length) { this.destroy(canvasId); return; }
+    this.create(canvasId, {
+      type: 'line',
+      data: {
+        labels: points.map(p => p.label),
+        datasets: [{
+          label: 'Valeur',
+          data: points.map(p => p.value),
+          borderColor: '#8b5cf6',
+          backgroundColor: this._vGrad('rgba(139,92,246,0.35)', 'rgba(139,92,246,0)'),
+          borderWidth: 3,
+          pointRadius: points.length > 1 ? 3 : 4,
+          pointBackgroundColor: '#8b5cf6',
+          pointBorderColor: '#131525',
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.35,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...this._tip(), callbacks: { label: (ctx) => ` ${Utils.formatCurrency(ctx.raw)}` } },
+        },
+        scales: { y: this._yAxis(this._dottedGrid({ beginAtZero: false })), x: this._xAxis() },
+      },
+    });
+  },
+
   expensesByCategory(expenses, month) {
     const monthExp = expenses.filter(e => Utils.getExpenseMonth(e) === month);
     const byCategory = {};
