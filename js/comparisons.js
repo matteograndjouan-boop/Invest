@@ -150,9 +150,12 @@ const Comparisons = {
   },
 
   // Lignes en div/grid (pas <table>, voir index.html) : chaque ligne catégorie porte une mini
-  // barre double (A/B) sous son nom, à l'échelle du MAX affiché sur tout le tableau (pas du total
-  // de la ligne) pour rester comparable d'une catégorie à l'autre — même barre pleine pour la
-  // plus grosse dépense des 2 périodes, les autres lui sont proportionnelles.
+  // barre double (A/B) sous son nom, à l'échelle du MAX DE LA LIGNE (pas du tableau entier) —
+  // la plus grosse des 2 périodes va toujours jusqu'à 100%, l'autre lui est proportionnelle :
+  // rend l'écart A/B immédiatement lisible catégorie par catégorie (demande explicite), au prix
+  // de ne plus pouvoir comparer l'AMPLEUR absolue d'une catégorie à l'autre sur ces mini-barres —
+  // déjà couvert par les montants en euros à côté, le graphique du dessus (échelle commune) et le
+  // tri par dépensé décroissant.
   _renderCatTable(expA, expB, totalA, totalB) {
     const rowsEl   = document.getElementById('comp-cat-rows');
     const totalRow = document.getElementById('comp-total-row');
@@ -173,12 +176,11 @@ const Comparisons = {
     }
     if (empty) empty.classList.add('hidden');
 
-    const maxAmount = Math.max(1, ...rows.flatMap(r => [r.amtA, r.amtB]));
-
     rowsEl.innerHTML = rows.map(({ cat, amtA, amtB, diff, pct }) => {
       const color = Utils.getCategoryColor(cat);
-      const barA  = (amtA / maxAmount * 100).toFixed(1);
-      const barB  = (amtB / maxAmount * 100).toFixed(1);
+      const rowMax = Math.max(1, amtA, amtB);
+      const barA  = (amtA / rowMax * 100).toFixed(1);
+      const barB  = (amtB / rowMax * 100).toFixed(1);
       return `<div class="cc-row">
         <div class="cc-cat"><span class="cc-dot" style="background:${color}"></span><span class="cc-name">${cat}</span></div>
         <div class="cc-amount">${amtA > 0 ? Utils.formatCurrency(amtA) : '<span class="cc-dash">—</span>'}</div>
