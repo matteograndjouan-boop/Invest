@@ -485,7 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
   Budget.init();
   DataEntry.init();
   Comparisons.init();
-  Portfolio.init();
   Envelopes.init();
   Transactions.init();
   Analyse.init();

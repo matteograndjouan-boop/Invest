@@ -133,13 +133,6 @@
            patrimonial (page "Général") continuent de lire l'ancien modèle pour le patrimoine net,
            eux inchangés. -->
       <section class="section hidden" id="section-portfolio">
-        <div class="donnees-toolbar">
-          <div id="pf-period-filter-container"></div>
-          <div id="pf-filter-envelope-slot"></div>
-          <div id="pf-filter-type-slot"></div>
-          <div id="pf-filter-etab-slot"></div>
-        </div>
-
         <div id="pf-content">
           <div class="kpi-grid-4">
             <div class="flux-kpi-card fk-balance">
@@ -161,7 +154,7 @@
               <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
               <div class="kpi-label">Versements totaux</div>
               <div class="kpi-value" id="pf-kpi-contrib">0 €</div>
-              <div class="kpi-trend" id="pf-kpi-contrib-sub"></div>
+              <div class="kpi-trend">Toutes enveloppes confondues</div>
             </div>
             <div class="flux-kpi-card fk-return">
               <div class="fk-smoke"></div>
@@ -194,7 +187,7 @@
                 <div class="kpi-badge">+</div>
                 <div class="kpi-label">Actifs</div>
                 <div class="kpi-value" id="pf-bilan-actifs">0 €</div>
-                <div class="kpi-sub" id="pf-bilan-actifs-sub"></div>
+                <div class="kpi-sub">Somme de toutes les enveloppes</div>
               </div>
               <div class="kpi-card danger">
                 <div class="kpi-badge">−</div>
@@ -212,7 +205,7 @@
         </div>
 
         <div class="empty-state hidden" id="pf-empty">
-          <p id="pf-empty-text">Aucune enveloppe. Rendez-vous dans l'onglet <strong>Enveloppes</strong> pour en créer une.</p>
+          <p>Aucune enveloppe. Rendez-vous dans l'onglet <strong>Enveloppes</strong> pour en créer une.</p>
         </div>
       </section>
 
