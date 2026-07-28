@@ -2644,60 +2644,15 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
         </div>
       </section>
 
-      <!-- PORTFOLIO — Vue globale -->
+      <!-- PORTFOLIO — Vue globale : placeholder pour l'instant (demande explicite). Doit à terme
+           afficher le patrimoine total consolidé de toutes les enveloppes — l'ancien tableau de
+           bord (positions valorisées invest_investments : KPI, allocation, évolution) reste
+           entièrement fonctionnel en JS (js/investments.js, inchangé) mais n'a plus de bouton
+           d'accès depuis la nav ; Dashboard/Bilan patrimonial (page "Général") continuent de
+           lire ces mêmes données pour le calcul du patrimoine net, eux inchangés. -->
       <section class="section hidden" id="section-portfolio">
-        <div class="section-header" style="justify-content:flex-end">
-          <div class="header-actions">
-            <button class="btn-secondary" id="invest-import-btn">📊 Importer</button>
-            <div id="inv-evo-window-slot"></div>
-            <button class="fab-add" onclick="Investments.openAddForm()" title="Ajouter un investissement">+</button>
-          </div>
-        </div>
-        <div class="kpi-grid-4">
-          <div class="flux-kpi-card fk-balance">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
-            <div class="kpi-label">Valeur du portefeuille</div>
-            <div class="kpi-value" id="inv-kpi-value">0 €</div>
-            <div class="kpi-trend" id="inv-kpi-value-trend"></div>
-          </div>
-          <div class="flux-kpi-card fk-revenue" id="inv-kpi-gain-card">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon" id="inv-kpi-gain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="15 5 21 5 21 11"/></svg></span>
-            <div class="kpi-label">Plus-value latente</div>
-            <div class="kpi-value" id="inv-kpi-gain">+0 €</div>
-            <div class="kpi-trend" id="inv-kpi-gain-pct"></div>
-          </div>
-          <div class="flux-kpi-card fk-return">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
-            <div class="kpi-label">Rendement annuel</div>
-            <div class="kpi-value" id="inv-kpi-return">— %</div>
-            <div class="kpi-trend">Estimé net</div>
-          </div>
-          <div class="flux-kpi-card fk-savings">
-            <div class="fk-smoke"></div>
-            <span class="fk-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4Z"/></svg></span>
-            <div class="kpi-label">Versement moyen</div>
-            <div class="kpi-value" id="inv-kpi-avg">0 €</div>
-            <div class="kpi-trend">Par mois</div>
-          </div>
-        </div>
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>Allocation du patrimoine</h3>
-            <div class="port-donut-wrap">
-              <div class="chart-container" style="height:180px"><canvas id="chart-port-account"></canvas></div>
-              <div id="port-alloc-legend" class="port-legend"></div>
-            </div>
-          </div>
-          <div class="chart-card">
-            <div class="card-header-row">
-              <h3>Évolution du patrimoine</h3>
-              <span id="inv-evo-trend" class="inv-evo-trend"></span>
-            </div>
-            <div class="chart-container"><canvas id="chart-port-evolution"></canvas></div>
-          </div>
+        <div class="empty-state">
+          <p>Vue globale — à venir</p>
         </div>
       </section>
 
@@ -2715,6 +2670,10 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
 
         <!-- List view -->
         <div id="envelopes-list-view">
+          <div class="donnees-toolbar">
+            <div id="envelopes-filter-type-slot"></div>
+            <div id="envelopes-filter-etab-slot"></div>
+          </div>
           <div id="envelopes-grid" class="envelopes-grid"></div>
           <div class="empty-state hidden" id="envelopes-empty">
             <p>Aucune enveloppe. Cliquez sur <strong>+ Nouvelle enveloppe</strong> pour commencer.</p>
@@ -2734,6 +2693,41 @@ body[data-view="comparisons"] #period-filter-container .period-compact > .period
             </div>
             <p class="empty-state hidden" id="envelope-ops-empty">Aucune opération.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- TRANSACTIONS — liste brute de toutes les opérations, toutes enveloppes confondues
+           (js/transactions.js) : pas de mise en forme particulière pour l'instant (demande
+           explicite), juste les données déjà saisies via Enveloppes avec quelques filtres. -->
+      <section class="section hidden" id="section-transactions">
+        <div class="donnees-toolbar">
+          <div id="transactions-filter-envelope-slot"></div>
+          <div id="transactions-filter-type-slot"></div>
+          <div id="transactions-filter-etab-slot"></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="text-muted" style="font-size:12px">Du</span>
+            <input type="date" id="transactions-filter-start">
+            <span class="text-muted" style="font-size:12px">au</span>
+            <input type="date" id="transactions-filter-end">
+          </div>
+          <span id="transactions-count" class="donnees-count"></span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Enveloppe</th><th>Établissement</th><th>Type</th><th>Détail</th><th class="text-right">Montant</th></tr></thead>
+            <tbody id="transactions-tbody"></tbody>
+          </table>
+        </div>
+        <p class="empty-state hidden" id="transactions-empty">Aucune opération.</p>
+      </section>
+
+      <!-- BILAN PATRIMONIAL (mode Investissement) — placeholder pour l'instant (demande
+           explicite). Distinct de #section-patrimony (page "Général" existante, actifs/passifs
+           manuels + portefeuille, inchangée) : appelé à devenir la vue consolidée du patrimoine
+           des enveloppes spécifiquement, une fois construite. -->
+      <section class="section hidden" id="section-patrimoine">
+        <div class="empty-state">
+          <p>Bilan patrimonial — à venir</p>
         </div>
       </section>
 
@@ -5623,6 +5617,37 @@ const Envelopes = {
     amount:    { label: 'Montant (€)', type: 'number', step: '0.01', required: true },
   },
 
+  // Filtres liste : ids des dropdowns Dropdown.mount (voir _populateFilters), pas d'état
+  // séparé sur l'objet — la valeur courante se lit directement sur le hidden input au moment du
+  // render, comme DataEntry/Expenses le font déjà pour leurs propres filtres.
+  init() {
+    this._populateFilters();
+    const typeFilter = document.getElementById('envelopes-filter-type');
+    const etabFilter = document.getElementById('envelopes-filter-etab');
+    if (typeFilter) typeFilter.addEventListener('change', () => this.render());
+    if (etabFilter) etabFilter.addEventListener('change', () => this.render());
+  },
+
+  // Rappelée à chaque render() de la liste (pas seulement à init()) : la liste des établissements
+  // peut grandir à tout moment (créer une enveloppe peut en ajouter un nouveau) — sans ce
+  // rafraîchissement, un établissement tout juste utilisé resterait absent du filtre jusqu'au
+  // prochain rechargement complet de l'app. Dropdown.mount met à jour EN PLACE (pas de perte du
+  // listener attaché une fois dans init()) et réinjecte la sélection courante si elle existe
+  // toujours dans la liste reconstruite (même schéma que DataEntry._populateCatFilter).
+  _populateFilters() {
+    const typeVal = document.getElementById('envelopes-filter-type')?.value || '';
+    const typeOpts = ['<option value="">Tous les types</option>']
+      .concat(Utils.ENVELOPE_TYPES.map(t => `<option value="${t.key}"${t.key === typeVal ? ' selected' : ''}>${t.label}</option>`))
+      .join('');
+    Dropdown.mount('envelopes-filter-type-slot', 'envelopes-filter-type', typeOpts);
+
+    const etabVal = document.getElementById('envelopes-filter-etab')?.value || '';
+    const etabOpts = ['<option value="">Tous les établissements</option>']
+      .concat(Storage.getEtablissements().map(e => `<option value="${e}"${e === etabVal ? ' selected' : ''}>${e}</option>`))
+      .join('');
+    Dropdown.mount('envelopes-filter-etab-slot', 'envelopes-filter-etab', etabOpts);
+  },
+
   render() {
     if (this._currentEnvelopeId) this._renderDetail(this._currentEnvelopeId);
     else this._renderList();
@@ -5647,14 +5672,26 @@ const Envelopes = {
     if (addBtn)   addBtn.textContent = '+ Nouvelle enveloppe';
     if (backBtn)  backBtn.classList.add('hidden');
 
-    const envelopes = Storage.getEnvelopes();
+    this._populateFilters();
+    const allEnvelopes = Storage.getEnvelopes();
+    const typeFilter = document.getElementById('envelopes-filter-type')?.value || '';
+    const etabFilter = document.getElementById('envelopes-filter-etab')?.value || '';
+    let envelopes = allEnvelopes;
+    if (typeFilter) envelopes = envelopes.filter(e => e.type === typeFilter);
+    if (etabFilter) envelopes = envelopes.filter(e => e.etablissement === etabFilter);
+
     const grid  = document.getElementById('envelopes-grid');
     const empty = document.getElementById('envelopes-empty');
     if (!grid) return;
 
     if (!envelopes.length) {
       grid.innerHTML = '';
-      if (empty) empty.classList.remove('hidden');
+      if (empty) {
+        empty.querySelector('p').innerHTML = allEnvelopes.length
+          ? 'Aucune enveloppe ne correspond à ces filtres.'
+          : 'Aucune enveloppe. Cliquez sur <strong>+ Nouvelle enveloppe</strong> pour commencer.';
+        empty.classList.remove('hidden');
+      }
       return;
     }
     if (empty) empty.classList.add('hidden');
@@ -6039,6 +6076,114 @@ const Envelopes = {
     if (!confirm('Supprimer cette opération ?')) return;
     Storage.saveOperations(Storage.getOperations().filter(o => o.id !== id));
     this.render();
+  },
+};
+
+</script>
+<script>
+// Onglet Transactions : liste brute de TOUTES les opérations, toutes enveloppes confondues
+// (Storage.getOperations), avec 4 filtres (enveloppe/type d'opération/établissement/période).
+// Pas de mise en forme particulière pour l'instant (demande explicite) — un tableau simple, même
+// classe .data-table que partout ailleurs, aucune saisie ici (l'ajout/édition/suppression
+// d'opérations reste dans Enveloppes, voir js/envelopes.js, dont ce module réutilise les
+// helpers _opDef/_opDetailText plutôt que de dupliquer cette logique).
+const Transactions = {
+  init() {
+    this._populateFilters();
+    ['envelope', 'type', 'etab'].forEach(key => {
+      const el = document.getElementById(`transactions-filter-${key}`);
+      if (el) el.addEventListener('change', () => this.render());
+    });
+    const start = document.getElementById('transactions-filter-start');
+    const end = document.getElementById('transactions-filter-end');
+    if (start) start.addEventListener('change', () => this.render());
+    if (end) end.addEventListener('change', () => this.render());
+  },
+
+  // Types d'opération de TOUS les types d'enveloppe réunis, dédupliqués par clé — "achat" par ex.
+  // apparaît dans PEA/Compte-titres/Crypto mais ne doit compter qu'une fois dans ce filtre global
+  // (contrairement à Enveloppes, où les types disponibles sont déjà bornés à UNE enveloppe).
+  _allOperationDefs() {
+    const seen = new Map();
+    Object.values(Utils.ENVELOPE_OPERATIONS).flat().forEach(def => {
+      if (!seen.has(def.key)) seen.set(def.key, def.label);
+    });
+    return [...seen.entries()].map(([key, label]) => ({ key, label }));
+  },
+
+  // Même schéma que Envelopes._populateFilters (Dropdown.mount, ré-appelé à chaque render — les
+  // enveloppes/établissements disponibles peuvent changer entre 2 visites de cet onglet).
+  _populateFilters() {
+    const envVal = document.getElementById('transactions-filter-envelope')?.value || '';
+    const envOpts = ['<option value="">Toutes les enveloppes</option>']
+      .concat(Storage.getEnvelopes().map(e => `<option value="${e.id}"${e.id === envVal ? ' selected' : ''}>${e.name}</option>`))
+      .join('');
+    Dropdown.mount('transactions-filter-envelope-slot', 'transactions-filter-envelope', envOpts);
+
+    const typeVal = document.getElementById('transactions-filter-type')?.value || '';
+    const typeOpts = ['<option value="">Tous les types</option>']
+      .concat(this._allOperationDefs().map(d => `<option value="${d.key}"${d.key === typeVal ? ' selected' : ''}>${d.label}</option>`))
+      .join('');
+    Dropdown.mount('transactions-filter-type-slot', 'transactions-filter-type', typeOpts);
+
+    const etabVal = document.getElementById('transactions-filter-etab')?.value || '';
+    const etabOpts = ['<option value="">Tous les établissements</option>']
+      .concat(Storage.getEtablissements().map(e => `<option value="${e}"${e === etabVal ? ' selected' : ''}>${e}</option>`))
+      .join('');
+    Dropdown.mount('transactions-filter-etab-slot', 'transactions-filter-etab', etabOpts);
+  },
+
+  render() {
+    this._populateFilters();
+
+    const envelopes = Storage.getEnvelopes();
+    const envById = new Map(envelopes.map(e => [e.id, e]));
+    const allOps = Storage.getOperations();
+
+    const envFilter  = document.getElementById('transactions-filter-envelope')?.value || '';
+    const typeFilter = document.getElementById('transactions-filter-type')?.value || '';
+    const etabFilter = document.getElementById('transactions-filter-etab')?.value || '';
+    const start = document.getElementById('transactions-filter-start')?.value || '';
+    const end   = document.getElementById('transactions-filter-end')?.value || '';
+
+    let ops = allOps;
+    if (envFilter)  ops = ops.filter(o => o.envelopeId === envFilter);
+    if (typeFilter) ops = ops.filter(o => o.type === typeFilter);
+    if (etabFilter) ops = ops.filter(o => envById.get(o.envelopeId)?.etablissement === etabFilter);
+    if (start)      ops = ops.filter(o => o.date >= start);
+    if (end)        ops = ops.filter(o => o.date <= end);
+    ops = [...ops].sort((a, b) => b.date.localeCompare(a.date));
+
+    const tbody   = document.getElementById('transactions-tbody');
+    const empty   = document.getElementById('transactions-empty');
+    const countEl = document.getElementById('transactions-count');
+    if (!tbody) return;
+
+    if (countEl) countEl.textContent = `${ops.length} opération${ops.length > 1 ? 's' : ''}`;
+
+    if (!ops.length) {
+      tbody.innerHTML = '';
+      if (empty) {
+        empty.textContent = allOps.length ? 'Aucune opération pour ces filtres.' : 'Aucune opération.';
+        empty.classList.remove('hidden');
+      }
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    tbody.innerHTML = ops.map(op => {
+      const env = envById.get(op.envelopeId);
+      const def = env ? Envelopes._opDef(env.type, op.type) : null;
+      const amount = op.amount != null ? op.amount : (op.quantity != null && op.unitPrice != null ? op.quantity * op.unitPrice : null);
+      return `<tr>
+        <td>${Utils.formatDate(op.date)}</td>
+        <td>${env ? env.name : '—'}</td>
+        <td>${env ? (env.etablissement || '—') : '—'}</td>
+        <td>${def ? def.label : op.type}</td>
+        <td>${Envelopes._opDetailText(op)}</td>
+        <td class="text-right">${amount != null ? Utils.formatCurrency(amount) : '—'}</td>
+      </tr>`;
+    }).join('');
   },
 };
 
@@ -13009,18 +13154,21 @@ const Dashboard = {
 // ---- Mode & Navigation ----
 
 const APP_MODES = {
+  // 4 onglets fixes (structure demandée telle quelle) : Vue globale et Bilan patrimonial sont
+  // des placeholders pour l'instant, Enveloppes/Transactions sont les vraies vues sur les
+  // données du nouveau modèle enveloppes+opérations (js/envelopes.js, js/transactions.js). Plus
+  // de dynamicSections (l'ancien onglet par compte, sur invest_investments/js/investments.js) :
+  // le nouveau modèle enveloppes le remplace, la structure demandée n'en a plus besoin. Le code
+  // et les données de l'ancien modèle "positions" restent en place (Dashboard/Patrimoine s'en
+  // servent toujours pour le calcul du patrimoine net), seule sa navigation dédiée disparaît.
   investments: {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
       { id: 'envelopes', label: 'Enveloppes' },
+      { id: 'transactions', label: 'Transactions' },
+      { id: 'patrimoine', label: 'Bilan patrimonial' },
     ],
-    // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
-    // affichage des onglets, pas figé comme les autres modes.
-    dynamicSections: () => {
-      const accounts = [...new Set(Storage.getInvestments().map(i => i.account || 'autre'))];
-      return accounts.map(acc => ({ id: `account-${acc}`, label: Utils.INVESTMENT_ACCOUNTS[acc] || acc }));
-    },
     default: 'portfolio',
   },
   expenses: {
@@ -13093,6 +13241,11 @@ function navigateTo(sectionId) {
     categories: 'categories',
     dashboard: 'dashboard',
     patrimony: 'patrimony',
+    transactions: 'transactions',
+    // 'patrimoine' (nouvel onglet placeholder du mode Investissement) n'a pas besoin d'entrée
+    // ici : sectionMap[sectionId] || sectionId retombe déjà sur 'patrimoine' tel quel, qui est
+    // exactement l'id HTML voulu (#section-patrimoine) — distinct de 'patrimony' ci-dessus
+    // (#section-patrimony, la page "Général" existante, inchangée).
   };
 
   const htmlSectionId = sectionId.startsWith('account-') ? 'portfolio-account' : (sectionMap[sectionId] || sectionId);
@@ -13137,11 +13290,14 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    case 'portfolio':
-      Investments.renderPortfolio();
-      break;
+    // Pas de case 'portfolio' ni 'patrimoine' : les 2 sont des placeholders statiques ("à
+    // venir") sans rien à calculer — le HTML de la section suffit, déjà rendu visible par la
+    // logique générique de bascule .hidden juste au-dessus, avant ce switch.
     case 'envelopes':
       Envelopes.render();
+      break;
+    case 'transactions':
+      Transactions.render();
       break;
     case 'flux':
       Flux.render();
@@ -13222,6 +13378,8 @@ document.addEventListener('DOMContentLoaded', () => {
   Budget.init();
   DataEntry.init();
   Comparisons.init();
+  Envelopes.init();
+  Transactions.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {

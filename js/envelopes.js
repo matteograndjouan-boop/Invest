@@ -22,6 +22,37 @@ const Envelopes = {
     amount:    { label: 'Montant (€)', type: 'number', step: '0.01', required: true },
   },
 
+  // Filtres liste : ids des dropdowns Dropdown.mount (voir _populateFilters), pas d'état
+  // séparé sur l'objet — la valeur courante se lit directement sur le hidden input au moment du
+  // render, comme DataEntry/Expenses le font déjà pour leurs propres filtres.
+  init() {
+    this._populateFilters();
+    const typeFilter = document.getElementById('envelopes-filter-type');
+    const etabFilter = document.getElementById('envelopes-filter-etab');
+    if (typeFilter) typeFilter.addEventListener('change', () => this.render());
+    if (etabFilter) etabFilter.addEventListener('change', () => this.render());
+  },
+
+  // Rappelée à chaque render() de la liste (pas seulement à init()) : la liste des établissements
+  // peut grandir à tout moment (créer une enveloppe peut en ajouter un nouveau) — sans ce
+  // rafraîchissement, un établissement tout juste utilisé resterait absent du filtre jusqu'au
+  // prochain rechargement complet de l'app. Dropdown.mount met à jour EN PLACE (pas de perte du
+  // listener attaché une fois dans init()) et réinjecte la sélection courante si elle existe
+  // toujours dans la liste reconstruite (même schéma que DataEntry._populateCatFilter).
+  _populateFilters() {
+    const typeVal = document.getElementById('envelopes-filter-type')?.value || '';
+    const typeOpts = ['<option value="">Tous les types</option>']
+      .concat(Utils.ENVELOPE_TYPES.map(t => `<option value="${t.key}"${t.key === typeVal ? ' selected' : ''}>${t.label}</option>`))
+      .join('');
+    Dropdown.mount('envelopes-filter-type-slot', 'envelopes-filter-type', typeOpts);
+
+    const etabVal = document.getElementById('envelopes-filter-etab')?.value || '';
+    const etabOpts = ['<option value="">Tous les établissements</option>']
+      .concat(Storage.getEtablissements().map(e => `<option value="${e}"${e === etabVal ? ' selected' : ''}>${e}</option>`))
+      .join('');
+    Dropdown.mount('envelopes-filter-etab-slot', 'envelopes-filter-etab', etabOpts);
+  },
+
   render() {
     if (this._currentEnvelopeId) this._renderDetail(this._currentEnvelopeId);
     else this._renderList();
@@ -46,14 +77,26 @@ const Envelopes = {
     if (addBtn)   addBtn.textContent = '+ Nouvelle enveloppe';
     if (backBtn)  backBtn.classList.add('hidden');
 
-    const envelopes = Storage.getEnvelopes();
+    this._populateFilters();
+    const allEnvelopes = Storage.getEnvelopes();
+    const typeFilter = document.getElementById('envelopes-filter-type')?.value || '';
+    const etabFilter = document.getElementById('envelopes-filter-etab')?.value || '';
+    let envelopes = allEnvelopes;
+    if (typeFilter) envelopes = envelopes.filter(e => e.type === typeFilter);
+    if (etabFilter) envelopes = envelopes.filter(e => e.etablissement === etabFilter);
+
     const grid  = document.getElementById('envelopes-grid');
     const empty = document.getElementById('envelopes-empty');
     if (!grid) return;
 
     if (!envelopes.length) {
       grid.innerHTML = '';
-      if (empty) empty.classList.remove('hidden');
+      if (empty) {
+        empty.querySelector('p').innerHTML = allEnvelopes.length
+          ? 'Aucune enveloppe ne correspond à ces filtres.'
+          : 'Aucune enveloppe. Cliquez sur <strong>+ Nouvelle enveloppe</strong> pour commencer.';
+        empty.classList.remove('hidden');
+      }
       return;
     }
     if (empty) empty.classList.add('hidden');

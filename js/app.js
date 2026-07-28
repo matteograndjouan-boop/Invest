@@ -256,18 +256,21 @@ const Dashboard = {
 // ---- Mode & Navigation ----
 
 const APP_MODES = {
+  // 4 onglets fixes (structure demandée telle quelle) : Vue globale et Bilan patrimonial sont
+  // des placeholders pour l'instant, Enveloppes/Transactions sont les vraies vues sur les
+  // données du nouveau modèle enveloppes+opérations (js/envelopes.js, js/transactions.js). Plus
+  // de dynamicSections (l'ancien onglet par compte, sur invest_investments/js/investments.js) :
+  // le nouveau modèle enveloppes le remplace, la structure demandée n'en a plus besoin. Le code
+  // et les données de l'ancien modèle "positions" restent en place (Dashboard/Patrimoine s'en
+  // servent toujours pour le calcul du patrimoine net), seule sa navigation dédiée disparaît.
   investments: {
     label: 'Investissements',
     sections: [
       { id: 'portfolio', label: 'Vue globale' },
       { id: 'envelopes', label: 'Enveloppes' },
+      { id: 'transactions', label: 'Transactions' },
+      { id: 'patrimoine', label: 'Bilan patrimonial' },
     ],
-    // Un onglet par compte réellement utilisé (a au moins une position) — recalculé à chaque
-    // affichage des onglets, pas figé comme les autres modes.
-    dynamicSections: () => {
-      const accounts = [...new Set(Storage.getInvestments().map(i => i.account || 'autre'))];
-      return accounts.map(acc => ({ id: `account-${acc}`, label: Utils.INVESTMENT_ACCOUNTS[acc] || acc }));
-    },
     default: 'portfolio',
   },
   expenses: {
@@ -340,6 +343,11 @@ function navigateTo(sectionId) {
     categories: 'categories',
     dashboard: 'dashboard',
     patrimony: 'patrimony',
+    transactions: 'transactions',
+    // 'patrimoine' (nouvel onglet placeholder du mode Investissement) n'a pas besoin d'entrée
+    // ici : sectionMap[sectionId] || sectionId retombe déjà sur 'patrimoine' tel quel, qui est
+    // exactement l'id HTML voulu (#section-patrimoine) — distinct de 'patrimony' ci-dessus
+    // (#section-patrimony, la page "Général" existante, inchangée).
   };
 
   const htmlSectionId = sectionId.startsWith('account-') ? 'portfolio-account' : (sectionMap[sectionId] || sectionId);
@@ -384,11 +392,14 @@ function navigateTo(sectionId) {
     case 'dashboard':
       Dashboard.render();
       break;
-    case 'portfolio':
-      Investments.renderPortfolio();
-      break;
+    // Pas de case 'portfolio' ni 'patrimoine' : les 2 sont des placeholders statiques ("à
+    // venir") sans rien à calculer — le HTML de la section suffit, déjà rendu visible par la
+    // logique générique de bascule .hidden juste au-dessus, avant ce switch.
     case 'envelopes':
       Envelopes.render();
+      break;
+    case 'transactions':
+      Transactions.render();
       break;
     case 'flux':
       Flux.render();
@@ -469,6 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
   Budget.init();
   DataEntry.init();
   Comparisons.init();
+  Envelopes.init();
+  Transactions.init();
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {
