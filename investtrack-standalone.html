@@ -6487,7 +6487,17 @@ const PortfolioAnalytics = {
         cash -= op.amount || 0;
       } else if (op.type === 'achat') {
         const qty = op.quantity || 0, price = op.unitPrice || 0;
-        cash -= qty * price;
+        // Jamais de cash négatif ici : un achat sans versement préalable enregistré est un cas
+        // COURANT (l'utilisateur note l'achat mais pas le dépôt qui l'a financé), pas une erreur
+        // de saisie — sans ce plancher, la position achetée se retrouvait "annulée" par un cash
+        // négatif de même montant, donnant une valeur totale à 0 € qui faisait disparaître
+        // l'enveloppe des totaux (retour utilisateur : "il ajoute pas la valeur du PEA"). N'affecte
+        // aucune enveloppe déjà correctement financée (le plancher ne joue que si cash − coût < 0,
+        // donc aucun changement quand un versement suffisant précède l'achat). Contrairement à
+        // retrait/transfert_sortant (laissés tels quels : un cash négatif y reste un signal utile
+        // d'incohérence de saisie), un achat représente toujours un investissement réel qui doit
+        // se voir dans la valeur totale, même quand sa source de financement n'a pas été loggée.
+        cash = Math.max(0, cash - qty * price);
         const key = this._posKey(op);
         const pos = positions.get(key) || { qty: 0, lastPrice: 0, name: op.assetName, ticker: op.ticker };
         pos.qty += qty;
