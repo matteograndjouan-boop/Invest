@@ -165,7 +165,86 @@ const Envelopes = {
     if (infoCard) infoCard.innerHTML = this._envelopeInfoHtml(env);
 
     const ops = Storage.getOperations().filter(o => o.envelopeId === id).sort((a, b) => b.date.localeCompare(a.date));
+    this._renderPerformanceCard(env, ops);
     this._renderOpsTable(ops, env);
+  },
+
+  // Opération "mise à jour de valeur" dédiée par type d'enveloppe (voir Utils.ENVELOPE_OPERATIONS)
+  // — sert de base à l'historique replié/déplié ci-dessous. PEA/Compte-titres/Crypto n'en ont pas
+  // (leur valeur se déduit des achats/ventes, déjà visibles dans le tableau "Opérations" complet
+  // juste en dessous) : rien à dupliquer ici pour ces types.
+  _VALUE_UPDATE_OP: {
+    assurance_vie: 'maj_valeur',
+    livret: 'maj_solde',
+    immobilier: 'maj_valeur_estimee',
+    produit_structure: 'maj_valeur',
+  },
+
+  // Versements/valeur actuelle/plus-value/performance calculés via PortfolioAnalytics (même
+  // moteur que Vue globale/Analyse, aucun calcul dupliqué ici) — libellés adaptés par type pour
+  // rester lisibles (ex. "Intérêts générés" plutôt que "Plus-value" pour un Livret). `netInvested`
+  // (pas `contributions`) sert de base affichée : c'est exactement le dénominateur utilisé pour
+  // la plus-value/performance juste à côté, donc l'arithmétique affichée reste vérifiable
+  // (valeur actuelle − ce montant = plus-value affichée), y compris quand il inclut un achat non
+  // couvert par un versement (voir PortfolioAnalytics._cashLedger/implicitFunding) ou, pour
+  // l'immobilier, la 1ère estimation de valeur saisie ("prix d'achat").
+  _renderPerformanceCard(env, envOps) {
+    const card = document.getElementById('envelope-perf-card');
+    if (!card) return;
+    const m = PortfolioAnalytics.envelopeMetrics(env, Storage.getOperations(), null, Utils.getToday());
+
+    let contribLabel = 'Versements totaux', gainLabel = 'Plus-value';
+    if (env.type === 'livret') { contribLabel = 'Versements nets'; gainLabel = 'Intérêts générés'; }
+    else if (env.type === 'immobilier') { contribLabel = "Prix d'achat"; gainLabel = 'Plus-value latente'; }
+
+    const gainCls = m.gain === null ? '' : (m.gain >= 0 ? 'positive' : 'negative');
+    const gainTxt = m.gain === null ? '—' : (m.gain >= 0 ? '+' : '−') + Utils.formatCurrency(Math.abs(m.gain));
+    const pctTxt  = m.gainPct === null ? '—' : Utils.formatPercent(m.gainPct);
+
+    // Patrimoine net (valeur − capital restant dû) : uniquement pertinent pour l'immobilier, seul
+    // type portant un passif dans ce modèle (voir PortfolioAnalytics.envelopeLiability).
+    const netWorthItem = env.type === 'immobilier'
+      ? `<div class="env-info-item"><span class="text-muted">Patrimoine net</span><strong>${Utils.formatCurrency(m.value - m.liability)}</strong></div>`
+      : '';
+
+    card.innerHTML = `
+      <h3>Performance</h3>
+      <div class="env-info-grid">
+        <div class="env-info-item"><span class="text-muted">${contribLabel}</span><strong>${m.netInvested !== null ? Utils.formatCurrency(m.netInvested) : '—'}</strong></div>
+        <div class="env-info-item"><span class="text-muted">Valeur actuelle</span><strong>${Utils.formatCurrency(m.value)}</strong></div>
+        <div class="env-info-item"><span class="text-muted">${gainLabel}</span><strong class="${gainCls}">${gainTxt}</strong></div>
+        <div class="env-info-item"><span class="text-muted">Performance</span><strong class="${gainCls}">${pctTxt}</strong></div>
+        ${netWorthItem}
+      </div>
+      ${this._historiqueHtml(env, envOps)}`;
+  },
+
+  // Affiche seulement la DERNIÈRE mise à jour de valeur par défaut ; les précédentes restent
+  // repliées derrière "Voir l'historique" (demande explicite) — vide (pas de bouton du tout) s'il
+  // n'y a encore aucune mise à jour, ou si le type d'enveloppe n'en a pas (voir _VALUE_UPDATE_OP).
+  _historiqueHtml(env, envOps) {
+    const opType = this._VALUE_UPDATE_OP[env.type];
+    if (!opType) return '';
+    const updates = envOps.filter(o => o.type === opType && o.amount != null).sort((a, b) => b.date.localeCompare(a.date));
+    if (!updates.length) return '';
+    const [latest, ...older] = updates;
+    const rows = older.map(o => `<tr><td>${Utils.formatDate(o.date)}</td><td class="text-right">${Utils.formatCurrency(o.amount)}</td></tr>`).join('');
+    return `
+      <div class="mt-md">
+        <p class="text-muted" style="margin:0 0 8px">Dernière mise à jour : ${Utils.formatDate(latest.date)} — <strong>${Utils.formatCurrency(latest.amount)}</strong></p>
+        ${older.length ? `
+          <button type="button" class="btn-secondary btn-sm" onclick="Envelopes._toggleHistorique()">Voir l'historique (${older.length})</button>
+          <div class="table-wrapper hidden mt-md" id="env-historique-table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th class="text-right">Valeur</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>` : ''}
+      </div>`;
+  },
+
+  _toggleHistorique() {
+    document.getElementById('env-historique-table-wrap')?.classList.toggle('hidden');
   },
 
   _envelopeInfoHtml(env) {

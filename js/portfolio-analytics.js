@@ -44,6 +44,12 @@ const PortfolioAnalytics = {
       .sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id)));
 
     let cash = 0;
+    // Cumul des achats non couverts par du cash déjà déposé (voir envelopeMetrics) — un apport
+    // "implicite" : l'utilisateur a loggé l'achat mais pas le versement qui l'a financé, ce qui
+    // reste un investissement réel et doit compter dans la base de coût, sans pour autant
+    // apparaître dans "Versements totaux" (ce champ reste la somme des VRAIS versements, voir
+    // envelopeContributions, séparé et inchangé).
+    let implicitFunding = 0;
     const positions = new Map();
 
     sorted.forEach(op => {
@@ -53,6 +59,7 @@ const PortfolioAnalytics = {
         cash -= op.amount || 0;
       } else if (op.type === 'achat') {
         const qty = op.quantity || 0, price = op.unitPrice || 0;
+        const cost = qty * price;
         // Jamais de cash négatif ici : un achat sans versement préalable enregistré est un cas
         // COURANT (l'utilisateur note l'achat mais pas le dépôt qui l'a financé), pas une erreur
         // de saisie — sans ce plancher, la position achetée se retrouvait "annulée" par un cash
@@ -63,7 +70,8 @@ const PortfolioAnalytics = {
         // retrait/transfert_sortant (laissés tels quels : un cash négatif y reste un signal utile
         // d'incohérence de saisie), un achat représente toujours un investissement réel qui doit
         // se voir dans la valeur totale, même quand sa source de financement n'a pas été loggée.
-        cash = Math.max(0, cash - qty * price);
+        implicitFunding += Math.max(0, cost - cash);
+        cash = Math.max(0, cash - cost);
         const key = this._posKey(op);
         const pos = positions.get(key) || { qty: 0, lastPrice: 0, name: op.assetName, ticker: op.ticker };
         pos.qty += qty;
@@ -85,7 +93,7 @@ const PortfolioAnalytics = {
       // voir envelopeLiability.
     });
 
-    return { cash, positions };
+    return { cash, positions, implicitFunding };
   },
 
   // Valeur totale d'UNE enveloppe (opérations déjà filtrées) à `cutoff` (falsy = valeur actuelle,
@@ -130,6 +138,16 @@ const PortfolioAnalytics = {
     return matches.length ? matches[matches.length - 1].amount : null;
   },
 
+  // Symétrique de _latestOpAmount : la PREMIÈRE (pas la dernière) — sert de "prix d'achat" pour
+  // l'immobilier (1ère estimation de valeur saisie), à défaut de toute opération de versement dans
+  // ce type d'enveloppe.
+  _firstOpAmount(envOps, opType, cutoff) {
+    const matches = envOps
+      .filter(o => o.type === opType && o.amount != null && (!cutoff || o.date <= cutoff))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return matches.length ? matches[0].amount : null;
+  },
+
   // Passif d'une enveloppe (capital restant dû) : dernière opération "maj_capital_restant" connue
   // à `cutoff`, sinon le champ statique saisi à la création de l'enveloppe (remainingLoanCapital)
   // — seul un type 'immobilier' peut porter un passif dans ce modèle.
@@ -142,18 +160,38 @@ const PortfolioAnalytics = {
 
   // Gain/performance "à date" — délibérément simplifié en gain TOTAL depuis l'origine jusqu'à
   // `end` (pas de performance pondérée dans le temps / period-delta, trop complexe pour la
-  // fiabilité visée ici) : valeur à `end` moins net investi depuis toujours jusqu'à `end`. gain
-  // reste `null` (affiché "—" par les appelants) quand netInvested <= 0 — aucune base de coût
-  // (ex. Immobilier, qui n'a jamais d'opération de versement) plutôt qu'un pourcentage trompeur.
+  // fiabilité visée ici) : valeur à `end` moins un coût de référence (netInvested) calculé
+  // différemment selon le type :
+  //   - Immobilier (jamais de versement dans ce modèle) : coût de référence = 1ère estimation de
+  //     valeur saisie ("prix d'achat"), voir _firstOpAmount. gain reste `null` tant qu'aucune
+  //     estimation n'a jamais été saisie.
+  //   - Tous les autres types : versements − retraits + apports implicites (achats non couverts
+  //     par du cash déjà déposé, voir _cashLedger/implicitFunding — compte comme un investissement
+  //     réel dans le coût de référence SANS apparaître dans "Versements totaux", qui reste la
+  //     somme des VRAIS versements). gain reste `null` (affiché "—") quand ce coût de référence
+  //     est <= 0 — aucune base de coût du tout plutôt qu'un pourcentage trompeur.
   //
   // `start` ne sert QUE pour les champs contributions/withdrawals (période affichée) — le gain
   // reste toujours calculé depuis l'origine réelle de l'enveloppe, jamais depuis `start`.
   envelopeMetrics(envelope, allOps, start, end) {
     const envOps = allOps.filter(o => o.envelopeId === envelope.id);
-    const value = this._valueAtCutoff(envOps, end);
-    const netInvested = this.envelopeContributions(envOps, null, end) - this.envelopeWithdrawals(envOps, null, end);
-    const gain = netInvested > 0 ? (value - netInvested) : null;
-    const gainPct = gain !== null ? (gain / netInvested * 100) : null;
+    const { cash, positions, implicitFunding } = this._cashLedger(envOps, end);
+    let posValue = 0;
+    positions.forEach(p => { posValue += p.qty * p.lastPrice; });
+    const value = cash + posValue;
+
+    let netInvested, gain, gainPct;
+    if (envelope.type === 'immobilier') {
+      const purchasePrice = this._firstOpAmount(envOps, 'maj_valeur_estimee', end);
+      netInvested = purchasePrice;
+      gain = purchasePrice ? (value - purchasePrice) : null;
+      gainPct = gain !== null ? (gain / purchasePrice * 100) : null;
+    } else {
+      netInvested = this.envelopeContributions(envOps, null, end) - this.envelopeWithdrawals(envOps, null, end) + implicitFunding;
+      gain = netInvested > 0 ? (value - netInvested) : null;
+      gainPct = gain !== null ? (gain / netInvested * 100) : null;
+    }
+
     return {
       value,
       netInvested,
