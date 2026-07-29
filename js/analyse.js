@@ -59,6 +59,10 @@ const Analyse = {
   },
 
   render() {
+    // Si init() a échoué (voir safeInit dans app.js), this.picker est resté null — sans ce garde,
+    // visiter cet onglet planterait une 2e fois (this.picker.getDateRange()) au lieu de simplement
+    // rester inerte, ce qui romprait à nouveau la navigation depuis CET onglet précis.
+    if (!this.picker) return;
     this._populateFilters();
     const { all: allEnvelopes, list: envelopes } = this._filteredEnvelopes();
     const ops = Storage.getOperations();

@@ -65,6 +65,9 @@ const Comparisons = {
   },
 
   render() {
+    // Si init() a échoué (voir safeInit dans app.js), pickerA/pickerB sont restés null — sans ce
+    // garde, visiter cet onglet planterait une 2e fois au lieu de simplement rester inerte.
+    if (!this.pickerA || !this.pickerB) return;
     const rangeA = this.pickerA.getDateRange();
     const rangeB = this.pickerB.getDateRange();
 

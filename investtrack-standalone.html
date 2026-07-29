@@ -6822,6 +6822,10 @@ const Analyse = {
   },
 
   render() {
+    // Si init() a échoué (voir safeInit dans app.js), this.picker est resté null — sans ce garde,
+    // visiter cet onglet planterait une 2e fois (this.picker.getDateRange()) au lieu de simplement
+    // rester inerte, ce qui romprait à nouveau la navigation depuis CET onglet précis.
+    if (!this.picker) return;
     this._populateFilters();
     const { all: allEnvelopes, list: envelopes } = this._filteredEnvelopes();
     const ops = Storage.getOperations();
@@ -7928,6 +7932,9 @@ const Comparisons = {
   },
 
   render() {
+    // Si init() a échoué (voir safeInit dans app.js), pickerA/pickerB sont restés null — sans ce
+    // garde, visiter cet onglet planterait une 2e fois au lieu de simplement rester inerte.
+    if (!this.pickerA || !this.pickerB) return;
     const rangeA = this.pickerA.getDateRange();
     const rangeB = this.pickerB.getDateRange();
 
@@ -14155,18 +14162,27 @@ document.addEventListener('DOMContentLoaded', () => {
     <option value="subcat">🏷️ Sous-catégorie réaffectée</option>
   `);
 
-  PeriodFilter.renderUI();
-  BankImport.init();
-  InvestImport.init();
-  Expenses.init();
-  Revenues.init();
-  Flux.init();
-  Budget.init();
-  DataEntry.init();
-  Comparisons.init();
-  Envelopes.init();
-  Transactions.init();
-  Analyse.init();
+  // Isole chaque .init() de module : une exception dans l'un d'eux (ex. donnée propre à ce module
+  // dans un état inattendu) ne doit JAMAIS empêcher les modules suivants de s'initialiser, ni les
+  // écouteurs mode-btn/nav-item plus bas ni navigateTo('flux') en toute fin de bloc de s'exécuter
+  // — sans ce garde-fou, un seul module en échec bloquait TOUTE la navigation (plus aucun onglet/
+  // mode cliquable), même pour un utilisateur qui n'a rien à faire avec ce module précis.
+  // console.error (jamais avalé en silence) : seule vraie piste de diagnostic depuis la console
+  // si ça se reproduit.
+  const safeInit = (name, fn) => { try { fn(); } catch (e) { console.error(`${name}.init() a échoué :`, e); } };
+
+  safeInit('PeriodFilter', () => PeriodFilter.renderUI());
+  safeInit('BankImport', () => BankImport.init());
+  safeInit('InvestImport', () => InvestImport.init());
+  safeInit('Expenses', () => Expenses.init());
+  safeInit('Revenues', () => Revenues.init());
+  safeInit('Flux', () => Flux.init());
+  safeInit('Budget', () => Budget.init());
+  safeInit('DataEntry', () => DataEntry.init());
+  safeInit('Comparisons', () => Comparisons.init());
+  safeInit('Envelopes', () => Envelopes.init());
+  safeInit('Transactions', () => Transactions.init());
+  safeInit('Analyse', () => Analyse.init());
 
   // Mode switcher buttons
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -14211,8 +14227,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // Default mode is Dépenses, show expenses section (navigateTo synchronise lui-même le
-  // sélecteur de mode et les onglets du haut)
-  navigateTo('flux');
+  // sélecteur de mode et les onglets du haut) — même garde-fou que safeInit ci-dessus : sans lui,
+  // une exception ici laisserait TOUTES les sections dans leur état HTML brut (aucun .hidden
+  // appliqué), affichage de plusieurs onglets superposés (ex. Flux + Dépenses, les deux seules
+  // sections non masquées par défaut dans le HTML) sans qu'aucun clic ne puisse s'en sortir.
+  try {
+    navigateTo('flux');
+  } catch (e) {
+    console.error("navigateTo('flux') a échoué au chargement initial :", e);
+  }
 });
 
 // ---- PDF Import ----
