@@ -10,21 +10,18 @@ def read(path):
 
 html = read('index.html')
 
-# Inline CSS — tolère un éventuel paramètre de cache-busting (?v=N) sur le href, ajouté pour que
-# GitHub Pages/le navigateur ne serve pas indéfiniment une version en cache de ces fichiers.
+# Inline CSS
 css = read('css/style.css')
-html = re.sub(
-    r'<link rel="stylesheet" href="css/style\.css(?:\?[^"]*)?">',
-    lambda m: f'<style>\n{css}\n</style>',
-    html
+html = html.replace(
+    '<link rel="stylesheet" href="css/style.css">',
+    f'<style>\n{css}\n</style>'
 )
 
-# Collect all local JS files referenced in index.html (in document order) — le groupe capturé
-# exclut le paramètre ?v=N (jamais présent sur disque, uniquement dans les balises servies).
-js_refs = re.findall(r'<script src="(js/[^"]+?\.js)(?:\?[^"]*)?"></script>', html)
+# Collect all local JS files referenced in index.html (in document order)
+js_refs = re.findall(r'<script src="(js/[^"]+\.js)"></script>', html)
 
 # Remove all <script src="js/..."> tags from html
-html = re.sub(r'\s*<script src="js/[^"]+?\.js(?:\?[^"]*)?"></script>', '', html)
+html = re.sub(r'\s*<script src="js/[^"]+\.js"></script>', '', html)
 
 # Inline each JS file before </body>
 inlined = '\n'.join(f'<script>\n{read(p)}\n</script>' for p in js_refs)
