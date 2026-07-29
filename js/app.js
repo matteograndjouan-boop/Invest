@@ -494,6 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit('Budget', () => Budget.init());
   safeInit('DataEntry', () => DataEntry.init());
   safeInit('Comparisons', () => Comparisons.init());
+  safeInit('Portfolio', () => Portfolio.init());
   safeInit('Envelopes', () => Envelopes.init());
   safeInit('Transactions', () => Transactions.init());
   safeInit('Analyse', () => Analyse.init());
