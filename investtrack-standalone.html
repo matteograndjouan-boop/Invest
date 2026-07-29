@@ -7583,9 +7583,11 @@ const Flux = {
     this._togglePill(label);
   },
 
-  // Catégories regroupées dans "Autres" sur le donut (au-delà du top 6 — _categoryBreakdown).
+  // Catégories regroupées dans "Autres" sur le donut, seulement au-delà de 7 catégories réelles
+  // (sinon la 7e catégorie garde son vrai nom — voir _categoryBreakdown).
   _autresCategories() {
-    return this._categoryTotals().slice(6).map(([label]) => label);
+    const entries = this._categoryTotals();
+    return entries.length > 7 ? entries.slice(6).map(([label]) => label) : [];
   },
 
   // "Autres" est actif quand la sélection courante correspond EXACTEMENT à l'ensemble de ses
@@ -7837,12 +7839,14 @@ const Flux = {
     return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
   },
 
-  // Répartition pour le donut : top 6 + « Autres » (au-delà, le camembert devient illisible).
+  // Répartition pour le donut : la légende a la place pour 7 lignes. Jusqu'à 7 catégories
+  // réelles, toutes s'affichent sous leur vrai nom. Au-delà (8+), "Autres" regroupe la 7e et
+  // les suivantes (donc toujours au moins 2 catégories groupées, jamais un simple renommage).
   _categoryBreakdown() {
     let entries = this._categoryTotals();
     const total = entries.reduce((s, [, v]) => s + v, 0);
 
-    if (entries.length > 6) {
+    if (entries.length > 7) {
       const autres = entries.slice(6).reduce((s, [, v]) => s + v, 0);
       entries = [...entries.slice(0, 6), ['Autres', autres]];
     }
